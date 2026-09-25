@@ -255,7 +255,7 @@ export class Renderer {
     }
 
     // ghost tower
-    if (view.ghost) this.drawGhost(view.ghost, now);
+    if (view.ghost) this.drawGhost(view.ghost, now, state.reachOf(view.ghost.def, state.you));
 
     this.fx.drawAir(ctx, now);
 
@@ -264,14 +264,14 @@ export class Renderer {
       const t = state.towers.get(id);
       if (!t) continue;
       const p = toWorld(t.lane, t.x + 1, t.y + 1);
-      const r = t.tdef.attack?.range ?? t.tdef.pulse?.radius ?? t.tdef.aura?.radius;
+      const r = state.reachOf(t.tdef, t.owner);
       if (r && view.selected.size <= 3) this.rangeCircle(p.x, p.y, r, '#8fe8ff', 0.9);
     }
     if (view.hover >= 0 && !view.selected.has(view.hover)) {
       const t = state.towers.get(view.hover);
       if (t) {
         const p = toWorld(t.lane, t.x + 1, t.y + 1);
-        const r = t.tdef.attack?.range ?? t.tdef.pulse?.radius ?? t.tdef.aura?.radius;
+        const r = state.reachOf(t.tdef, t.owner);
         if (r) this.rangeCircle(p.x, p.y, r, '#ffffff', 0.35);
       }
     }
@@ -557,7 +557,7 @@ export class Renderer {
     ctx.restore();
   }
 
-  private drawGhost(g: Ghost, now: number): void {
+  private drawGhost(g: Ghost, now: number, r: number | undefined): void {
     const { ctx } = this;
     const p = toWorld(g.lane, g.x + 1, g.y + 1);
     const col = g.ok ? '#62e3a0' : '#ff5f6d';
@@ -568,7 +568,6 @@ export class Renderer {
     ctx.roundRect(p.x - 1, p.y - 1, 2, 2, 0.2);
     ctx.fill();
     ctx.stroke();
-    const r = g.def.attack?.range ?? g.def.pulse?.radius ?? g.def.aura?.radius;
     if (r) this.rangeCircle(p.x, p.y, r, g.ok ? '#8fe8ff' : '#ff9aa4', 0.7);
     ctx.globalAlpha = 0.6 + 0.1 * Math.sin(now * 5);
     ctx.drawImage(towerSprite(g.def), p.x - GX / SP, p.y - GY / SP, TW / SP, TH / SP);

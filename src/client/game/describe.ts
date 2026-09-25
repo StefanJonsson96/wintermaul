@@ -1,17 +1,22 @@
 import { ARMOR_LABEL, DAMAGE_LABEL, DAMAGE_TABLE } from '../../shared/combat';
 import { RACE_BY_ID, TOWERS, totalCost } from '../../shared/data/races';
+import { attackRange, baseDamageMul, type PlayerMods, typeDamageMul } from '../../shared/sim/mods';
 import type { ArmorType, TowerDef } from '../../shared/types';
 import { h } from '../ui/dom';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const num = (v: number) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1));
 
-export function dps(def: TowerDef): number {
+export function dps(def: TowerDef, m?: PlayerMods): number {
   const a = def.attack;
   if (!a) return 0;
   const avg = (a.dmg[0] + a.dmg[1]) / 2;
   let v = a.beam ? (avg * (1 + a.beam.maxMult)) / 2 : avg / a.cd;
   if (a.crit) v *= 1 + a.crit.chance * (a.crit.mult - 1);
+  if (m) {
+    v *= baseDamageMul(def.race, m) * typeDamageMul(a.type, m) * (m.speed ?? 1);
+    if (m.crit) v *= 1 + (1 - (a.crit?.chance ?? 0)) * m.crit;
+  }
   return v * (a.multishot ?? 1);
 }
 
@@ -94,7 +99,7 @@ export function vsText(def: TowerDef): string | null {
   return `${DAMAGE_LABEL[t]}${strong.length ? ` · strong vs ${strong.join(', ')}` : ''}${weak.length ? ` · weak vs ${weak.join(', ')}` : ''}`;
 }
 
-export function towerTooltip(def: TowerDef, opts: { cost?: number; note?: string } = {}): HTMLElement {
+export function towerTooltip(def: TowerDef, opts: { cost?: number; note?: string; mods?: PlayerMods } = {}): HTMLElement {
   const race = RACE_BY_ID[def.race];
   const a = def.attack;
   const stats = h('div', { class: 'tt-stats' });
@@ -103,8 +108,8 @@ export function towerTooltip(def: TowerDef, opts: { cost?: number; note?: string
     stats.append(
       h('span', null, 'Damage ', h('b', null, dmg)),
       h('span', null, 'Speed ', h('b', null, a.beam ? 'beam' : `${num(a.cd)}s`)),
-      h('span', null, 'Range ', h('b', null, num(a.range))),
-      h('span', null, 'DPS ', h('b', null, String(Math.round(dps(def))))),
+      h('span', null, 'Range ', h('b', null, num(attackRange(a.range, opts.mods)))),
+      h('span', null, 'DPS ', h('b', null, String(Math.round(dps(def, opts.mods))))),
     );
   } else if (def.pulse) {
     stats.append(h('span', null, 'Pulse ', h('b', null, `${num(def.pulse.every)}s`)), h('span', null, 'Radius ', h('b', null, num(def.pulse.radius))));

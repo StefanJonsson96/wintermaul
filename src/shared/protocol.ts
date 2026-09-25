@@ -114,6 +114,10 @@ export interface FullState {
   rubble: { lane: number; cells: number[] }[];
   wave: WaveState;
   endlessDefs: import('./types').CreepDef[];
+  /** The races that can be picked, when a stage limits them. */
+  races?: string[];
+  /** Talent bonuses by player id (only players that have any). */
+  mods?: Record<number, import('./sim/mods').PlayerMods>;
 }
 
 /** Things that happen, in order. Sent inside snapshots. */
@@ -142,6 +146,7 @@ export type GameEvent =
   | { e: 'split'; t: number; id: number }
   | { e: 'heal'; t: number; id: number }
   | { e: 'endless'; t: number; def: import('./types').CreepDef }
+  | { e: 'rally'; t: number; lives: number }
   | { e: 'setup'; t: number; settings: GameSettings; done: boolean; lives: number; finalWave: number };
 
 /** Compact per-tick state. Creeps: flat array of [id, lane, x*100, y*100, hp, flags] per creep. */

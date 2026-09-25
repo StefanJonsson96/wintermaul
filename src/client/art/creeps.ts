@@ -2269,3 +2269,17 @@ function golem(ctx: Ctx, R: number, ph: number, k: Look): void {
   shard(-R * 0.28, R * 0.72, R * 0.58, R * 0.45, shade(k.body, -0.05));
   ctx.restore();
 }
+
+/** A still of a creep for menus, standing on a soft shadow. */
+export function creepPortrait(def: CreepDef, px = 64): HTMLCanvasElement {
+  const spr = creepSprite(def);
+  const [c, ctx] = makeCanvas(px, px);
+  const k = (px * 1.05) / spr.size;
+  ctx.translate(px / 2 - spr.gx * k, px * 0.88 - spr.gy * k);
+  ctx.scale(k, k);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ellipse(ctx, spr.gx, spr.gy, def.size * SP * 0.9, def.size * SP * 0.3);
+  ctx.fill();
+  ctx.drawImage(spr.frames[1], 0, -spr.lift * SP);
+  return c;
+}

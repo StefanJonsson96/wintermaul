@@ -12,6 +12,7 @@ import {
   type Snapshot,
   type WaveState,
 } from '../../shared/protocol';
+import { attackRange, type PlayerMods, towerCost } from '../../shared/sim/mods';
 import type { CreepDef, TowerDef } from '../../shared/types';
 
 export interface CTower extends NetTower {
@@ -66,6 +67,10 @@ export class ClientState {
   towers = new Map<number, CTower>();
   creeps = new Map<number, CCreep>();
   grids: LaneGrid[];
+  /** Talent bonuses by player id. */
+  mods: Record<number, PlayerMods>;
+  /** Races that can be picked in this game (a campaign stage may limit them). */
+  races: string[] | null;
   beams: { tower: number; creep: number; ramp: number }[] = [];
   private endless = new Map<string, CreepDef>();
   private timeline: GameEvent[] = [];
@@ -85,6 +90,8 @@ export class ClientState {
     this.players = full.players;
     this.laneOwners = full.laneOwners;
     this.wave = full.wave;
+    this.mods = full.mods ?? {};
+    this.races = full.races ?? null;
     this.grids = full.laneOwners.map(() => new LaneGrid());
     for (const d of full.endlessDefs) this.endless.set(d.id, d);
     for (const t of full.towers) this.addTower(t, -10);
@@ -107,6 +114,20 @@ export class ClientState {
 
   get myLane(): number {
     return this.me?.lane ?? 0;
+  }
+
+  modsOf(player: number): PlayerMods | undefined {
+    return this.mods[player];
+  }
+
+  /** What a tower costs me, after talents. */
+  costOf(def: TowerDef): number {
+    return towerCost(def, this.modsOf(this.you));
+  }
+
+  /** How far a tower reaches: its attack range after talents, or its pulse or aura radius. */
+  reachOf(def: TowerDef, owner: number): number | undefined {
+    return def.attack ? attackRange(def.attack.range, this.modsOf(owner)) : (def.pulse?.radius ?? def.aura?.radius);
   }
 
   player(id: number): NetPlayer | undefined {

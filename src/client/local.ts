@@ -31,6 +31,8 @@ export interface LocalOptions {
   prepare?: (game: Game) => void;
   /** Buttons on the end screen; defaults to play again / main menu. */
   endActions?: (victory: boolean, stats: EndStats, local: LocalGame) => EndAction[];
+  /** Extra panel on the end screen (campaign rewards). */
+  endNote?: (victory: boolean, stats: EndStats) => HTMLElement | undefined;
   onGameOver?: (victory: boolean, stats: EndStats, game: Game) => void;
 }
 
@@ -50,11 +52,15 @@ export class LocalGame implements Link {
   private userPaused = false;
   private hiddenPaused = false;
   private onVisibility = () => this.applyPause();
+  /** Where leaving this game goes. */
+  exitTo: 'menu' | 'campaign';
 
   constructor(
     private readonly deliver: (msg: ServerMsg) => void,
     readonly opts: LocalOptions,
-  ) {}
+  ) {
+    this.exitTo = opts.mode === 'campaign' ? 'campaign' : 'menu';
+  }
 
   get mode(): LocalOptions['mode'] {
     return this.opts.mode;
@@ -122,8 +128,9 @@ export class LocalGame implements Link {
     this.deliver({ type: 'gameOver', victory, stats });
   }
 
-  /** Optional panel on the end screen (campaign rewards). */
-  endNote?: (victory: boolean, stats: EndStats) => HTMLElement | undefined;
+  endNote(victory: boolean, stats: EndStats): HTMLElement | undefined {
+    return this.opts.endNote?.(victory, stats);
+  }
 
   endActions(victory: boolean, stats: EndStats): EndAction[] {
     return (

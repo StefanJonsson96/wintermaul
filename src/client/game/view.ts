@@ -60,6 +60,8 @@ export class GameView {
   private hudTimer = 0;
   private miniTimer = 0;
   private alive = true;
+  /** The last wave seen starting, so "cleared" is only announced for waves actually played. */
+  private startedWave = 0;
   private cleanup: (() => void)[] = [];
   private lastClick = { t: 0, id: -1 };
   private leakToastAt = 0;
@@ -73,6 +75,7 @@ export class GameView {
     private isHost: () => boolean,
   ) {
     this.state = new ClientState(full, you);
+    if (full.wave.phase === 'wave') this.startedWave = full.wave.n;
     this.renderer = new Renderer(canvas, this.state, this.fx);
     this.hud = new Hud(hudRoot, this);
     this.fx.quality = this.prefs.hq ? 1 : 0.4;
@@ -117,7 +120,7 @@ export class GameView {
   onGameOver(victory: boolean, stats: EndStats): void {
     audio.play(victory ? 'victory' : 'defeat');
     const local = this.link.local;
-    setTimeout(() => this.alive && this.hud.showEnd(victory, stats, this.isHost(), local?.endActions(victory, stats), local?.endNote?.(victory, stats)), victory ? 600 : 1200);
+    setTimeout(() => this.alive && this.hud.showEnd(victory, stats, this.isHost(), local?.endActions(victory, stats), local?.endNote(victory, stats)), victory ? 600 : 1200);
   }
 
   togglePause(): void {
@@ -145,8 +148,9 @@ export class GameView {
     const def = TOWERS[defId];
     if (!def || this.state.you < 0) return;
     const me = this.state.me!;
-    if (me.gold < def.cost) {
-      toast(`Not enough gold (${def.cost} needed)`, 'error', 1500);
+    const cost = this.state.costOf(def);
+    if (me.gold < cost) {
+      toast(`Not enough gold (${cost} needed)`, 'error', 1500);
       audio.play('error', 0.5);
       return;
     }
@@ -504,12 +508,13 @@ export class GameView {
       }
       case 'wave': {
         if (ev.phase === 'wave') {
+          this.startedWave = ev.n;
           const info = this.hud.waveInfo(ev.n);
           const boss = info?.creep.boss;
           this.hud.banner(`Wave ${ev.n}`, info ? `${info.creep.name}${info.title ? ` — ${info.title}` : ''}` : '', boss ? 'boss' : '');
           if (info?.hint) this.hud.chat.system(`Wave ${ev.n}: ${info.hint}`);
           audio.play(boss ? 'boss' : 'wave', 0.8);
-        } else if (ev.phase === 'build' && ev.n > 0) {
+        } else if (ev.phase === 'build' && ev.n > 0 && ev.n === this.startedWave) {
           toast(`Wave ${ev.n} cleared!`, 'good', 2000);
           if (ev.n < 15 || ev.n % 2 === 0) this.showTip(4000);
         }
@@ -537,6 +542,11 @@ export class GameView {
       case 'lumber':
         toast(`+1 lumber! Pick a new race or build a Legend.`, 'good', 3500);
         audio.play('lumber', 0.7);
+        return;
+      case 'rally':
+        this.hud.banner('Second Wind!', `The line holds: ${ev.lives} lives restored`, 'boss');
+        this.hud.chat.system(`Second Wind! The team rallies with ${ev.lives} lives. It only happens once.`);
+        audio.play('lumber', 0.9);
         return;
       case 'gift': {
         const a = s.player(ev.from);
@@ -810,7 +820,7 @@ export class GameView {
       }
       this.send({ c: 'build', tower: this.buildDef.id, x: g.x, y: g.y });
       const me = s.me;
-      const cost = this.buildDef.cost;
+      const cost = s.costOf(this.buildDef);
       const keep = e.shiftKey && this.buildDef.tier !== 5 && (me?.gold ?? 0) - cost >= cost;
       if (!keep) this.cancelBuild();
       return;

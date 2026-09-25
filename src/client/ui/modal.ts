@@ -1,4 +1,4 @@
-import { h } from './dom';
+import { h, hideTooltip } from './dom';
 
 export interface ModalHandle {
   el: HTMLElement;
@@ -14,6 +14,7 @@ export function openModal(content: HTMLElement, opts: { narrow?: boolean; wide?:
   const close = () => {
     if (closed) return;
     closed = true;
+    hideTooltip();
     back.remove();
     removeEventListener('keydown', onKey, true);
     opts.onClose?.();

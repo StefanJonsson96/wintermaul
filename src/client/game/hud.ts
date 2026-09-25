@@ -1,11 +1,12 @@
 import { raceEmblem } from '../art/emblems';
 import { towerIcon } from '../art/towers';
 import { audio } from '../audio';
-import { PLAYER_COLORS, SELL_REFUND } from '../../shared/constants';
+import { PLAYER_COLORS } from '../../shared/constants';
 import { ARMOR_LABEL } from '../../shared/combat';
 import { RACE_BY_ID, RACES, TOWERS, towersOfRace } from '../../shared/data/races';
 import { CREEPS, FINAL_WAVE, waveDef } from '../../shared/data/waves';
 import { DIFFICULTIES, type Difficulty, type EndStats, type GameSettings, RACE_MODES, startingLives } from '../../shared/protocol';
+import { attackRange, sellRefund } from '../../shared/sim/mods';
 import { TARGET_MODES, type CreepDef, type TargetMode, type TowerDef } from '../../shared/types';
 import { ChatBox } from '../ui/chat';
 import { clear, fmt, h, hideTooltip, toast, tooltip } from '../ui/dom';
@@ -41,6 +42,8 @@ export class Hud {
   private selKey = '';
   private sbKey = '';
   private lastLives = -1;
+  private countdownKey = '';
+  private countdownFrom = 1;
   private pauseBtn?: HTMLButtonElement;
   private speedBtn?: HTMLButtonElement;
   private pausedBanner?: HTMLElement;
@@ -152,7 +155,13 @@ export class Hud {
       title = `Wave ${nextN}`;
       name = next ? next.creep.name : '';
       sub = [`in ${Math.ceil(w.countdown)}s`, ...(next ? this.traits(next.creep, next.title) : [])];
-      fill = w.countdown / (w.n === 0 ? 45 : 25);
+      // the bar starts full whatever the delay (the first wave and some stages wait longer)
+      const key = `${w.n}|${w.phase}`;
+      if (this.countdownKey !== key) {
+        this.countdownKey = key;
+        this.countdownFrom = Math.max(w.countdown, 1);
+      }
+      fill = w.countdown / this.countdownFrom;
     } else if (w.phase === 'wave') {
       title = `Wave ${w.n}${w.finalWave ? `/${w.finalWave}` : ''}`;
       name = next ? next.creep.name : '';
@@ -314,7 +323,8 @@ export class Hud {
     };
     for (const r of me.races) {
       const def = TOWERS[`${r}_1`];
-      const btn = this.towerButton(def, def.cost, me.gold >= def.cost, this.view.buildDef?.id === def.id);
+      const cost = s.costOf(def);
+      const btn = this.towerButton(def, cost, me.gold >= cost, this.view.buildDef?.id === def.id);
       add(btn, null, def, () => this.view.startBuild(def.id));
     }
     for (const r of me.races) {
@@ -342,7 +352,7 @@ export class Hud {
     const c = h('canvas', { width: 64, height: 64 }) as HTMLCanvasElement;
     c.getContext('2d')!.drawImage(icon, 0, 0);
     const btn = h('button', { class: `cmd-btn${affordable ? '' : ' poor'}${active ? ' active' : ''}`, onclick: () => this.view.startBuild(def.id) }, c, h('span', { class: 'cost' }, String(cost)));
-    tooltip(btn, () => towerTooltip(def));
+    tooltip(btn, () => towerTooltip(def, { cost, mods: this.state.modsOf(this.state.you) }));
     return btn;
   }
 
@@ -390,13 +400,14 @@ export class Hud {
       if (a) {
         stat('Damage', a.beam ? `${a.dmg[0]}/s` : `${a.dmg[0]}–${a.dmg[1]}`);
         stat('Speed', a.beam ? 'beam' : `${a.cd}s`);
-        stat('Range', String(a.range));
-        stat('DPS', String(Math.round(dps(def))));
+        const m = s.modsOf(first.owner);
+        stat('Range', String(+attackRange(a.range, m).toFixed(1)));
+        stat('DPS', String(Math.round(dps(def, m))));
       }
       stat('Kills', String(first.kills));
       stat('Damage dealt', fmt(first.damage));
       if (def.growth) stat('Level', `${first.level}/${def.growth.maxLevel}`);
-      stat('Value', `${Math.floor(first.invested * SELL_REFUND)}g`);
+      stat('Value', `${Math.floor(first.invested * sellRefund(s.modsOf(first.owner)))}g`);
       this.selectPanel.append(grid, h('div', { class: 'sel-desc' }, def.desc));
     }
     if (mine.length === 0) return;
@@ -418,13 +429,13 @@ export class Hud {
         icon,
         h('div', { style: { minWidth: '0' } }, h('div', { class: 't' }, `${hk ? `[${hk.toUpperCase()}] ` : ''}${up.name}${tids.length > 1 ? ` ×${tids.length}` : ''}`), h('div', { class: 'c' }, `${cost} gold`)),
       ) as HTMLButtonElement;
-      tooltip(btn, () => towerTooltip(up, { note: tids.length > 1 ? `Upgrades ${tids.length} towers (as many as you can afford)` : undefined }));
+      tooltip(btn, () => towerTooltip(up, { mods: s.modsOf(s.you), note: tids.length > 1 ? `Upgrades ${tids.length} towers (as many as you can afford)` : undefined }));
       actions.append(btn);
       if (hk) this.selectionKeys.push({ key: hk, action: act });
     }
-    const refund = mine.reduce((sum, t) => sum + Math.floor(t.invested * SELL_REFUND), 0);
+    const refund = mine.reduce((sum, t) => sum + Math.floor(t.invested * sellRefund(s.modsOf(s.you))), 0);
     const sellBtn = h('button', { class: 'btn danger small', onclick: () => this.view.sell(mine.map((t) => t.id)) }, `Sell [X] +${refund}`);
-    tooltip(sellBtn, () => 'Refunds 75% (100% if you built it during this build phase). Selling while creeps are on the field leaves rubble until the wave ends.');
+    tooltip(sellBtn, () => `Refunds ${Math.round(sellRefund(s.modsOf(s.you)) * 100)}% (100% if you built it during this build phase). Selling while creeps are on the field leaves rubble until the wave ends.`);
     this.selectionKeys.push({ key: 'x', action: () => this.view.sell(mine.map((t) => t.id)) });
     if (options.size === 0 && mine.length > 0) actions.append(h('div', { class: 'muted', style: { fontSize: '12px', flex: '1' } }, 'Fully upgraded.'));
     this.selectPanel.append(actions);
@@ -463,6 +474,7 @@ export class Hud {
     };
     if (!randomMode) {
       for (const r of RACES) {
+        if (s.races && !s.races.includes(r.id)) continue;
         const owned = me.races.includes(r.id);
         const em = h('canvas', { class: 'emblem', width: 64, height: 64 }) as HTMLCanvasElement;
         em.getContext('2d')!.drawImage(raceEmblem(r.id, 64), 0, 0);
@@ -502,7 +514,7 @@ export class Hud {
         'div',
         null,
         h('h2', null, me.races.length === 0 ? 'Choose your race' : 'Choose another race'),
-        h('div', { class: 'sub' }, `You have ${me.lumber} lumber. Each race costs 1. Stars show how tricky a race is to play well. Hover the little towers for details.`),
+        h('div', { class: 'sub' }, `You have ${me.lumber} lumber. Each race costs 1. Stars show how tricky a race is to play well. Hover the little towers for details.${s.races ? ' This stage allows only the races shown.' : ''}`),
         grid,
         legendNote,
       ),
@@ -650,6 +662,7 @@ export class Hud {
   showEnd(victory: boolean, stats: EndStats, isHost: boolean, actions?: EndAction[], extra?: HTMLElement): void {
     hideTooltip();
     this.endModal?.close();
+    this.closeRacePicker();
     const rows = stats.players.map((p) =>
       h(
         'tr',
@@ -669,7 +682,7 @@ export class Hud {
         'div',
         null,
         h('h2', { style: { color: victory ? '#9cf09f' : '#ff9aa4', fontSize: '34px' } }, victory ? 'Victory!' : 'The north has fallen'),
-        h('div', { class: 'sub' }, victory ? `You held the line against all ${stats.wave} waves with ${stats.lives} lives to spare. (${mins} min)` : `You reached wave ${stats.wave}. (${mins} min) Try another race combination!`),
+        h('div', { class: 'sub' }, victory ? `You held the line through wave ${stats.wave} with ${stats.lives} ${stats.lives === 1 ? 'life' : 'lives'} to spare. (${mins} min)` : `You reached wave ${stats.wave}. (${mins} min) Try another race combination!`),
         extra ?? null,
         h('table', { class: 'end-table' }, h('thead', null, h('tr', null, ...['Player', 'Races', 'Kills', 'Leaks', 'Damage', 'Gold', 'MVP tower'].map((t) => h('th', null, t)))), h('tbody', null, rows)),
         h(

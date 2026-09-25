@@ -5,7 +5,11 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import '@fontsource/inter/800.css';
 import './styles.css';
+import type { Stage } from '../shared/campaign';
 import type { RoomState, ServerMsg } from '../shared/protocol';
+import { stageOptions } from './campaign/play';
+import { loadSave, progressLine } from './campaign/save';
+import { CampaignScreen } from './campaign/screen';
 import { GameView } from './game/view';
 import { type Link, LocalGame, type LocalOptions } from './local';
 import { skirmishOptions } from './modes/skirmish';
@@ -27,7 +31,7 @@ if (qs.has('gallery')) {
   });
 } else boot();
 
-type Screen = 'menu' | 'lobby' | 'game';
+type Screen = 'menu' | 'lobby' | 'campaign' | 'game';
 
 function boot(): void {
   const net = new Net();
@@ -37,24 +41,31 @@ function boot(): void {
   let local: LocalGame | null = null;
   let pendingJoin = qs.get('room')?.toUpperCase() ?? null;
 
+  const leaveTo = (to: 'menu' | 'campaign') => () => {
+    if (!local) return show(to);
+    local.exitTo = to;
+    local.send({ type: 'leave' });
+  };
   const menu = new MenuScreen($('#screen-menu'), net, {
-    tutorial: () => startLocal(tutorialOptions({ campaign: () => (local?.send({ type: 'leave' }), toast('The campaign is on its way.', 'warn', 2000)), menu: () => local?.send({ type: 'leave' }) })),
-    campaign: () => toast('The campaign is on its way.', 'warn', 2000),
+    tutorial: () => startLocal(tutorialOptions({ campaign: leaveTo('campaign'), menu: leaveTo('menu') })),
+    campaign: () => show('campaign'),
     skirmish: () => startLocal(skirmishOptions()),
-    campaignProgress: () => '12 stages, earn runestones',
+    campaignProgress: () => progressLine(loadSave()),
   });
   const lobby = new LobbyScreen($('#screen-lobby'), net);
+  const playStage = (stage: Stage) => startLocal(stageOptions(stage, loadSave(), { play: playStage, map: leaveTo('campaign') }));
+  const campaign = new CampaignScreen($('#screen-campaign'), { play: playStage, back: () => show('menu') });
 
   function show(screen: Screen): void {
-    $('#screen-menu').classList.toggle('hidden', screen !== 'menu');
-    $('#screen-lobby').classList.toggle('hidden', screen !== 'lobby');
-    $('#screen-game').classList.toggle('hidden', screen !== 'game');
+    for (const s of ['menu', 'lobby', 'campaign', 'game'] as const) $(`#screen-${s}`).classList.toggle('hidden', screen !== s);
     backdrop.setRunning(screen !== 'game');
     if (screen !== 'game' && game) {
       game.destroy();
       game = null;
     }
     if (screen === 'menu') menu.refresh();
+    if (screen === 'campaign') campaign.show();
+    else campaign.hide();
   }
 
   /** Starts a single-player game that runs in this browser tab. */
@@ -92,11 +103,12 @@ function boot(): void {
       case 'left':
         if (from === local) {
           local = null;
-        } else {
-          room = null;
-          history.replaceState(null, '', location.pathname);
-          lobby.chat.clear();
+          show(from.local?.exitTo ?? 'menu');
+          return;
         }
+        room = null;
+        history.replaceState(null, '', location.pathname);
+        lobby.chat.clear();
         show('menu');
         return;
       case 'error':

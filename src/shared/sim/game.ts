@@ -10,7 +10,6 @@ import {
   LUMBER_WAVES,
   RANDOM_RACE_BONUS,
   READY_SKIP_TO,
-  SELL_REFUND,
   SETUP_TIME,
   START_GOLD,
   START_LUMBER,
@@ -36,6 +35,7 @@ import {
   type WaveState,
 } from '../protocol';
 import { Rng } from '../rng';
+import { attackRange, baseDamageMul, type PlayerMods, sellRefund, towerCost, typeDamageMul } from './mods';
 import type { AttackDef, CreepDef, DamageType, OnHit, TargetKind, TargetMode, TowerDef, WaveDef } from '../types';
 
 /** Per-game rule changes for tutorials, campaign stages and the like. */
@@ -53,6 +53,14 @@ export interface GameRules {
   firstWaveDelay?: number;
   /** Only these races can be picked. */
   races?: string[];
+  /** Start at this wave instead of wave 1 (a stage that joins the siege late). */
+  firstWave?: number;
+  /** Stage mutators: extra creep regeneration (fraction of max health per second), extra armor, more or fewer creeps per wave. */
+  regen?: number;
+  armor?: number;
+  countMul?: number;
+  /** Talent bonuses by player id. */
+  mods?: Record<number, PlayerMods>;
 }
 
 export interface PlayerInit {
@@ -64,6 +72,7 @@ export interface PlayerInit {
 
 export interface Player extends NetPlayer {
   goldMul: number;
+  mods: PlayerMods;
 }
 
 interface Dot {
@@ -223,6 +232,10 @@ export class Game {
   /** Wave the game was lost/won on and when. */
   endedAt = 0;
   stats = { leakedTotal: 0 };
+  /** Lives the team gets back once, when it would lose (Second Wind talent). */
+  private secondWind = 0;
+  private lastStand = false;
+  private tyrantEscaped = false;
 
   constructor(settings: GameSettings, players: PlayerInit[], seed = Date.now(), opts: { skipSetup?: boolean; rules?: GameRules } = {}) {
     this.settings = { ...settings };
@@ -230,10 +243,11 @@ export class Game {
     this.finalWave = this.rules.finalWave ?? FINAL_WAVE;
     this.rng = new Rng(seed);
     const diff = DIFFICULTIES[settings.difficulty];
-    this.lives = this.maxLives = this.rules.lives ?? startingLives(settings.difficulty, players.length);
     this.hpMul = diff.hp * (this.rules.hpMul ?? 1);
+    this.wave = Math.max(1, this.rules.firstWave ?? 1) - 1;
     const sorted = [...players].sort((a, b) => a.id - b.id);
     sorted.forEach((p, i) => {
+      const mods = this.rules.mods?.[p.id] ?? {};
       this.players.push({
         id: p.id,
         name: p.name,
@@ -241,7 +255,7 @@ export class Game {
         isBot: p.isBot,
         connected: true,
         lane: i,
-        gold: this.rules.startGold ?? START_GOLD,
+        gold: (this.rules.startGold ?? START_GOLD) + (mods.startGold ?? 0),
         lumber: this.rules.startLumber ?? START_LUMBER,
         races: [],
         legends: [],
@@ -251,22 +265,35 @@ export class Game {
         goldEarned: 0,
         ready: false,
         goldMul: 1,
+        mods,
       });
       this.lanes.push({ index: i, owner: p.id, grid: new LaneGrid(), rubble: [], creeps: [] });
     });
+    this.lives = this.maxLives = this.startLives();
+    this.secondWind = Math.max(0, ...this.players.map((p) => p.mods.secondWind ?? 0));
     this.chooser = this.players.find((p) => !p.isBot)?.id ?? -1;
     if (opts.skipSetup || this.chooser < 0) this.lockSetup();
+  }
+
+  /** Team lives for the current rules, plus every player's talent lives. */
+  private startLives(): number {
+    const base = this.rules.lives ?? startingLives(this.settings.difficulty, this.players.length);
+    return base + this.players.reduce((n, p) => n + (p.mods.lives ?? 0), 0);
+  }
+
+  get firstWave(): number {
+    return Math.max(1, this.rules.firstWave ?? 1);
   }
 
   /** Applies the chosen rules and starts the countdown to wave 1. */
   private lockSetup(): void {
     const diff = DIFFICULTIES[this.settings.difficulty];
-    this.lives = this.maxLives = this.rules.lives ?? startingLives(this.settings.difficulty, this.players.length);
+    this.lives = this.maxLives = this.startLives();
     this.hpMul = diff.hp * (this.rules.hpMul ?? 1);
     const mode = this.settings.raceMode;
     for (const p of this.players) {
-      p.lumber = (this.rules.startLumber ?? START_LUMBER) + (mode === 'double' ? 1 : 0);
-      p.goldMul = (mode === 'random' ? 1.15 : 1) * (this.rules.bountyMul ?? 1);
+      p.lumber = (this.rules.startLumber ?? START_LUMBER) + (mode === 'double' ? 1 : 0) + (p.mods.startLumber ?? 0);
+      p.goldMul = (mode === 'random' ? 1.15 : 1) * (this.rules.bountyMul ?? 1) * (p.mods.bounty ?? 1);
     }
     if (mode === 'same') {
       const race = this.rng.pick(this.allowedRaces());
@@ -275,11 +302,11 @@ export class Game {
       for (const p of this.players) this.pickRace(p, 'random');
     }
     this.phase = 'build';
-    this.countdown = this.rules.firstWaveDelay ?? FIRST_WAVE_DELAY;
+    this.countdown = (this.rules.firstWaveDelay ?? FIRST_WAVE_DELAY) + Math.max(0, ...this.players.map((p) => p.mods.prep ?? 0));
     this.phaseCounter++;
     for (const p of this.players) p.ready = false;
     this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: true, lives: this.lives, finalWave: this.settings.endless ? 0 : this.finalWave });
-    this.emit({ e: 'wave', t: this.time, n: 0, phase: 'build' });
+    this.emit({ e: 'wave', t: this.time, n: this.wave, phase: 'build' });
   }
 
   // ─────────────────────────────────────────────────────────────── queries
@@ -337,7 +364,7 @@ export class Game {
         if (st.difficulty && st.difficulty in DIFFICULTIES) this.settings.difficulty = st.difficulty;
         if (st.raceMode && ['pick', 'double', 'random', 'same'].includes(st.raceMode)) this.settings.raceMode = st.raceMode;
         if (typeof st.endless === 'boolean') this.settings.endless = st.endless;
-        this.lives = this.maxLives = startingLives(this.settings.difficulty, this.players.length);
+        this.lives = this.maxLives = this.startLives();
         this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: this.lives, finalWave: this.settings.endless ? 0 : this.finalWave });
         return { ok: true };
       }
@@ -425,11 +452,12 @@ export class Game {
       if (p.legends.includes(def.id)) return { ok: false, error: 'You already built that Legend' };
       if (p.lumber < (def.lumber ?? 1)) return { ok: false, error: 'Legends cost 1 lumber' };
     }
-    if (p.gold < def.cost) return { ok: false, error: 'Not enough gold' };
+    const cost = towerCost(def, p.mods);
+    if (p.gold < cost) return { ok: false, error: 'Not enough gold' };
     const lane = this.lanes[p.lane];
     const res = lane.grid.canPlace(x, y, this.occupiedCells(lane.index));
     if (!res.ok) return { ok: false, error: res.reason };
-    p.gold -= def.cost;
+    p.gold -= cost;
     if (def.tier === 5) {
       p.lumber -= def.lumber ?? 1;
       p.legends.push(def.id);
@@ -451,7 +479,7 @@ export class Game {
       mode: def.tier === 5 && def.id === 'sun_L' ? 'strong' : 'first',
       kills: 0,
       damage: 0,
-      invested: def.cost,
+      invested: cost,
       buildPhase: this.phase === 'build' ? this.phaseCounter : -1,
       level: 0,
       xp: 0,
@@ -519,7 +547,7 @@ export class Game {
       const t = this.towers.get(id);
       if (!t || t.owner !== p.id) continue;
       const undo = this.phase === 'build' && t.buildPhase === this.phaseCounter;
-      const refund = Math.floor(t.invested * (undo ? 1 : SELL_REFUND));
+      const refund = Math.floor(t.invested * (undo ? 1 : sellRefund(p.mods)));
       p.gold += refund;
       if (t.def.tier === 5) {
         p.legends = p.legends.filter((l) => l !== t.def.id);
@@ -587,7 +615,18 @@ export class Game {
     this.resolveHits();
     this.updateTowers();
     this.cleanup();
-    if (this.lives <= 0 && !this.over) this.finish(false);
+    if (this.lives <= 0 && !this.over) {
+      if (this.secondWind > 0 && !this.tyrantEscaped) {
+        this.lives = Math.min(this.maxLives, this.secondWind);
+        this.secondWind = 0;
+        this.emit({ e: 'rally', t: this.time, lives: this.lives });
+      } else this.finish(false);
+    }
+    const lastStand = this.lives <= this.maxLives * 0.25;
+    if (lastStand !== this.lastStand) {
+      this.lastStand = lastStand;
+      if (this.players.some((p) => p.mods.lastStand)) for (const lane of this.lanes) this.refreshAuras(lane.index);
+    }
   }
 
   private updatePhase(): void {
@@ -655,7 +694,9 @@ export class Game {
         for (let i = 0; i < wave.escort.count; i++, at += 0.5) this.spawnQueue.push({ at, lane: lane.index, def: wave.escort.creep, wave: n });
         at += 1.5;
       }
-      for (let i = 0; i < wave.count; i++, at += wave.interval) this.spawnQueue.push({ at, lane: lane.index, def: wave.creep, wave: n });
+      const count = Math.max(1, Math.round(wave.count * (this.rules.countMul ?? 1)));
+      const interval = wave.interval / Math.max(1, this.rules.countMul ?? 1);
+      for (let i = 0; i < count; i++, at += interval) this.spawnQueue.push({ at, lane: lane.index, def: wave.creep, wave: n });
     }
     this.spawnQueue.sort((a, b) => a.at - b.at);
     this.emit({ e: 'wave', t: this.time, n, phase: 'wave' });
@@ -666,7 +707,7 @@ export class Game {
     // level bonus (classic: 10 gold + 2 per level)
     const bonus = waveBonus(n);
     for (const p of this.players) {
-      const g = Math.round(bonus * p.goldMul);
+      const g = Math.round(bonus * p.goldMul * (p.mods.waveBonus ?? 1));
       p.gold += g;
       p.goldEarned += g;
       this.emit({ e: 'bonus', t: this.time, p: p.id, gold: g, reason: `wave ${n}` });
@@ -684,6 +725,7 @@ export class Game {
         if (e.perWave) interest += e.perWave;
         if (e.lifePerWave) livesBack += e.lifePerWave;
       }
+      if (p.mods.interest) interest += Math.min(p.mods.interestCap ?? Infinity, Math.floor(bank * p.mods.interest));
       if (interest > 0) {
         p.gold += interest;
         p.goldEarned += interest;
@@ -815,7 +857,8 @@ export class Game {
     if (this.time < c.stunUntil || this.time < c.rootUntil) return 0;
     let slow = Math.max(this.time < c.slowUntil ? c.slowPct : 0, c.auraSlow);
     slow = Math.min(slow, c.def.boss ? 0.5 : 0.75);
-    return c.def.speed * (1 - slow) * (this.rules.speedMul ?? 1);
+    const owner = this.player(this.lanes[c.lane].owner);
+    return c.def.speed * (1 - slow) * (this.rules.speedMul ?? 1) * (1 - (owner?.mods.creepSlow ?? 0));
   }
 
   private updateCreeps(): void {
@@ -824,7 +867,8 @@ export class Game {
       for (const c of lane.creeps) {
         if (!c.alive) continue;
         // regeneration and healing
-        if (c.def.regen && c.hp < c.maxHp) c.hp = Math.min(c.maxHp, c.hp + c.maxHp * c.def.regen * DT);
+        const regen = (c.def.regen ?? 0) + (this.rules.regen ?? 0);
+        if (regen && c.hp < c.maxHp) c.hp = Math.min(c.maxHp, c.hp + c.maxHp * regen * DT);
         if (c.def.heal && this.time >= c.nextHeal) {
           c.nextHeal = this.time + c.def.heal.every;
           const r2 = c.def.heal.radius * c.def.heal.radius;
@@ -915,10 +959,10 @@ export class Game {
 
   private leak(c: Creep): void {
     const from = c.lane;
-    const cost = c.def.leak;
+    const owner = this.player(this.lanes[from].owner);
+    const cost = c.def.boss ? Math.max(1, c.def.leak - (owner?.mods.bossLeak ?? 0)) : c.def.leak;
     this.lives -= cost;
     this.stats.leakedTotal++;
-    const owner = this.player(this.lanes[from].owner);
     if (owner) owner.leaks++;
     // A leaked creep gets exactly one more run: through the next player's maze (or yours again, solo).
     const maxVisits = 2;
@@ -928,7 +972,10 @@ export class Game {
     if (escaped) {
       this.removeCreep(c);
       // the Winter Tyrant getting away ends the game, whatever the lives
-      if (c.def.boss && c.wave === FINAL_WAVE) this.lives = Math.min(this.lives, 0);
+      if (c.def.boss && c.wave === FINAL_WAVE) {
+        this.lives = Math.min(this.lives, 0);
+        this.tyrantEscaped = true;
+      }
       return;
     }
     // Teleport into the next player's lane, keeping its current health.
@@ -1014,13 +1061,14 @@ export class Game {
       const t = this.towers.get(d.tower);
       const s = t?.def.attack?.onHit?.spreadOnDeath;
       if (s) r = Math.max(r, s);
+      if (d.kind === 'poison') r = Math.max(r, this.player(d.owner)?.mods.spread ?? 0);
     }
     return r;
   }
 
   // ─────────────────────────────────────────────────────────────── damage
   private armorOf(c: Creep): number {
-    let a = c.def.armor;
+    let a = c.def.armor + (this.rules.armor ?? 0);
     for (let i = c.sunders.length - 1; i >= 0; i--) {
       const s = c.sunders[i];
       if (this.time >= s.until) c.sunders.splice(i, 1);
@@ -1066,6 +1114,8 @@ export class Game {
   private damage(c: Creep, amount: number, type: DamageType, owner: number, towerId: number, onHit?: OnHit): number {
     if (!c.alive) return 0;
     let mult = DAMAGE_TABLE[type][c.def.armorType] * armorMultiplier(this.armorOf(c)) * this.amplifyOf(c);
+    const frostbite = this.player(owner)?.mods.frostbite;
+    if (frostbite && ((this.time < c.slowUntil && c.slowPct > 0) || c.auraSlow > 0)) mult *= 1 + frostbite;
     if (onHit) {
       if (onHit.bonusVsAir && c.air) mult *= onHit.bonusVsAir;
       const vs = onHit.bonusVsArmor?.[c.def.armorType];
@@ -1096,21 +1146,25 @@ export class Game {
     const cc = !c.def.immune;
     const boss = !!c.def.boss;
     const now = this.time;
+    const m = this.player(t.owner)?.mods;
     if (oh.slow && cc) {
-      if (now >= c.slowUntil || oh.slow.pct >= c.slowPct) {
-        c.slowPct = Math.max(now < c.slowUntil ? c.slowPct : 0, oh.slow.pct);
+      const pct = oh.slow.pct * (m?.slow ?? 1);
+      if (now >= c.slowUntil || pct >= c.slowPct) {
+        c.slowPct = Math.max(now < c.slowUntil ? c.slowPct : 0, pct);
         c.slowUntil = Math.max(c.slowUntil, now + oh.slow.dur);
       }
     }
+    const stunDur = (d: number) => d * (m?.stun ?? 1);
     if (oh.stun && cc && this.rng.chance(oh.stun.chance)) {
       if (boss) {
         c.slowPct = Math.max(c.slowPct, 0.3);
-        c.slowUntil = Math.max(c.slowUntil, now + oh.stun.dur);
-      } else c.stunUntil = Math.max(c.stunUntil, now + oh.stun.dur);
+        c.slowUntil = Math.max(c.slowUntil, now + stunDur(oh.stun.dur));
+      } else c.stunUntil = Math.max(c.stunUntil, now + stunDur(oh.stun.dur));
     }
-    if (oh.root && cc && !boss && this.rng.chance(oh.root.chance)) c.rootUntil = Math.max(c.rootUntil, now + oh.root.dur);
+    if (oh.root && cc && !boss && this.rng.chance(oh.root.chance)) c.rootUntil = Math.max(c.rootUntil, now + stunDur(oh.root.dur));
     if (oh.dot) {
-      this.addDot(c, { key: t.def.id, kind: oh.dot.kind, dps: oh.dot.dps * t.dmgMul * this.growthMul(t), stacks: 1, until: now + oh.dot.dur, owner, tower: t.id }, oh.dot.maxStacks);
+      const kindMul = (oh.dot.kind === 'poison' ? m?.poison : m?.burn) ?? 1;
+      this.addDot(c, { key: t.def.id, kind: oh.dot.kind, dps: oh.dot.dps * t.dmgMul * kindMul * this.growthMul(t), stacks: 1, until: now + oh.dot.dur, owner, tower: t.id }, oh.dot.maxStacks);
     }
     if (oh.sunder) {
       const ex = c.sunders.find((s) => s.key === t.def.id);
@@ -1184,8 +1238,9 @@ export class Game {
         spd = Math.max(spd, a.def.aura!.towerSpdPct ?? 0);
         xp = Math.max(xp, a.def.aura!.xpRate ?? 0);
       }
-      t.dmgMul = 1 + dmg;
-      t.spdMul = 1 + spd;
+      const m = this.player(t.owner)?.mods;
+      t.dmgMul = (1 + dmg) * baseDamageMul(t.def.race, m) * (this.lastStand ? 1 + (m?.lastStand ?? 0) : 1);
+      t.spdMul = (1 + spd) * (m?.speed ?? 1);
       t.xpMul = 1 + xp;
     }
   }
@@ -1201,7 +1256,7 @@ export class Game {
         const dx = c.x - t.cx;
         const dy = c.y - t.cy;
         if (dx * dx + dy * dy > r2) continue;
-        if (a.enemySlowPct && !c.def.immune) c.auraSlow = Math.max(c.auraSlow, a.enemySlowPct);
+        if (a.enemySlowPct && !c.def.immune) c.auraSlow = Math.max(c.auraSlow, a.enemySlowPct * (this.player(t.owner)?.mods.slow ?? 1));
         if (a.enemyAmplify) c.auraAmplify = Math.max(c.auraAmplify, a.enemyAmplify);
         if (a.enemyDps) this.trueDamage(c, a.enemyDps * t.dmgMul * DT, t.owner, t.id);
       }
@@ -1279,17 +1334,22 @@ export class Game {
   }
 
   private rollDamage(t: Tower, a: AttackDef): { dmg: number; crit: boolean } {
-    let dmg = this.rng.range(a.dmg[0], a.dmg[1]) * t.dmgMul * this.growthMul(t);
-    if (a.goldScaling) {
-      const p = this.player(t.owner);
-      if (p) dmg += Math.min(a.goldScaling.max, p.gold * a.goldScaling.pct);
-    }
+    const p = this.player(t.owner);
+    let dmg = this.rng.range(a.dmg[0], a.dmg[1]) * t.dmgMul * this.growthMul(t) * typeDamageMul(a.type, p?.mods);
+    if (a.goldScaling && p) dmg += Math.min(a.goldScaling.max, p.gold * a.goldScaling.pct);
     let crit = false;
     if (a.crit && this.rng.chance(a.crit.chance)) {
       dmg *= a.crit.mult;
       crit = true;
+    } else if (p?.mods.crit && this.rng.chance(p.mods.crit)) {
+      dmg *= 2;
+      crit = true;
     }
     return { dmg, crit };
+  }
+
+  private rangeOf(t: Tower, a: AttackDef): number {
+    return attackRange(a.range, this.player(t.owner)?.mods);
   }
 
   private updateTowers(): void {
@@ -1307,7 +1367,7 @@ export class Game {
   private updateAttack(t: Tower, a: AttackDef): void {
     t.cd -= DT * t.spdMul;
     if (t.cd > 0) return;
-    const targets = this.acquire(t, a.range, a.targets, a.multishot ?? 1);
+    const targets = this.acquire(t, this.rangeOf(t, a), a.targets, a.multishot ?? 1);
     if (targets.length === 0) {
       t.cd = 0;
       return;
@@ -1325,15 +1385,16 @@ export class Game {
       const len = Math.hypot(dx, dy) || 1;
       const ux = dx / len;
       const uy = dy / len;
-      const ex = t.cx + ux * a.range;
-      const ey = t.cy + uy * a.range;
+      const range = this.rangeOf(t, a);
+      const ex = t.cx + ux * range;
+      const ey = t.cy + uy * range;
       this.emit({ e: 'line', t: this.time, tw: t.id, x: ex, y: ey });
       for (const c of [...this.lanes[t.lane].creeps]) {
         if (!c.alive || c.lane !== t.lane || !this.canTarget(a.targets, c)) continue;
         const px = c.x - t.cx;
         const py = c.y - t.cy;
         const along = px * ux + py * uy;
-        if (along < 0 || along > a.range) continue;
+        if (along < 0 || along > range) continue;
         const off = Math.abs(px * uy - py * ux);
         if (off > 0.7) continue;
         this.hitCreep(t, a, c, dmg, crit);
@@ -1433,7 +1494,8 @@ export class Game {
     }
     if (a.groundFire && !air) {
       const g = a.groundFire;
-      this.fires.push({ lane, x, y, r: g.radius, dps: g.dps * t.dmgMul, until: this.time + g.dur, owner: t.owner, tower: t.id });
+      const burn = this.player(t.owner)?.mods.burn ?? 1;
+      this.fires.push({ lane, x, y, r: g.radius, dps: g.dps * t.dmgMul * burn, until: this.time + g.dur, owner: t.owner, tower: t.id });
       this.emit({ e: 'fire', t: this.time, lane, x, y, r: g.radius, until: this.time + g.dur });
     }
   }
@@ -1448,7 +1510,8 @@ export class Game {
   private updateBeam(t: Tower, a: AttackDef): void {
     const beam = a.beam!;
     let target = t.beamTarget >= 0 ? this.creeps.get(t.beamTarget) : undefined;
-    const r2 = a.range * a.range;
+    const range = this.rangeOf(t, a);
+    const r2 = range * range;
     if (target && (!target.alive || target.lane !== t.lane || (target.x - t.cx) ** 2 + (target.y - t.cy) ** 2 > r2)) {
       const died = !target.alive;
       target = undefined;
@@ -1456,7 +1519,7 @@ export class Game {
       t.beamRamp = died ? Math.max(1, t.beamRamp * beam.keepOnKill) : 1;
     }
     if (!target) {
-      const found = this.acquire(t, a.range, a.targets, 1)[0];
+      const found = this.acquire(t, range, a.targets, 1)[0];
       if (!found) {
         t.beamRamp = Math.max(1, t.beamRamp - DT);
         return;
@@ -1464,7 +1527,7 @@ export class Game {
       target = found;
       t.beamTarget = found.id;
     }
-    const dps = a.dmg[0] * t.dmgMul * t.spdMul * this.growthMul(t) * t.beamRamp;
+    const dps = a.dmg[0] * t.dmgMul * t.spdMul * this.growthMul(t) * t.beamRamp * typeDamageMul(a.type, this.player(t.owner)?.mods);
     this.damage(target, dps * DT, a.type, t.owner, t.id, a.onHit);
     t.beamRamp = Math.min(beam.maxMult, t.beamRamp + beam.ramp * DT);
   }
@@ -1488,7 +1551,7 @@ export class Game {
         else this.applyRawDamage(c, c.hp + c.shield + 1, t.owner, t.id);
         continue;
       }
-      if (pu.dmg) this.damage(c, pu.dmg * t.dmgMul * this.growthMul(t), pu.type ?? 'magic', t.owner, t.id, pu.onHit);
+      if (pu.dmg) this.damage(c, pu.dmg * t.dmgMul * this.growthMul(t) * typeDamageMul(pu.type ?? 'magic', this.player(t.owner)?.mods), pu.type ?? 'magic', t.owner, t.id, pu.onHit);
       if (pu.onHit && c.alive) this.applyOnHit(c, pu.onHit, t.owner, t);
       if (pu.pull && c.alive && !c.def.immune && !c.def.boss) this.pushBack(c, pu.pull);
     }
@@ -1535,7 +1598,7 @@ export class Game {
   }
 
   netPlayers(): NetPlayer[] {
-    return this.players.map(({ goldMul: _g, ...p }) => ({ ...p, gold: Math.floor(p.gold), damage: Math.round(p.damage) }));
+    return this.players.map(({ goldMul: _g, mods: _m, ...p }) => ({ ...p, gold: Math.floor(p.gold), damage: Math.round(p.damage) }));
   }
 
   waveState(): WaveState {
@@ -1561,6 +1624,8 @@ export class Game {
       rubble: this.lanes.map((l) => ({ lane: l.index, cells: [...l.rubble] })),
       wave: this.waveState(),
       endlessDefs: this.endlessDefs,
+      races: this.rules.races?.length ? this.rules.races : undefined,
+      mods: Object.fromEntries(this.players.filter((p) => Object.keys(p.mods).length).map((p) => [p.id, p.mods])),
     };
   }
 

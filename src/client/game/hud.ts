@@ -9,6 +9,7 @@ import { DIFFICULTIES, type Difficulty, type EndStats, type GameSettings, RACE_M
 import { TARGET_MODES, type CreepDef, type TargetMode, type TowerDef } from '../../shared/types';
 import { ChatBox } from '../ui/chat';
 import { clear, fmt, h, hideTooltip, toast, tooltip } from '../ui/dom';
+import type { EndAction } from '../local';
 import { openHelp } from '../ui/help';
 import { icon } from '../ui/icons';
 import { openModal, type ModalHandle } from '../ui/modal';
@@ -40,6 +41,9 @@ export class Hud {
   private selKey = '';
   private sbKey = '';
   private lastLives = -1;
+  private pauseBtn?: HTMLButtonElement;
+  private speedBtn?: HTMLButtonElement;
+  private pausedBanner?: HTMLElement;
   buildButtons: { key: string; def: TowerDef | null; action: () => void }[] = [];
   selectionKeys: { key: string; action: () => void }[] = [];
   private raceModal: ModalHandle | null = null;
@@ -53,7 +57,7 @@ export class Hud {
   ) {
     this.root = root;
     clear(root);
-    this.chat = new ChatBox(view.net, true);
+    this.chat = new ChatBox(view.link, true);
     this.minimap = h('canvas', { width: 170, height: 120 }) as HTMLCanvasElement;
     this.build();
   }
@@ -91,9 +95,17 @@ export class Hud {
       sound.style.opacity = audio.muted ? '0.45' : '1';
     });
     sound.style.opacity = audio.muted ? '0.45' : '1';
+    const local = v.link.local;
+    if (local) {
+      this.pauseBtn = h('button', { class: 'btn icon-btn', title: 'Pause (P)', onclick: () => v.togglePause() }, icon('pause', 17)) as HTMLButtonElement;
+      this.speedBtn = h('button', { class: 'btn icon-btn speed-btn', title: 'Game speed (F)', onclick: () => v.cycleSpeed() }, '1×') as HTMLButtonElement;
+      this.pausedBanner = h('div', { class: 'paused-banner hidden' }, h('b', null, 'Paused'), h('span', null, 'Press P to resume'));
+    }
     const topRight = h(
       'div',
       { class: 'top-right' },
+      this.pauseBtn ?? null,
+      this.speedBtn ?? null,
       h('button', { class: 'btn icon-btn', title: 'How to play (F1)', onclick: () => openHelp() }, icon('help', 17)),
       sound,
       h('button', { class: 'btn icon-btn', title: 'Settings', onclick: () => this.openSettings() }, icon('gear', 17)),
@@ -113,6 +125,7 @@ export class Hud {
     const card = h('div', { class: 'command-card' }, this.buildPanel, this.selectPanel);
 
     this.root.append(top, this.preview, topRight, this.scoreboard, this.chat.el, mini, card);
+    if (this.pausedBanner) this.root.append(this.pausedBanner);
     if (this.state.you < 0) this.root.append(h('div', { class: 'panel spectating' }, 'Spectating — enjoy the show'));
     this.chat.onCommand = (cmd, args) => v.chatCommand(cmd, args);
   }
@@ -632,7 +645,7 @@ export class Hud {
     );
   }
 
-  showEnd(victory: boolean, stats: EndStats, isHost: boolean): void {
+  showEnd(victory: boolean, stats: EndStats, isHost: boolean, actions?: EndAction[], extra?: HTMLElement): void {
     hideTooltip();
     this.endModal?.close();
     const rows = stats.players.map((p) =>
@@ -655,17 +668,33 @@ export class Hud {
         null,
         h('h2', { style: { color: victory ? '#9cf09f' : '#ff9aa4', fontSize: '34px' } }, victory ? 'Victory!' : 'The north has fallen'),
         h('div', { class: 'sub' }, victory ? `You held the line against all ${stats.wave} waves with ${stats.lives} lives to spare. (${mins} min)` : `You reached wave ${stats.wave}. (${mins} min) Try another race combination!`),
+        extra ?? null,
         h('table', { class: 'end-table' }, h('thead', null, h('tr', null, ...['Player', 'Races', 'Kills', 'Leaks', 'Damage', 'Gold', 'MVP tower'].map((t) => h('th', null, t)))), h('tbody', null, rows)),
         h(
           'div',
           { class: 'field-row', style: { justifyContent: 'flex-end' } },
           h('button', { class: 'btn', onclick: () => this.endModal?.close() }, 'Look around'),
-          isHost ? h('button', { class: 'btn primary', onclick: () => this.view.playAgain() }, 'Back to lobby') : h('span', { class: 'muted', style: { alignSelf: 'center' } }, 'The host can take everyone back to the lobby.'),
-          h('button', { class: 'btn danger', onclick: () => this.view.leave() }, 'Main menu'),
+          ...(actions
+            ? actions.map((a) => h('button', { class: `btn ${a.kind ?? ''}`, onclick: () => (this.endModal?.close(), a.run()) }, a.label))
+            : [
+                isHost ? h('button', { class: 'btn primary', onclick: () => this.view.playAgain() }, 'Back to lobby') : h('span', { class: 'muted', style: { alignSelf: 'center' } }, 'The host can take everyone back to the lobby.'),
+                h('button', { class: 'btn danger', onclick: () => this.view.leave() }, 'Main menu'),
+              ]),
         ),
       ),
       { dismissable: true },
     );
+  }
+
+  /** Pause / speed buttons of single-player games. */
+  refreshLocalControls(): void {
+    const local = this.view.link.local;
+    if (!local || !this.pauseBtn || !this.speedBtn || !this.pausedBanner) return;
+    this.pauseBtn.replaceChildren(icon(local.paused ? 'play' : 'pause', 17));
+    this.pauseBtn.title = local.paused ? 'Resume (P)' : 'Pause (P)';
+    this.speedBtn.textContent = `${local.speed}×`;
+    this.speedBtn.classList.toggle('on', local.speed > 1);
+    this.pausedBanner.classList.toggle('hidden', !local.paused);
   }
 
   closeAll(): void {

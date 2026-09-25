@@ -274,6 +274,71 @@ input:focus {
   font-size: 14px;
 }
 
+.menu-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.solo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.solo-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 12px 11px;
+  border-radius: 12px;
+  border: 1px solid rgba(124, 200, 255, 0.22);
+  background: linear-gradient(180deg, rgba(40, 62, 98, 0.7), rgba(22, 34, 58, 0.8));
+  color: #cfe0f4;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s, background 0.12s;
+  font: inherit;
+}
+
+.solo-tile:hover {
+  transform: translateY(-1px);
+  border-color: rgba(143, 211, 255, 0.6);
+  background: linear-gradient(180deg, rgba(52, 80, 124, 0.8), rgba(26, 42, 70, 0.85));
+}
+
+.solo-tile b {
+  color: #fff;
+  font-size: 14.5px;
+}
+
+.solo-tile span:last-child {
+  font-size: 11.5px;
+  color: #9fb6d4;
+  line-height: 1.35;
+}
+
+.solo-tile .solo-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(124, 200, 255, 0.14);
+  color: #8fd3ff;
+  margin-bottom: 4px;
+}
+
+.solo-tile.accent {
+  border-color: rgba(255, 211, 90, 0.45);
+}
+
+.solo-tile.accent .solo-icon {
+  background: rgba(255, 211, 90, 0.16);
+  color: #ffd35a;
+}
+
 .menu-card {
   padding: 22px;
   display: flex;
@@ -1737,4 +1802,44 @@ input:focus {
   .setup-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.speed-btn {
+  font-weight: 800;
+  font-size: 13px;
+  min-width: 38px;
+}
+
+.speed-btn.on {
+  color: #ffd35a;
+  border-color: rgba(255, 211, 90, 0.55);
+}
+
+.paused-banner {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 34px;
+  border-radius: 16px;
+  background: rgba(8, 14, 26, 0.72);
+  border: 1px solid rgba(143, 211, 255, 0.35);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.paused-banner b {
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: 0.14em;
+  color: #e6f4ff;
+}
+
+.paused-banner span {
+  color: #9fb6d4;
+  font-size: 13px;
 }

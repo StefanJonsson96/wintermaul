@@ -1,6 +1,6 @@
 import { PLAYER_COLORS } from '../../shared/constants';
 import type { ChatLine } from '../../shared/protocol';
-import type { Net } from '../net';
+import type { Link } from '../local';
 import { h } from './dom';
 
 /** Chat log + input. In game the log fades out and the input opens with Enter. */
@@ -13,7 +13,7 @@ export class ChatBox {
   private isOpen = false;
 
   constructor(
-    private net: Net,
+    private link: Link,
     private inGame: boolean,
   ) {
     this.log = h('div', { class: 'chat-log' });
@@ -62,7 +62,7 @@ export class ChatBox {
       const [cmd, ...args] = text.slice(1).split(/\s+/);
       if (this.onCommand(cmd.toLowerCase(), args)) return;
     }
-    this.net.send({ type: 'chat', text });
+    this.link.send({ type: 'chat', text });
   }
 
   add(line: ChatLine): void {

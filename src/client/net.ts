@@ -57,6 +57,12 @@ export class Net {
     };
   }
 
+  /** Every message, whatever its type. */
+  onAny(fn: (msg: ServerMsg) => void): void {
+    if (!this.handlers.has('*')) this.handlers.set('*', new Set());
+    this.handlers.get('*')!.add(fn);
+  }
+
   on<T extends ServerMsg['type']>(type: T, fn: Handler<T>): void {
     if (!this.handlers.has(type)) this.handlers.set(type, new Set());
     this.handlers.get(type)!.add(fn as (m: ServerMsg) => void);

@@ -152,6 +152,8 @@ export interface Snapshot {
   w: [number, number, number, number]; // wave n, phase index, countdown*10, lives
   b: number[]; // beams: towerId, creepId, ramp*100
   ev: GameEvent[];
+  /** Game speed when it is not 1 (0 = paused), so clients can keep their clocks in step. */
+  sp?: number;
 }
 
 export const PHASES: WaveState['phase'][] = ['setup', 'build', 'wave', 'victory', 'defeat'];

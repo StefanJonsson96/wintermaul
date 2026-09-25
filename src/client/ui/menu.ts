@@ -5,17 +5,33 @@ import { openHelp } from './help';
 import { clear, h, toast } from './dom';
 import { icon } from './icons';
 
+/** Single-player entry points, provided by the app. */
+export interface SoloActions {
+  tutorial(): void;
+  campaign(): void;
+  skirmish(): void;
+  /** Short progress line for the campaign tile, e.g. "Stage 3 · 7 stars". */
+  campaignProgress(): string;
+}
+
 export class MenuScreen {
   private roomList!: HTMLElement;
   private status!: HTMLElement;
   private nameInput!: HTMLInputElement;
   private codeInput!: HTMLInputElement;
+  private campaignSub!: HTMLElement;
 
   constructor(
     private root: HTMLElement,
     private net: Net,
+    private solo: SoloActions,
   ) {
     this.render();
+  }
+
+  /** Called whenever the menu is shown again. */
+  refresh(): void {
+    this.campaignSub.textContent = this.solo.campaignProgress();
   }
 
   private render(): void {
@@ -36,10 +52,25 @@ export class MenuScreen {
     this.status = h('div', { class: 'conn-status' }, 'Connecting…');
     this.roomList = h('div', { class: 'room-list' });
 
+    const tile = (ic: string, title: string, sub: HTMLElement | string, onclick: () => void, extra = '') =>
+      h('button', { class: `solo-tile ${extra}`, onclick: () => (this.commitName(), onclick()) }, h('span', { class: 'solo-icon' }, icon(ic, 22)), h('b', null, title), typeof sub === 'string' ? h('span', null, sub) : sub);
+    this.campaignSub = h('span', null, '');
+    const soloCard = h(
+      'div',
+      { class: 'panel menu-card' },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, h('h3', null, 'Single player'), h('span', { class: 'muted', style: { fontSize: '12px' } }, 'Runs in your browser · pause anytime')),
+      h(
+        'div',
+        { class: 'solo-grid' },
+        tile('book', 'Tutorial', 'Learn to maze in 8 waves', () => this.solo.tutorial(), 'accent'),
+        tile('map', 'Campaign', this.campaignSub, () => this.solo.campaign()),
+        tile('sword', 'Skirmish', 'Solo game, classic rules', () => this.solo.skirmish()),
+      ),
+    );
     const card = h(
       'div',
       { class: 'panel menu-card' },
-      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, h('h3', null, 'Play'), this.status),
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, h('h3', null, 'Multiplayer'), this.status),
       h('div', null, h('div', { class: 'label' }, 'Name'), h('div', { class: 'field-row' }, this.nameInput)),
       h(
         'div',
@@ -85,7 +116,7 @@ export class MenuScreen {
         'div',
         { class: 'menu-wrap' },
         brand,
-        card,
+        h('div', { class: 'menu-cards' }, soloCard, card),
         h('div', { class: 'menu-footer' }, h('span', null, 'Inspired by Wintermaul for Warcraft III. All art is procedurally drawn.'), h('span', null, 'Tip: add ?room=CODE to the URL to share an invite.')),
       ),
     );

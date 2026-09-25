@@ -70,6 +70,8 @@ export class ClientState {
   private endless = new Map<string, CreepDef>();
   private timeline: GameEvent[] = [];
   private offset: number | null = null;
+  /** Game seconds per real second (0 while paused), as announced by the server. */
+  speed = 1;
   lastServerTime = 0;
   renderTime = 0;
   /** Receives every event: immediately for state events, at render time for visual ones. */
@@ -158,10 +160,17 @@ export class ClientState {
   // ───────────────────────────────────────── network input
   applySnapshot(s: Snapshot, localNow: number): void {
     const now = localNow / 1000;
-    const est = s.t - now;
-    if (this.offset === null || Math.abs(est - this.offset) > 0.6) this.offset = est;
+    const sp = s.sp ?? 1;
+    const k = Math.max(1, sp);
+    if (sp !== this.speed) {
+      // the clock changed pace: re-anchor it so the picture stays continuous
+      this.speed = sp;
+      this.offset = this.renderTime + INTERP_DELAY * k - sp * now;
+    }
+    const est = s.t - sp * now;
+    if (this.offset === null || Math.abs(est - this.offset) > 0.6 * k) this.offset = est;
     else if (est > this.offset) this.offset += (est - this.offset) * 0.15;
-    else this.offset -= 0.0015;
+    else this.offset -= 0.0015 * k;
     this.lastServerTime = s.t;
 
     // events first (spawns must exist before their samples)
@@ -290,9 +299,10 @@ export class ClientState {
   // ───────────────────────────────────────── per frame
   update(localNow: number, dt: number): void {
     if (this.offset === null) return;
-    const target = localNow / 1000 + this.offset - INTERP_DELAY;
+    const k = Math.max(1, this.speed);
+    const target = (this.speed * localNow) / 1000 + this.offset - INTERP_DELAY * k;
     // never run ahead of the data we have, never jump backwards
-    this.renderTime = Math.max(this.renderTime, Math.min(target, this.lastServerTime + 0.25));
+    this.renderTime = Math.max(this.renderTime, Math.min(target, this.lastServerTime + 0.25 * k));
 
     if (this.timeline.length) {
       let i = 0;
@@ -300,7 +310,7 @@ export class ClientState {
         const ev = this.timeline[i];
         if (ev.t > this.renderTime) break;
         // effects more than half a second old (e.g. after the tab was hidden) are skipped
-        if (ev.t >= this.renderTime - 0.5) this.onEvent(ev, true);
+        if (ev.t >= this.renderTime - 0.5 * k) this.onEvent(ev, true);
       }
       if (i > 0) this.timeline.splice(0, i);
     }

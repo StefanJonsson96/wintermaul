@@ -1,7 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { WebSocket } from 'ws';
-import { DT, MAX_PLAYERS, SNAPSHOT_EVERY } from '../shared/constants';
-import { TOWERS } from '../shared/data/races';
+import { MAX_PLAYERS } from '../shared/constants';
 import {
   type ChatLine,
   type ClientMsg,
@@ -15,6 +14,7 @@ import {
 } from '../shared/protocol';
 import { Bot } from '../shared/sim/bot';
 import { Game } from '../shared/sim/game';
+import { endStats, GameRunner } from '../shared/sim/runner';
 import { botName, cleanChat, cleanName, randomName } from './names';
 
 export interface Session {
@@ -57,7 +57,7 @@ export class Room {
   spectators = new Set<Session>();
   game: Game | null = null;
   chat: ChatLine[] = [];
-  private acc = 0;
+  private runner: GameRunner | null = null;
   private last = performance.now();
   emptySince = 0;
   private endStats: { victory: boolean; stats: EndStats } | null = null;
@@ -314,7 +314,6 @@ export class Room {
   }
 
   /** Testing shortcuts, only when the server runs with WINTERWARD_DEV=1. */
-  private speed = 1;
   private devCommand(slot: number, text: string): boolean {
     const [cmd, arg] = text.slice(1).split(/\s+/);
     const n = Number(arg);
@@ -331,7 +330,7 @@ export class Room {
         g.devSkipTo(Number.isFinite(n) ? n : g.wave + 1);
         break;
       case 'speed':
-        this.speed = Math.max(0.25, Math.min(8, Number.isFinite(n) ? n : 1));
+        this.runner?.setSpeed(Math.max(0.25, Math.min(8, Number.isFinite(n) ? n : 1)));
         break;
       default:
         return false;
@@ -350,9 +349,10 @@ export class Room {
       if (seat?.isBot) seat.bot = new Bot(id, seed + id);
       if (seat && !seat.isBot && !seat.connected) this.game!.setConnected(id, false);
     });
+    const bots = this.seats.flatMap((seat) => (seat?.bot ? [seat.bot] : []));
+    this.runner = new GameRunner(this.game, bots, (s) => this.broadcast({ type: 'snap', s }), () => this.finishGame());
     this.state = 'playing';
     this.endStats = null;
-    this.acc = 0;
     this.last = performance.now();
     const state = this.game.fullState();
     for (const m of this.members()) send(m, { type: 'start', you: this.seatOf(m), state });
@@ -365,6 +365,7 @@ export class Room {
   backToLobby(): void {
     this.state = 'lobby';
     this.game = null;
+    this.runner = null;
     this.endStats = null;
     for (const seat of this.seats) if (seat) seat.ready = seat.isBot;
     // spectators take free seats when possible
@@ -382,47 +383,15 @@ export class Room {
   }
 
   update(now: number): void {
-    if (this.state !== 'playing' || !this.game) {
-      this.last = now;
-      return;
-    }
-    this.acc += (Math.min(250, now - this.last) / 1000) * this.speed;
+    const elapsed = now - this.last;
     this.last = now;
-    let steps = 0;
-    while (this.acc >= DT && steps < 5 * Math.ceil(this.speed)) {
-      this.acc -= DT;
-      steps++;
-      for (const seat of this.seats) seat?.bot?.update(this.game);
-      this.game.step();
-      if (this.game.tick % SNAPSHOT_EVERY === 0 || this.game.over) {
-        this.broadcast({ type: 'snap', s: this.game.snapshot() });
-      }
-      if (this.game.over) {
-        this.finishGame();
-        break;
-      }
-    }
+    if (this.state === 'playing') this.runner?.advance(elapsed);
   }
 
   private finishGame(): void {
     const g = this.game!;
     const victory = g.phase === 'victory';
-    const stats: EndStats = {
-      wave: g.wave,
-      lives: Math.max(0, g.lives),
-      duration: g.time,
-      players: g.players.map((p) => {
-        let mvp: string | null = null;
-        let best = -1;
-        for (const t of g.towers.values()) {
-          if (t.owner === p.id && t.damage > best) {
-            best = t.damage;
-            mvp = TOWERS[t.def.id].name;
-          }
-        }
-        return { id: p.id, name: p.name, color: p.color, races: p.races, kills: p.kills, leaks: p.leaks, damage: Math.round(p.damage), goldEarned: Math.round(p.goldEarned), mvpTower: mvp };
-      }),
-    };
+    const stats = endStats(g);
     this.state = 'ended';
     this.endStats = { victory, stats };
     this.broadcast({ type: 'gameOver', victory, stats });

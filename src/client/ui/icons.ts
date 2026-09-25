@@ -18,6 +18,12 @@ const PATHS: Record<string, string> = {
   bolt: 'M13 2L4 14h7l-1 8 9-12h-7z',
   shield: 'M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z',
   eye: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  pause: 'M7 4h4v16H7zM13 4h4v16h-4z',
+  fast: 'M3 5l9 7-9 7zM12 5l9 7-9 7z',
+  map: 'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15',
+  book: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5M8 7h7',
+  sword: 'M14.5 3H21v6.5L10 20.5l-3.5-3.5zM4 16l4 4M3 21l3-3',
+  lock: 'M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3',
 };
 
 export function icon(name: string, size = 18, extra = ''): SVGSVGElement {

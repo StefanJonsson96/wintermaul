@@ -6,7 +6,7 @@ import { RACE_BY_ID, TOWERS } from '../../shared/data/races';
 import { CELL_TOWER, LaneGrid } from '../../shared/grid';
 import { type ChatLine, DIFFICULTIES, type EndStats, type FullState, type GameCommand, type GameEvent, type GameSettings, RACE_MODES, type Snapshot } from '../../shared/protocol';
 import type { TargetMode, TowerDef } from '../../shared/types';
-import type { Net } from '../net';
+import { type Link, SPEEDS } from '../local';
 import { toast } from '../ui/dom';
 import { openHelp } from '../ui/help';
 import { anyModalOpen } from '../ui/modal';
@@ -61,7 +61,7 @@ export class GameView {
   private leakToastAt = 0;
 
   constructor(
-    readonly net: Net,
+    readonly link: Link,
     private canvas: HTMLCanvasElement,
     hudRoot: HTMLElement,
     full: FullState,
@@ -112,11 +112,28 @@ export class GameView {
 
   onGameOver(victory: boolean, stats: EndStats): void {
     audio.play(victory ? 'victory' : 'defeat');
-    setTimeout(() => this.hud.showEnd(victory, stats, this.isHost()), victory ? 600 : 1200);
+    const local = this.link.local;
+    setTimeout(() => this.alive && this.hud.showEnd(victory, stats, this.isHost(), local?.endActions(victory, stats), local?.endNote?.(victory, stats)), victory ? 600 : 1200);
+  }
+
+  togglePause(): void {
+    const local = this.link.local;
+    if (!local || this.state.wave.phase === 'victory' || this.state.wave.phase === 'defeat') return;
+    local.togglePause();
+    audio.play('click', 0.5);
+    this.hud.refreshLocalControls();
+  }
+
+  cycleSpeed(): void {
+    const local = this.link.local;
+    if (!local) return;
+    local.setSpeed(SPEEDS[(SPEEDS.indexOf(local.speed) + 1) % SPEEDS.length]);
+    audio.play('click', 0.5);
+    this.hud.refreshLocalControls();
   }
 
   send(cmd: GameCommand): void {
-    this.net.send({ type: 'cmd', cmd });
+    this.link.send({ type: 'cmd', cmd });
   }
 
   // ───────────────────────────────────────── actions (from HUD / input)
@@ -207,15 +224,17 @@ export class GameView {
   }
 
   confirmLeave(): void {
-    if (this.state.wave.phase === 'victory' || this.state.wave.phase === 'defeat' || confirm('Leave the game? Your towers keep fighting without you.')) this.leave();
+    const over = this.state.wave.phase === 'victory' || this.state.wave.phase === 'defeat';
+    const question = this.link.local ? 'Leave the game? This single-player game will end.' : 'Leave the game? Your towers keep fighting without you.';
+    if (over || confirm(question)) this.leave();
   }
 
   leave(): void {
-    this.net.send({ type: 'leave' });
+    this.link.send({ type: 'leave' });
   }
 
   playAgain(): void {
-    this.net.send({ type: 'playAgain' });
+    this.link.send({ type: 'playAgain' });
   }
 
   setPref<K extends keyof Prefs>(k: K, v: Prefs[K]): void {
@@ -256,6 +275,11 @@ export class GameView {
   private worldOfCreep(c: CCreep): Point {
     const p = toWorld(c.rlane, c.x, c.y);
     return { x: p.x, y: p.y - c.def.size * 1.1 - creepLift(c.def) };
+  }
+
+  /** Converts a duration in game time to real time at the current game speed. */
+  private realSeconds(gameSeconds: number): number {
+    return gameSeconds / Math.max(1, this.state.speed);
   }
 
   private muzzle(t: CTower): Point {
@@ -307,7 +331,7 @@ export class GameView {
           fx.burst(target.x, target.y + 0.3, color, 4, { speed: 1.5, life: 0.3, size: 0.05, z: 0.2 });
         } else {
           const getter = () => (c && s.isVisible(c) && s.creeps.has(c.id) ? this.worldOfCreep(c) : null);
-          fx.projectile(ev.k, from, getter, ev.d, color, now, (p) => fx.burst(p.x, p.y + 0.3, color, 3, { speed: 1.2, life: 0.25, size: 0.05, z: 0.3 }));
+          fx.projectile(ev.k, from, getter, this.realSeconds(ev.d), color, now, (p) => fx.burst(p.x, p.y + 0.3, color, 3, { speed: 1.2, life: 0.25, size: 0.05, z: 0.3 }));
         }
         return;
       }
@@ -330,9 +354,9 @@ export class GameView {
         } else {
           const kind = t.tdef.attack?.proj ?? 'bolt';
           const first = s.creeps.get(ev.ids[0]);
-          fx.projectile(kind, pts[0], () => (first && s.creeps.has(first.id) ? this.worldOfCreep(first) : null), ev.d, color, now);
+          fx.projectile(kind, pts[0], () => (first && s.creeps.has(first.id) ? this.worldOfCreep(first) : null), this.realSeconds(ev.d), color, now);
           const rest = pts.slice(1);
-          setTimeout(() => this.alive && fx.lightning(rest, color, performance.now() / 1000, 0.09), ev.d * 1000);
+          setTimeout(() => this.alive && fx.lightning(rest, color, performance.now() / 1000, 0.09), this.realSeconds(ev.d) * 1000);
           audio.play(`shot:${kind}`, this.gainAt(pts[0]) * 0.45);
         }
         for (const p of pts.slice(1)) fx.burst(p.x, p.y + 0.3, color, 3, { speed: 1.2, life: 0.3, size: 0.05 });
@@ -767,7 +791,7 @@ export class GameView {
     const w = this.mouseWorld();
     if (e.altKey) {
       const lane = nearestLane(w.y, s.laneOwners.length);
-      this.net.send({ type: 'ping', lane, x: w.x - LANE_MARGIN_X, y: w.y - laneOriginY(lane) });
+      this.link.send({ type: 'ping', lane, x: w.x - LANE_MARGIN_X, y: w.y - laneOriginY(lane) });
       return;
     }
     if (this.buildDef) {
@@ -855,6 +879,14 @@ export class GameView {
     }
     if (k === 'g') {
       this.toggleReady();
+      return;
+    }
+    if (k === 'p' && this.link.local) {
+      this.togglePause();
+      return;
+    }
+    if (k === 'f' && this.link.local) {
+      this.cycleSpeed();
       return;
     }
     if (k === 'l') {

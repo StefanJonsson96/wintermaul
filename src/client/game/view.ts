@@ -3,7 +3,7 @@ import { audio } from '../audio';
 import { LANE_H, LANE_MARGIN_X, LANE_W, laneOriginY, PLAYER_COLORS } from '../../shared/constants';
 import { RACE_BY_ID, TOWERS } from '../../shared/data/races';
 import { CELL_TOWER, LaneGrid } from '../../shared/grid';
-import type { ChatLine, EndStats, FullState, GameCommand, GameEvent, GameSettings, Snapshot } from '../../shared/protocol';
+import { type ChatLine, DIFFICULTIES, type EndStats, type FullState, type GameCommand, type GameEvent, type GameSettings, RACE_MODES, type Snapshot } from '../../shared/protocol';
 import type { TargetMode, TowerDef } from '../../shared/types';
 import type { Net } from '../net';
 import { toast } from '../ui/dom';
@@ -14,16 +14,18 @@ import { BUILD_KEYS, Hud } from './hud';
 import { nearestLane, toLane, toWorld } from './layout';
 import { type Ghost, Renderer, type ViewState } from './renderer';
 import { type CCreep, ClientState, type CTower } from './state';
+import { TipDeck } from './tips';
 
 interface Prefs {
   showPath: boolean;
   showGrid: boolean;
   edgePan: boolean;
   hq: boolean;
+  tips: boolean;
 }
 
 function loadPrefs(): Prefs {
-  const d: Prefs = { showPath: true, showGrid: true, edgePan: false, hq: true };
+  const d: Prefs = { showPath: true, showGrid: true, edgePan: false, hq: true, tips: true };
   try {
     return { ...d, ...JSON.parse(localStorage.getItem('winterward.prefs') ?? '{}') };
   } catch {
@@ -40,6 +42,7 @@ export class GameView {
   hover = -1;
   buildDef: TowerDef | null = null;
   prefs = loadPrefs();
+  private tips = new TipDeck();
   private ghost: Ghost | null = null;
   private ghostKey = '';
   private pings: ViewState['pings'] = [];
@@ -273,6 +276,13 @@ export class GameView {
     return d <= 1 ? 1 : Math.max(0, 1 - (d - 1) * 1.5);
   }
 
+  private showTip(delayMs: number): void {
+    if (!this.prefs.tips || this.state.you < 0) return;
+    setTimeout(() => {
+      if (this.alive && this.prefs.tips) this.hud.chat.tip(this.tips.next());
+    }, delayMs);
+  }
+
   private onEvent(ev: GameEvent, _late: boolean): void {
     const s = this.state;
     const now = performance.now() / 1000;
@@ -416,7 +426,7 @@ export class GameView {
         const n = c.def.boss ? 40 : 10;
         fx.burst(p.x, p.y, a, n, { speed: 2.4, life: 0.7, size: 0.07 + c.def.size * 0.06, kind: 'shard', add: false, up: 2.5 });
         fx.burst(p.x, p.y, d, Math.round(n / 2), { speed: 1.8, life: 0.5, size: 0.05 });
-        fx.burst(p.x, p.y + 0.3, shade2(b), 3, { speed: 0.6, life: 0.7, size: 0.14, kind: 'smoke', add: false, grav: 0, up: 0.4 });
+        fx.burst(p.x, p.y + 0.3, b, 3, { speed: 0.6, life: 0.7, size: 0.14, kind: 'smoke', add: false, grav: 0, up: 0.4 });
         if (c.def.boss) fx.ring(p.x, p.y + c.def.size, 3, '#ffffff', now, 0.8, 0.12, true);
         if (ev.by === s.you && ev.gold > 0) fx.text(p.x, p.y - 0.2, `+${ev.gold}`, '#ffd35a', now, c.def.boss ? 18 : 13);
         if (ev.exec) fx.text(p.x, p.y - 0.8, 'Executed', '#c9a6ff', now, 12);
@@ -473,6 +483,7 @@ export class GameView {
           audio.play(boss ? 'boss' : 'wave', 0.8);
         } else if (ev.phase === 'build' && ev.n > 0) {
           toast(`Wave ${ev.n} cleared!`, 'good', 2000);
+          if (ev.n < 15 || ev.n % 2 === 0) this.showTip(4000);
         }
         return;
       }
@@ -513,9 +524,12 @@ export class GameView {
         }
         this.hud.closeSetup();
         const st = ev.settings;
-        this.hud.banner('The march begins', `${capital(st.difficulty)} · ${st.raceMode === 'pick' ? 'All Pick' : st.raceMode === 'double' ? 'All Pick Double' : st.raceMode === 'random' ? 'All Random' : 'Same Race'}${st.endless ? ' · Endless' : ''} · ${ev.lives} lives`);
+        const rules = `${DIFFICULTIES[st.difficulty].label} · ${RACE_MODES[st.raceMode].label}${st.endless ? ' · Endless' : ''} · ${ev.lives} ${ev.lives === 1 ? 'life' : 'lives'}`;
+        this.hud.banner('The march begins', rules);
+        this.hud.chat.system(`Rules: ${rules}.`);
         audio.play('wave', 0.6);
         if ((st.raceMode === 'pick' || st.raceMode === 'double') && s.you >= 0) setTimeout(() => this.alive && this.state.me && this.state.me.lumber > 0 && this.hud.openRacePicker(), 400);
+        this.showTip(9000);
         return;
       }
     }
@@ -865,10 +879,3 @@ export class GameView {
   }
 }
 
-function capital(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function shade2(hex: string): string {
-  return hex;
-}

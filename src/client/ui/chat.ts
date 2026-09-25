@@ -81,6 +81,15 @@ export class ChatBox {
     this.add({ from: -1, name: '', text, color: -1, t: Date.now() });
   }
 
+  /** A gameplay tip, shown only to this player. */
+  tip(text: string): void {
+    const row = h('div', { class: 'chat-line tip' }, h('span', { class: 'tag' }, 'TIP'), text);
+    this.log.append(row);
+    while (this.log.children.length > 80) this.log.firstElementChild?.remove();
+    this.log.scrollTop = this.log.scrollHeight;
+    if (this.inGame) setTimeout(() => row.classList.add('faded'), 16000);
+  }
+
   clear(): void {
     this.log.replaceChildren();
   }

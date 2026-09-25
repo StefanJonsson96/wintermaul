@@ -357,7 +357,9 @@ export class Room {
     const state = this.game.fullState();
     for (const m of this.members()) send(m, { type: 'start', you: this.seatOf(m), state });
     this.broadcastRoom();
-    this.system(`The game begins! ${DIFFICULTIES[this.settings.difficulty].label}, ${RACE_MODES[this.settings.raceMode].label}${this.settings.endless ? ', endless' : ''}.`);
+    const chooser = this.game.phase === 'setup' ? this.seats[this.game.chooser] : null;
+    if (chooser) this.system(`The game begins! ${chooser.name} chooses the rules.`);
+    else this.system(`The game begins! ${DIFFICULTIES[this.settings.difficulty].label}, ${RACE_MODES[this.settings.raceMode].label}${this.settings.endless ? ', endless' : ''}.`);
   }
 
   backToLobby(): void {

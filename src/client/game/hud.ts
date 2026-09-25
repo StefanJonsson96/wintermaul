@@ -288,23 +288,19 @@ export class Hud {
     this.buildKey = key;
     clear(this.buildGrid);
     this.buildButtons = [];
-    const add = (btn: HTMLElement, key: string, def: TowerDef | null, action: () => void) => {
-      const hk = BUILD_KEYS[this.buildButtons.length];
+    // tower buttons get Q, W, E… in order; the race button always has L, so the tower
+    // hotkeys don't shift when lumber arrives mid-wave
+    let towerKeys = 0;
+    const add = (btn: HTMLElement, key: string | null, def: TowerDef | null, action: () => void) => {
+      const hk = key ?? BUILD_KEYS[towerKeys++];
       if (hk) btn.append(h('span', { class: 'hk' }, hk.toUpperCase()));
-      this.buildButtons.push({ key: hk ?? key, def, action });
+      this.buildButtons.push({ key: hk ?? '', def, action });
       this.buildGrid.append(btn);
     };
-    const canPickRace = me.lumber > 0 && me.races.length < 3 && s.wave.phase !== 'setup';
-    if (canPickRace) {
-      const btn = h('button', { class: 'cmd-btn special', onclick: () => this.openRacePicker() }, me.races.length === 0 ? 'Choose\nrace' : 'New race\n/ Legend');
-      btn.style.whiteSpace = 'pre-line';
-      tooltip(btn, () => (me.races.length === 0 ? 'Spend your lumber on a race to start building.' : 'You have lumber! Spend it on a new race, or on a Legend tower of a race you own.'));
-      add(btn, 'l', null, () => this.openRacePicker());
-    }
     for (const r of me.races) {
       const def = TOWERS[`${r}_1`];
       const btn = this.towerButton(def, def.cost, me.gold >= def.cost, this.view.buildDef?.id === def.id);
-      add(btn, '', def, () => this.view.startBuild(def.id));
+      add(btn, null, def, () => this.view.startBuild(def.id));
     }
     for (const r of me.races) {
       const def = TOWERS[`${r}_L`];
@@ -312,7 +308,14 @@ export class Hud {
       const affordable = me.gold >= def.cost && me.lumber >= (def.lumber ?? 1);
       const btn = this.towerButton(def, def.cost, affordable, this.view.buildDef?.id === def.id);
       btn.append(h('span', { class: 'cost lumber' }, `${def.lumber}🪵`.replace('🪵', 'L')));
-      add(btn, '', def, () => this.view.startBuild(def.id));
+      add(btn, null, def, () => this.view.startBuild(def.id));
+    }
+    const canPickRace = me.lumber > 0 && me.races.length < 3 && s.wave.phase !== 'setup';
+    if (canPickRace) {
+      const btn = h('button', { class: 'cmd-btn special', onclick: () => this.openRacePicker() }, me.races.length === 0 ? 'Choose\nrace' : 'New race\n/ Legend');
+      btn.style.whiteSpace = 'pre-line';
+      tooltip(btn, () => (me.races.length === 0 ? 'Spend your lumber on a race to start building.' : 'You have lumber! Spend it on a new race, or on a Legend tower of a race you own.'));
+      add(btn, 'l', null, () => this.openRacePicker());
     }
     if (this.buildButtons.length === 0) {
       this.buildGrid.append(h('div', { class: 'muted', style: { gridColumn: '1 / -1', padding: '8px', width: '240px' } }, s.wave.phase === 'setup' ? 'Waiting for the rules…' : 'No races yet.'));
@@ -622,6 +625,7 @@ export class Hud {
           row('Show build grid', toggle(v.prefs.showGrid, (on) => v.setPref('showGrid', on))),
           row('Scroll at screen edges', toggle(v.prefs.edgePan, (on) => v.setPref('edgePan', on))),
           row('High quality effects', toggle(v.prefs.hq, (on) => v.setPref('hq', on))),
+          row('Tips in chat', toggle(v.prefs.tips, (on) => v.setPref('tips', on))),
         ),
       ),
       { narrow: true },

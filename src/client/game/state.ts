@@ -168,7 +168,9 @@ export class ClientState {
     for (const ev of s.ev) this.receiveEvent(ev);
 
     const c = s.c;
+    const present = new Set<number>();
     for (let i = 0; i < c.length; i += SNAP_CREEP_STRIDE) {
+      present.add(c[i]);
       const cr = this.creeps.get(c[i]);
       if (!cr) continue;
       cr.samples.push({ t: s.t, lane: c[i + 1], x: c[i + 2] / 100, y: c[i + 3] / 100 });
@@ -178,6 +180,8 @@ export class ClientState {
       cr.flags = c[i + 5];
       cr.lane = c[i + 1];
     }
+    // every live creep is in every snapshot: anything missing is gone (e.g. removed by a dev skip)
+    for (const cr of this.creeps.values()) if (!present.has(cr.id) && cr.deadAt === Infinity) cr.deadAt = s.t;
     const p = s.p;
     this.players.forEach((pl, i) => {
       pl.gold = p[i * 6];
@@ -276,8 +280,11 @@ export class ClientState {
         break;
       }
     }
-    if (TIMELINE_EVENTS.has(ev.e)) this.timeline.push(ev);
-    else this.onEvent(ev, false);
+    if (TIMELINE_EVENTS.has(ev.e)) {
+      this.timeline.push(ev);
+      // a hidden tab stops rendering: don't hoard effects nobody will see
+      if (this.timeline.length > 4000) this.timeline.splice(0, 2000);
+    } else this.onEvent(ev, false);
   }
 
   // ───────────────────────────────────────── per frame
@@ -292,7 +299,8 @@ export class ClientState {
       for (; i < this.timeline.length; i++) {
         const ev = this.timeline[i];
         if (ev.t > this.renderTime) break;
-        this.onEvent(ev, true);
+        // effects more than half a second old (e.g. after the tab was hidden) are skipped
+        if (ev.t >= this.renderTime - 0.5) this.onEvent(ev, true);
       }
       if (i > 0) this.timeline.splice(0, i);
     }

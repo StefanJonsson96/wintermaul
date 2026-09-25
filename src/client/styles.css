@@ -589,6 +589,24 @@ input:focus {
   font-style: italic;
 }
 
+.chat-line.tip {
+  color: #cfe0f2;
+}
+
+.chat-line.tip .tag {
+  display: inline-block;
+  margin-right: 7px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 16px;
+  vertical-align: 1px;
+  color: #0b1424;
+  background: #8fd3ff;
+}
+
 .chat-input {
   margin-top: 10px;
   display: flex;

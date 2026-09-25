@@ -519,6 +519,27 @@ export class Game {
     if (p) p.connected = connected;
   }
 
+  // ─────────────────────────────────────────────────────────────── dev helpers (WINTERWARD_DEV=1 only)
+  devGold(playerId: number, amount: number): void {
+    const p = this.player(playerId);
+    if (p) p.gold += amount;
+  }
+
+  devLumber(playerId: number, amount: number): void {
+    const p = this.player(playerId);
+    if (p) p.lumber += amount;
+  }
+
+  devSkipTo(n: number): void {
+    if (this.phase === 'setup') this.lockSetup();
+    for (const c of [...this.creeps.values()]) this.removeCreep(c);
+    this.spawnQueue = [];
+    this.wave = Math.max(0, n - 1);
+    this.phase = 'build';
+    this.countdown = 2;
+    this.emit({ e: 'wave', t: this.time, n: this.wave, phase: 'build' });
+  }
+
   // ─────────────────────────────────────────────────────────────── main loop
   step(): void {
     if (this.over) return;

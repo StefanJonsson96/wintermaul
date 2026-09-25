@@ -159,7 +159,7 @@ export class ClientState {
   applySnapshot(s: Snapshot, localNow: number): void {
     const now = localNow / 1000;
     const est = s.t - now;
-    if (this.offset === null || Math.abs(est - this.offset) > 2) this.offset = est;
+    if (this.offset === null || Math.abs(est - this.offset) > 0.6) this.offset = est;
     else if (est > this.offset) this.offset += (est - this.offset) * 0.15;
     else this.offset -= 0.0015;
     this.lastServerTime = s.t;

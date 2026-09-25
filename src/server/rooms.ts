@@ -234,6 +234,7 @@ export class Room {
       case 'chat': {
         const text = cleanChat(msg.text);
         if (!text) return;
+        if (process.env.WINTERWARD_DEV === '1' && text.startsWith('-') && this.devCommand(slot, text)) return;
         const seat = slot >= 0 ? this.seats[slot]! : null;
         this.pushChat({ from: slot, name: seat?.name ?? s.name, text, color: seat?.color ?? -1, t: Date.now() });
         return;
@@ -312,6 +313,33 @@ export class Room {
     }
   }
 
+  /** Testing shortcuts, only when the server runs with WINTERWARD_DEV=1. */
+  private speed = 1;
+  private devCommand(slot: number, text: string): boolean {
+    const [cmd, arg] = text.slice(1).split(/\s+/);
+    const n = Number(arg);
+    const g = this.game;
+    if (!g || slot < 0) return false;
+    switch (cmd) {
+      case 'gold':
+        g.devGold(slot, Number.isFinite(n) ? n : 1000);
+        break;
+      case 'lumber':
+        g.devLumber(slot, Number.isFinite(n) ? n : 1);
+        break;
+      case 'wave':
+        g.devSkipTo(Number.isFinite(n) ? n : g.wave + 1);
+        break;
+      case 'speed':
+        this.speed = Math.max(0.25, Math.min(8, Number.isFinite(n) ? n : 1));
+        break;
+      default:
+        return false;
+    }
+    this.system(`[dev] ${text}`);
+    return true;
+  }
+
   // ─────────────────────────────────────────────── game lifecycle
   startGame(): void {
     const players = this.seats.flatMap((seat, id) => (seat ? [{ id, name: seat.name, color: seat.color, isBot: seat.isBot }] : []));
@@ -356,10 +384,10 @@ export class Room {
       this.last = now;
       return;
     }
-    this.acc += Math.min(250, now - this.last) / 1000;
+    this.acc += (Math.min(250, now - this.last) / 1000) * this.speed;
     this.last = now;
     let steps = 0;
-    while (this.acc >= DT && steps < 5) {
+    while (this.acc >= DT && steps < 5 * Math.ceil(this.speed)) {
       this.acc -= DT;
       steps++;
       for (const seat of this.seats) seat?.bot?.update(this.game);

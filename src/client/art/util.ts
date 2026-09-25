@@ -67,15 +67,51 @@ export function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, 
   ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
 }
 
-export function glow(ctx: Ctx, x: number, y: number, r: number, color: string, strength = 0.55): void {
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-  g.addColorStop(0, alpha(color, strength));
-  g.addColorStop(0.45, alpha(color, strength * 0.35));
+const glowCache = new Map<string, HTMLCanvasElement>();
+function glowSprite(color: string): HTMLCanvasElement {
+  let c = glowCache.get(color);
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g2 = c.getContext('2d')!;
+  const g = g2.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, alpha(color, 1));
+  g.addColorStop(0.45, alpha(color, 0.35));
   g.addColorStop(1, alpha(color, 0));
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
+  g2.fillStyle = g;
+  g2.fillRect(0, 0, 128, 128);
+  glowCache.set(color, c);
+  return c;
+}
+
+/** Soft radial light (cached sprite, cheap enough to call every frame). */
+export function glow(ctx: Ctx, x: number, y: number, r: number, color: string, strength = 0.55): void {
+  if (strength <= 0 || r <= 0) return;
+  const prev = ctx.globalAlpha;
+  ctx.globalAlpha = prev * Math.min(1, strength);
+  ctx.drawImage(glowSprite(color), x - r, y - r, r * 2, r * 2);
+  ctx.globalAlpha = prev;
+}
+
+const sphereCache = new Map<string, HTMLCanvasElement>();
+/** Cached shaded sphere for per-frame drawing. */
+export function sphereFast(ctx: Ctx, x: number, y: number, r: number, color: string): void {
+  let c = sphereCache.get(color);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const s = c.getContext('2d')!;
+    const g = s.createRadialGradient(32 - 11, 32 - 13, 3, 32, 32, 31);
+    g.addColorStop(0, shade(color, 0.65));
+    g.addColorStop(0.5, color);
+    g.addColorStop(1, shade(color, -0.45));
+    s.fillStyle = g;
+    s.beginPath();
+    s.arc(32, 32, 31, 0, Math.PI * 2);
+    s.fill();
+    sphereCache.set(color, c);
+  }
+  ctx.drawImage(c, x - r, y - r, r * 2, r * 2);
 }
 
 /** A shaded sphere with a specular highlight. */

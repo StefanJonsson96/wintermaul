@@ -190,7 +190,8 @@ export class Renderer {
       if (mine && (view.showGrid || view.ghost)) this.drawGrid(lane, view.ghost ? 0.22 : 0.1);
       if (view.showPath && (mine || view.ghost?.lane === lane)) {
         const path = view.ghost?.lane === lane && view.ghost.path ? view.ghost.path : state.path(lane);
-        this.drawPath(lane, path, now, view.ghost?.lane === lane ? (view.ghost.ok ? '#8fe8ff' : '#ff7a8a') : color, mine ? 0.9 : 0.5);
+        const strong = view.ghost?.lane === lane || state.wave.phase === 'build' || state.wave.phase === 'setup';
+        this.drawPath(lane, path, now, view.ghost?.lane === lane ? (view.ghost.ok ? '#8fe8ff' : '#ff7a8a') : color, (mine ? 0.9 : 0.5) * (strong ? 1 : 0.4));
       }
     }
 
@@ -460,9 +461,12 @@ export class Renderer {
       ctx.scale(-1, 1);
       ctx.translate(-x, 0);
     }
-    if (this.state.renderTime - c.hitAt < 0.08) ctx.filter = 'brightness(1.8)';
     ctx.drawImage(f, dx, dy, s, s);
-    ctx.filter = 'none';
+    if (this.state.renderTime - c.hitAt < 0.08) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.45;
+      ctx.drawImage(f, dx, dy, s, s);
+    }
     ctx.restore();
     const r = c.def.size;
     const cy = y - r * 1.1 - lift;

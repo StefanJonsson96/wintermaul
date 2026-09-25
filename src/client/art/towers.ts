@@ -2,6 +2,7 @@ import type { TowerDef } from '../../shared/types';
 import {
   alpha,
   crystal,
+  sphereFast,
   cylinder,
   ellipse,
   glow,
@@ -40,7 +41,7 @@ const BASE_MATERIAL: Record<string, string> = {
   prism: '#6b5b7c',
 };
 
-const TIER_SCALE = [0, 0.8, 0.88, 0.97, 1.06, 1.14];
+const TIER_SCALE = [0, 0.9, 0.98, 1.07, 1.16, 1.24];
 
 export interface TowerMeta {
   /** Height (cells) above the footprint centre where shots come from. */
@@ -136,69 +137,69 @@ export function towerHead(def: TowerDef): HTMLCanvasElement | null {
 function drawBase(ctx: Ctx, def: TowerDef): void {
   const mat = BASE_MATERIAL[def.race] ?? '#6b7890';
   const t = def.tier;
-  const w = 104 + Math.min(t, 4) * 3;
-  const h = 86 + Math.min(t, 4) * 3;
+  const w = 92 + Math.min(t, 4) * 3;
+  const h = 64 + Math.min(t, 4) * 2;
   const x = GX - w / 2;
-  const y = GY - h / 2 - 4;
+  const y = GY - h / 2 + 6;
+  const r = 24;
   // soft contact shadow
   ctx.save();
-  ctx.fillStyle = 'rgba(10,18,34,0.38)';
-  ctx.filter = 'blur(6px)';
-  roundRect(ctx, x - 4, y + 10, w + 8, h + 8, 26);
+  ctx.fillStyle = 'rgba(10,18,34,0.34)';
+  ctx.filter = 'blur(5px)';
+  roundRect(ctx, x - 2, y + 12, w + 8, h + 6, r + 4);
   ctx.fill();
   ctx.restore();
   // front face
-  const fh = 13;
-  ctx.fillStyle = shade(mat, -0.38);
-  roundRect(ctx, x, y + fh, w, h, 22);
+  const fh = 12;
+  ctx.fillStyle = shade(mat, -0.4);
+  roundRect(ctx, x, y + fh, w, h, r);
   ctx.fill();
   outline(ctx, 2.2);
   // top face
   const g = ctx.createLinearGradient(0, y, 0, y + h);
-  g.addColorStop(0, shade(mat, 0.2));
-  g.addColorStop(1, shade(mat, -0.08));
+  g.addColorStop(0, shade(mat, 0.22));
+  g.addColorStop(1, shade(mat, -0.06));
   ctx.fillStyle = g;
-  roundRect(ctx, x, y, w, h, 22);
+  roundRect(ctx, x, y, w, h, r);
   ctx.fill();
   outline(ctx, 2.2);
-  // stone joints / planks
+  // stone joints
   const rnd = seeded(def.id.length * 131 + def.tier * 17);
-  ctx.strokeStyle = shade(mat, -0.22, 0.55);
-  ctx.lineWidth = 1.4;
-  for (let i = 0; i < 5; i++) {
-    const yy = y + 14 + rnd() * (h - 28);
-    const xx = x + 12 + rnd() * (w - 44);
+  ctx.strokeStyle = shade(mat, -0.22, 0.5);
+  ctx.lineWidth = 1.3;
+  for (let i = 0; i < 4; i++) {
+    const yy = y + 12 + rnd() * (h - 24);
+    const xx = x + 14 + rnd() * (w - 44);
     ctx.beginPath();
     ctx.moveTo(xx, yy);
-    ctx.lineTo(xx + 14 + rnd() * 16, yy + (rnd() - 0.5) * 3);
+    ctx.lineTo(xx + 10 + rnd() * 14, yy + (rnd() - 0.5) * 3);
     ctx.stroke();
   }
   // snow dusting on the rim
-  ctx.fillStyle = 'rgba(235,244,255,0.55)';
+  ctx.fillStyle = 'rgba(235,244,255,0.6)';
   ctx.beginPath();
-  ctx.ellipse(x + w * 0.28, y + 7, w * 0.18, 4, -0.05, 0, Math.PI * 2);
-  ctx.ellipse(x + w * 0.72, y + 6, w * 0.12, 3.5, 0.05, 0, Math.PI * 2);
+  ctx.ellipse(x + w * 0.3, y + 6, w * 0.17, 3.5, -0.05, 0, Math.PI * 2);
+  ctx.ellipse(x + w * 0.72, y + 5, w * 0.1, 3, 0.05, 0, Math.PI * 2);
   ctx.fill();
   // tier studs on the front face
   const studs = t === 5 ? 0 : t;
   for (let i = 0; i < studs; i++) {
-    const sx = GX + (i - (studs - 1) / 2) * 15;
+    const sx = GX + (i - (studs - 1) / 2) * 14;
     const sy = y + h + fh * 0.55;
     ctx.fillStyle = shade(def.art.glow, 0.1);
     ctx.beginPath();
-    ctx.arc(sx, sy, 3.6, 0, Math.PI * 2);
+    ctx.arc(sx, sy, 3.4, 0, Math.PI * 2);
     ctx.fill();
     outline(ctx, 1.2);
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.beginPath();
-    ctx.arc(sx - 1, sy - 1, 1.2, 0, Math.PI * 2);
+    ctx.arc(sx - 1, sy - 1, 1.1, 0, Math.PI * 2);
     ctx.fill();
   }
   if (t === 5) {
-    // legend: golden trim and crown studs
     ctx.strokeStyle = '#ffd35a';
     ctx.lineWidth = 2.4;
-    roundRect(ctx, x + 3, y + 3, w - 6, h - 6, 19);
+    roundRect(ctx, x + 3, y + 3, w - 6, h - 6, r - 3);
     ctx.stroke();
     ctx.fillStyle = '#ffd35a';
     star(ctx, GX, y + h + fh * 0.55, 6, 2.6, 5);
@@ -746,7 +747,7 @@ export function drawTowerAnim(ctx: Ctx, def: TowerDef, x: number, y: number, tim
       ctx.globalCompositeOperation = 'lighter';
       glow(ctx, x, oy, r * 3.2, a.glow, 0.4 + flash * 0.4);
       ctx.restore();
-      sphere(ctx, x, oy, r, a.secondary, false);
+      sphereFast(ctx, x, oy, r, a.secondary);
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
       ellipse(ctx, x - r * 0.35, oy - r * 0.4, r * 0.25, r * 0.18);
       ctx.fill();
@@ -758,7 +759,7 @@ export function drawTowerAnim(ctx: Ctx, def: TowerDef, x: number, y: number, tim
         const ang = time * 2.4 + seed;
         const mx = x + Math.cos(ang) * r * 1.9;
         const my = oy + Math.sin(ang) * r * 0.6;
-        sphere(ctx, mx, my, r * 0.22, a.glow, false);
+        sphereFast(ctx, mx, my, r * 0.22, a.glow);
       }
       break;
     }
@@ -784,7 +785,7 @@ export function drawTowerAnim(ctx: Ctx, def: TowerDef, x: number, y: number, tim
         ctx.stroke();
       }
       ctx.restore();
-      sphere(ctx, x, ty, 0.12 * s, shade(a.glow, 0.3), false);
+      sphereFast(ctx, x, ty, 0.12 * s, a.glow);
       break;
     }
     case 'pool': {
@@ -816,7 +817,7 @@ export function drawTowerAnim(ctx: Ctx, def: TowerDef, x: number, y: number, tim
       ctx.restore();
       if ((a.shape === 'spire' || a.shape === 'shrine') && def.tier >= 2) {
         const oy = ty - 0.12 + Math.sin(time * 1.8 + seed) * 0.04;
-        sphere(ctx, x, oy, 0.09 * s + def.tier * 0.012, a.glow, false);
+        sphereFast(ctx, x, oy, 0.09 * s + def.tier * 0.012, a.glow);
       }
       break;
     }
@@ -887,22 +888,36 @@ export function drawTowerAnim(ctx: Ctx, def: TowerDef, x: number, y: number, tim
   }
 }
 
-function flame(ctx: Ctx, x: number, baseY: number, w: number, h: number, outer: string, inner: string): void {
-  const g = ctx.createLinearGradient(0, baseY, 0, baseY - h);
+const flameCache = new Map<string, HTMLCanvasElement>();
+function flameSprite(outer: string, inner: string): HTMLCanvasElement {
+  const key = outer + inner;
+  let c = flameCache.get(key);
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = 32;
+  c.height = 64;
+  const f = c.getContext('2d')!;
+  const g = f.createLinearGradient(0, 64, 0, 0);
   g.addColorStop(0, alpha(inner, 0.9));
   g.addColorStop(0.5, alpha(outer, 0.75));
   g.addColorStop(1, alpha(outer, 0));
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.moveTo(x - w, baseY);
-  ctx.quadraticCurveTo(x - w * 1.1, baseY - h * 0.5, x, baseY - h);
-  ctx.quadraticCurveTo(x + w * 1.1, baseY - h * 0.5, x + w, baseY);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = 'rgba(255,250,220,0.8)';
-  ctx.beginPath();
-  ctx.ellipse(x, baseY - h * 0.15, w * 0.4, h * 0.2, 0, 0, Math.PI * 2);
-  ctx.fill();
+  f.fillStyle = g;
+  f.beginPath();
+  f.moveTo(0, 64);
+  f.quadraticCurveTo(-2, 32, 16, 0);
+  f.quadraticCurveTo(34, 32, 32, 64);
+  f.closePath();
+  f.fill();
+  f.fillStyle = 'rgba(255,250,220,0.8)';
+  f.beginPath();
+  f.ellipse(16, 55, 6, 12, 0, 0, Math.PI * 2);
+  f.fill();
+  flameCache.set(key, c);
+  return c;
+}
+
+function flame(ctx: Ctx, x: number, baseY: number, w: number, h: number, outer: string, inner: string): void {
+  ctx.drawImage(flameSprite(outer, inner), x - w, baseY - h, w * 2, h);
 }
 
 /** Tower portrait for buttons and panels. */

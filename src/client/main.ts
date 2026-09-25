@@ -52,9 +52,10 @@ function boot(): void {
     skirmish: () => startLocal(skirmishOptions()),
     campaignProgress: () => progressLine(loadSave()),
   });
-  const lobby = new LobbyScreen($('#screen-lobby'), net);
+  const lobby = new LobbyScreen($('#screen-lobby'), net, () => sendTalents());
   const playStage = (stage: Stage) => startLocal(stageOptions(stage, loadSave(), { play: playStage, map: leaveTo('campaign') }));
-  const campaign = new CampaignScreen($('#screen-campaign'), { play: playStage, back: () => show('menu') });
+  const sendTalents = () => net.send({ type: 'talents', loadout: loadSave().talents });
+  const campaign = new CampaignScreen($('#screen-campaign'), { play: playStage, back: () => show('menu'), talentsChanged: sendTalents });
 
   function show(screen: Screen): void {
     for (const s of ['menu', 'lobby', 'campaign', 'game'] as const) $(`#screen-${s}`).classList.toggle('hidden', screen !== s);
@@ -83,6 +84,7 @@ function boot(): void {
     switch (msg.type) {
       case 'welcome':
         menu.setName(msg.name);
+        sendTalents();
         if (pendingJoin) {
           net.send({ type: 'join', code: pendingJoin });
           pendingJoin = null;

@@ -171,6 +171,7 @@ export class MenuScreen {
           h('span', { class: 'code' }, r.code),
           h('span', { class: 'name' }, r.name),
           h('span', { class: 'pill' }, `${r.players}/${r.max}`),
+          r.settings.talents ? h('span', { class: 'pill', title: 'Campaign talents are on' }, icon('rune', 12)) : null,
           r.state === 'lobby' ? h('span', { class: 'pill' }, DIFFICULTIES[r.settings.difficulty].label) : h('span', { class: 'pill live' }, 'In game · watch'),
         ),
       );

@@ -13,7 +13,8 @@ import {
   type ServerMsg,
 } from '../shared/protocol';
 import { Bot } from '../shared/sim/bot';
-import { Game } from '../shared/sim/game';
+import { Game, type GameRules } from '../shared/sim/game';
+import { type Loadout, modsFromLoadout, sanitizeLoadout, totalSpent } from '../shared/talents';
 import { endStats, GameRunner } from '../shared/sim/runner';
 import { botName, cleanChat, cleanName, randomName } from './names';
 
@@ -26,6 +27,7 @@ export interface Session {
   lastSeen: number;
   budget: number;
   budgetAt: number;
+  talents: Loadout;
 }
 
 interface Seat {
@@ -39,7 +41,15 @@ interface Seat {
 }
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-const DEFAULT_SETTINGS: GameSettings = { difficulty: 'normal', raceMode: 'pick', endless: false };
+const DEFAULT_SETTINGS: GameSettings = { difficulty: 'normal', raceMode: 'pick', endless: false, talents: false };
+
+/** Applies the lobby settings a client asked for, ignoring anything invalid. */
+function applySettings(to: GameSettings, st: Partial<GameSettings>): void {
+  if (st.difficulty && st.difficulty in DIFFICULTIES) to.difficulty = st.difficulty;
+  if (st.raceMode && st.raceMode in RACE_MODES) to.raceMode = st.raceMode;
+  if (typeof st.endless === 'boolean') to.endless = st.endless;
+  if (typeof st.talents === 'boolean') to.talents = st.talents;
+}
 
 function send(s: Session | null | undefined, msg: ServerMsg | string): void {
   if (!s?.ws || s.ws.readyState !== 1) return;
@@ -194,7 +204,7 @@ export class Room {
       you,
       players: this.seats.flatMap((seat, id) =>
         seat
-          ? [{ id, name: seat.name, color: seat.color, isBot: seat.isBot, ready: seat.ready || seat.isBot, host: !!seat.session && seat.session === this.host, connected: seat.connected || seat.isBot }]
+          ? [{ id, name: seat.name, color: seat.color, isBot: seat.isBot, ready: seat.ready || seat.isBot, host: !!seat.session && seat.session === this.host, connected: seat.connected || seat.isBot, talents: seat.session ? totalSpent(seat.session.talents) : 0 }]
           : [],
       ),
     };
@@ -266,10 +276,7 @@ export class Room {
       }
       case 'settings': {
         if (!isHost || this.state !== 'lobby') return;
-        const st = msg.settings ?? {};
-        if (st.difficulty && st.difficulty in DIFFICULTIES) this.settings.difficulty = st.difficulty;
-        if (st.raceMode && st.raceMode in RACE_MODES) this.settings.raceMode = st.raceMode;
-        if (typeof st.endless === 'boolean') this.settings.endless = st.endless;
+        applySettings(this.settings, msg.settings ?? {});
         if (typeof msg.public === 'boolean') this.isPublic = msg.public;
         this.broadcastRoom();
         return;
@@ -344,7 +351,9 @@ export class Room {
     const players = this.seats.flatMap((seat, id) => (seat ? [{ id, name: seat.name, color: seat.color, isBot: seat.isBot }] : []));
     if (players.length === 0) return;
     const seed = (Math.random() * 2 ** 31) | 0;
-    this.game = new Game({ ...this.settings }, players, seed);
+    const rules: GameRules = {};
+    if (this.settings.talents) rules.mods = Object.fromEntries(this.seats.flatMap((seat, id) => (seat?.session ? [[id, modsFromLoadout(seat.session.talents)]] : [])));
+    this.game = new Game({ ...this.settings }, players, seed, { rules });
     this.seats.forEach((seat, id) => {
       if (seat?.isBot) seat.bot = new Bot(id, seed + id);
       if (seat && !seat.isBot && !seat.connected) this.game!.setConnected(id, false);
@@ -360,6 +369,7 @@ export class Room {
     const chooser = this.game.phase === 'setup' ? this.seats[this.game.chooser] : null;
     if (chooser) this.system(`The game begins! ${chooser.name} chooses the rules.`);
     else this.system(`The game begins! ${DIFFICULTIES[this.settings.difficulty].label}, ${RACE_MODES[this.settings.raceMode].label}${this.settings.endless ? ', endless' : ''}.`);
+    if (this.settings.talents) this.system('Campaign talents are on: everyone fights with the talents they earned.');
   }
 
   backToLobby(): void {
@@ -415,6 +425,7 @@ export class Lobby {
       lastSeen: Date.now(),
       budget: 60,
       budgetAt: Date.now(),
+      talents: {},
     };
     this.sessions.set(s.id, s);
     this.byToken.set(s.token, s);
@@ -476,12 +487,7 @@ export class Lobby {
       case 'create': {
         this.leaveRoom(s);
         const room = new Room(this.makeCode(), cleanName(msg.name) || `${s.name}'s game`, !!msg.public);
-        if (msg.settings) {
-          const st = msg.settings;
-          if (st.difficulty && st.difficulty in DIFFICULTIES) room.settings.difficulty = st.difficulty;
-          if (st.raceMode && st.raceMode in RACE_MODES) room.settings.raceMode = st.raceMode;
-          if (typeof st.endless === 'boolean') room.settings.endless = st.endless;
-        }
+        if (msg.settings) applySettings(room.settings, msg.settings);
         this.rooms.set(room.code, room);
         room.join(s);
         return;
@@ -514,6 +520,10 @@ export class Lobby {
         this.leaveRoom(s);
         send(s, { type: 'left' });
         send(s, { type: 'rooms', rooms: this.listRooms() });
+        return;
+      case 'talents':
+        s.talents = sanitizeLoadout(msg.loadout);
+        if (s.room?.state === 'lobby') s.room.broadcastRoom();
         return;
       default:
         s.room?.handle(s, msg);

@@ -2623,3 +2623,53 @@ kbd {
 .cb-enemy.air {
   border-color: rgba(143, 212, 255, 0.45);
 }
+
+.tag.talent {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #d9c6ff;
+  border-color: rgba(199, 155, 255, 0.45);
+  background: rgba(199, 155, 255, 0.12);
+}
+
+.lobby-talents {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.lobby-talents.on {
+  border-color: rgba(199, 155, 255, 0.45);
+  background: rgba(199, 155, 255, 0.08);
+}
+
+.lobby-talents .tl-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.lobby-talents .tl-state {
+  min-width: 34px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.lobby-talents.on .tl-state {
+  color: #d9c6ff;
+}
+
+.dot-badge {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c79bff;
+  box-shadow: 0 0 8px #c79bff;
+}

@@ -1,5 +1,7 @@
 import { MAX_PLAYERS, PLAYER_COLORS } from '../../shared/constants';
 import type { ChatLine, RoomState } from '../../shared/protocol';
+import { loadSave, unspent } from '../campaign/save';
+import { openTalents } from '../campaign/tree';
 import type { Net } from '../net';
 import { ChatBox } from './chat';
 import { clear, h, toast } from './dom';
@@ -13,6 +15,7 @@ export class LobbyScreen {
   constructor(
     private root: HTMLElement,
     private net: Net,
+    private talentsChanged: () => void,
   ) {
     this.chat = new ChatBox(net, false);
     clear(root);
@@ -107,6 +110,7 @@ export class LobbyScreen {
             h('div', { class: 'n' }, p.name, mine ? h('span', { class: 'muted' }, ' (you)') : null),
             h('div', { class: 's' }, `${color.name}${!p.connected ? ' · reconnecting…' : ''}`),
           ),
+          room.settings.talents && !p.isBot ? h('span', { class: 'tag talent', title: `${p.talents} runestones in talents` }, icon('rune', 12), String(p.talents)) : null,
           p.host ? h('span', { class: 'tag host' }, 'Host') : null,
           p.isBot ? h('span', { class: 'tag wait' }, 'Bot') : p.host ? null : p.ready ? h('span', { class: 'tag ready' }, 'Ready') : h('span', { class: 'tag wait' }, 'Not ready'),
           isHost && !mine ? h('button', { class: 'btn small ghost', title: 'Remove', onclick: () => this.net.send({ type: 'kick', slot: p.id }) }, '✕') : null,
@@ -122,6 +126,34 @@ export class LobbyScreen {
       `when the game begins, ${chooser ? chooser.name : 'the first player'} has 30 seconds to choose the difficulty and race mode (like Red in the classic). Then everyone picks a race — or goes `,
       h('b', null, 'random'),
       ' for bonus gold. Wave 1 arrives 45 seconds later.',
+    );
+
+    const talentsOn = !!room.settings.talents;
+    const talents = h(
+      'div',
+      { class: `lobby-talents${talentsOn ? ' on' : ''}` },
+      isHost
+        ? h('div', { class: `switch${talentsOn ? ' on' : ''}`, onclick: () => this.net.send({ type: 'settings', settings: { talents: !talentsOn } }) })
+        : h('span', { class: 'tl-state' }, talentsOn ? 'On' : 'Off'),
+      h(
+        'div',
+        { class: 'tl-text' },
+        h('b', null, 'Campaign talents'),
+        h('span', { class: 'muted' }, talentsOn ? 'Everyone fights with the talents they earned in the campaign.' : 'Off: everyone plays on equal terms, the classic way.'),
+      ),
+      h(
+        'button',
+        {
+          class: 'btn small ghost',
+          onclick: () => {
+            const save = loadSave();
+            openTalents(save, () => this.talentsChanged());
+          },
+        },
+        icon('star', 14),
+        'My talents',
+        unspent(loadSave()) > 0 ? h('span', { class: 'dot-badge' }) : null,
+      ),
     );
 
     const humans = room.players.filter((p) => !p.isBot);
@@ -157,6 +189,6 @@ export class LobbyScreen {
     }
     actions.append(h('div', { style: { flex: '1' } }), h('button', { class: 'btn danger', onclick: () => this.net.send({ type: 'leave' }) }, icon('exit', 16), 'Leave'));
 
-    this.main.append(head, slots, info, actions);
+    this.main.append(head, slots, talents, info, actions);
   }
 }

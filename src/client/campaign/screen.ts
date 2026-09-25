@@ -16,6 +16,8 @@ import { openTalents } from './tree';
 export interface CampaignActions {
   play(stage: Stage, save: CampaignSave): void;
   back(): void;
+  /** The talent loadout changed (multiplayer rooms want to know). */
+  talentsChanged?(): void;
 }
 
 /** Plain-language lines for a stage's rules, beyond its named mutators. */
@@ -63,7 +65,11 @@ export class CampaignScreen {
     this.map.onSelect = (s) => this.select(s);
     this.brief = h('aside', { class: 'panel camp-brief' });
     this.purse = h('div', { class: 'camp-purse' });
-    this.talentBtn = h('button', { class: 'btn primary', onclick: () => openTalents(this.save, () => this.refresh()) }, icon('star', 16), 'Talents') as HTMLButtonElement;
+    const changed = () => {
+      this.refresh();
+      this.actions.talentsChanged?.();
+    };
+    this.talentBtn = h('button', { class: 'btn primary', onclick: () => openTalents(this.save, changed) }, icon('star', 16), 'Talents') as HTMLButtonElement;
     root.append(
       h(
         'div',

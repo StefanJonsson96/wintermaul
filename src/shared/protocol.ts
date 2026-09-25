@@ -8,6 +8,8 @@ export interface GameSettings {
   difficulty: Difficulty;
   raceMode: RaceMode;
   endless: boolean;
+  /** Players bring the talents they earned in the campaign (a lobby option, off by default). */
+  talents?: boolean;
 }
 
 export const DIFFICULTIES: Record<Difficulty, { label: string; lives: number; perPlayer: number; hp: number; blurb: string }> = {
@@ -185,6 +187,8 @@ export interface LobbyPlayer {
   ready: boolean;
   host: boolean;
   connected: boolean;
+  /** Runestones the player has spent on talents. */
+  talents: number;
 }
 
 export interface RoomInfo {
@@ -232,7 +236,9 @@ export type ClientMsg =
   | { type: 'chat'; text: string }
   | { type: 'ping'; lane: number; x: number; y: number }
   | { type: 'cmd'; cmd: GameCommand }
-  | { type: 'playAgain' };
+  | { type: 'playAgain' }
+  /** The player's campaign talents (used when the room allows them). */
+  | { type: 'talents'; loadout: Record<string, number> };
 
 export type ServerMsg =
   | { type: 'welcome'; id: string; token: string; name: string }

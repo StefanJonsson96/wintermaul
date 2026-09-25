@@ -152,8 +152,8 @@ const DEFS: Def[] = [
   // ─────────────────────────────── FROSTBORN ───────────────────────────────
   {
     id: 'frost_1', name: 'Frost Shard', race: 'frost', tier: 1, cost: 10, buildTime: 1,
-    attack: { dmg: [7, 9], cd: 1.0, range: 4.5, type: 'elemental', targets: 'both', proj: 'frost', projSpeed: 11,
-      onHit: { slow: { pct: 0.15, dur: 1.5 } } },
+    attack: { dmg: [8, 11], cd: 1.0, range: 4.5, type: 'elemental', targets: 'both', proj: 'frost', projSpeed: 11,
+      onHit: { slow: { pct: 0.2, dur: 1.5 } } },
     desc: 'A humming shard of ice. Slows what it hits.',
     art: { shape: 'crystal', primary: '#bfe6ff', secondary: '#4f8fd6', glow: '#8fd3ff' },
   },

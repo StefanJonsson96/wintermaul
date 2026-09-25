@@ -318,7 +318,7 @@ export class Hud {
       add(btn, 'l', null, () => this.openRacePicker());
     }
     if (this.buildButtons.length === 0) {
-      this.buildGrid.append(h('div', { class: 'muted', style: { gridColumn: '1 / -1', padding: '8px', width: '240px' } }, s.wave.phase === 'setup' ? 'Waiting for the rules…' : 'No races yet.'));
+      this.buildGrid.append(h('div', { class: 'muted', style: { gridColumn: 'span 4', padding: '8px', width: '240px', alignSelf: 'center' } }, s.wave.phase === 'setup' ? 'Waiting for the rules…' : 'No races yet.'));
     }
   }
 

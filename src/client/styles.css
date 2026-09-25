@@ -995,7 +995,9 @@ input:focus {
 
 .build-grid {
   display: grid;
-  grid-template-columns: repeat(4, 64px);
+  grid-auto-flow: column;
+  grid-auto-columns: 64px;
+  grid-template-rows: 64px;
   gap: 7px;
 }
 

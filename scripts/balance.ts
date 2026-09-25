@@ -28,7 +28,7 @@ interface Result {
 
 function play(seed: number): Result {
   const init = Array.from({ length: players }, (_, i) => ({ id: i, name: `Bot${i}`, color: i, isBot: true }));
-  const game = new Game({ difficulty, raceMode: 'pick', endless: false }, init, seed);
+  const game = new Game({ difficulty, raceMode: 'pick', endless: false }, init, seed, { skipSetup: true });
   const bots = init.map((p, i) => new Bot(p.id, seed + i, races.length ? [races[(i + seed) % races.length], races[(i + seed + 1) % races.length]] : undefined));
   const leaksByWave: number[] = [];
   let lastLives = game.lives;

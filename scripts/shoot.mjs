@@ -1,0 +1,33 @@
+// Browser smoke test + screenshots: node scripts/shoot.mjs [url] [outdir]
+import { chromium } from 'playwright-core';
+import { mkdirSync } from 'node:fs';
+
+const url = process.argv[2] ?? 'http://localhost:8787';
+const out = process.argv[3] ?? 'screenshots';
+mkdirSync(out, { recursive: true });
+const exe = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const browser = await chromium.launch({ executablePath: exe, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+const logs = [];
+page.on('console', (m) => logs.push(`[${m.type()}] ${m.text()}`));
+page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`));
+await page.goto(url);
+await page.waitForTimeout(1500);
+await page.screenshot({ path: `${out}/01-menu.png` });
+await page.fill('.menu-card input', 'Tester');
+await page.click('#screen-menu button:has-text("Private room")');
+await page.waitForTimeout(800);
+await page.click('#screen-lobby .lobby-actions button:has-text("Add bot")');
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${out}/02-lobby.png` });
+await page.click('#screen-lobby button:has-text("Start game")');
+await page.waitForTimeout(1500);
+await page.screenshot({ path: `${out}/03-setup.png` });
+await page.click('text=Lock in & start');
+await page.waitForTimeout(1200);
+await page.screenshot({ path: `${out}/04-race.png` });
+await page.click('.race-card >> text=Frostborn');
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/05-game.png` });
+console.log(logs.join('\n'));
+await browser.close();

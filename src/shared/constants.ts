@@ -58,7 +58,9 @@ export const LUMBER_WAVES = [10, 25]; // +1 lumber after clearing these waves
 export const waveBonus = (wave: number) => 10 + 2 * wave; // classic Wintermaul level bonus
 
 // ---- Wave flow -------------------------------------------------------------
-export const FIRST_WAVE_DELAY = 45; // seconds before wave 1
+export const SETUP_TIME = 30; // Red has 30 seconds to pick the rules (like the classic difficulty dialog)
+export const FIRST_WAVE_DELAY = 45; // seconds before wave 1 once the rules are set
 export const BETWEEN_WAVES = 25; // seconds of build time after a wave is cleared
 export const WAVE_FORCE_TIMEOUT = 75; // seconds after the last spawn before the next countdown starts anyway
 export const READY_SKIP_TO = 3; // countdown jumps to this when everyone is ready
+export const RANDOM_RACE_BONUS = 15; // gold for picking a random race (the old -random)

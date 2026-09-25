@@ -8,8 +8,10 @@ import {
   LANE_H,
   LANE_W,
   LUMBER_WAVES,
+  RANDOM_RACE_BONUS,
   READY_SKIP_TO,
   SELL_REFUND,
+  SETUP_TIME,
   START_GOLD,
   START_LUMBER,
   WAVE_FORCE_TIMEOUT,
@@ -171,7 +173,7 @@ export type CommandResult = { ok: true } | { ok: false; error: string };
 const HISTORY_LEN = 16;
 
 export class Game {
-  readonly settings: GameSettings;
+  settings: GameSettings;
   readonly rng: Rng;
   time = 0;
   tick = 0;
@@ -186,8 +188,10 @@ export class Game {
   private nextId = 1;
   events: GameEvent[] = [];
   wave = 0;
-  phase: WaveState['phase'] = 'build';
-  countdown = FIRST_WAVE_DELAY;
+  phase: WaveState['phase'] = 'setup';
+  countdown = SETUP_TIME;
+  /** The player who picks the rules during setup: the first human seat (Red, when Red is playing). */
+  chooser = -1;
   lives: number;
   maxLives: number;
   private lastSpawnAt = 0;
@@ -198,8 +202,8 @@ export class Game {
   endedAt = 0;
   stats = { leakedTotal: 0 };
 
-  constructor(settings: GameSettings, players: PlayerInit[], seed = Date.now()) {
-    this.settings = settings;
+  constructor(settings: GameSettings, players: PlayerInit[], seed = Date.now(), opts: { skipSetup?: boolean } = {}) {
+    this.settings = { ...settings };
     this.rng = new Rng(seed);
     const diff = DIFFICULTIES[settings.difficulty];
     this.lives = this.maxLives = diff.lives;
@@ -214,7 +218,7 @@ export class Game {
         connected: true,
         lane: i,
         gold: START_GOLD,
-        lumber: settings.raceMode === 'double' ? 2 : START_LUMBER,
+        lumber: START_LUMBER,
         races: [],
         legends: [],
         kills: 0,
@@ -222,14 +226,36 @@ export class Game {
         damage: 0,
         goldEarned: 0,
         ready: false,
-        goldMul: settings.raceMode === 'random' ? 1.15 : 1,
+        goldMul: 1,
       });
       this.lanes.push({ index: i, owner: p.id, grid: new LaneGrid(), rubble: [], creeps: [] });
     });
-    if (settings.raceMode === 'same') {
+    this.chooser = this.players.find((p) => !p.isBot)?.id ?? -1;
+    if (opts.skipSetup || this.chooser < 0) this.lockSetup();
+  }
+
+  /** Applies the chosen rules and starts the countdown to wave 1. */
+  private lockSetup(): void {
+    const diff = DIFFICULTIES[this.settings.difficulty];
+    this.lives = this.maxLives = diff.lives;
+    this.hpMul = diff.hp;
+    const mode = this.settings.raceMode;
+    for (const p of this.players) {
+      p.lumber = mode === 'double' ? 2 : START_LUMBER;
+      p.goldMul = mode === 'random' ? 1.15 : 1;
+    }
+    if (mode === 'same') {
       const race = this.rng.pick(RACES).id;
       for (const p of this.players) this.grantRace(p, race);
+    } else if (mode === 'random') {
+      for (const p of this.players) this.pickRace(p, 'random');
     }
+    this.phase = 'build';
+    this.countdown = FIRST_WAVE_DELAY;
+    this.phaseCounter++;
+    for (const p of this.players) p.ready = false;
+    this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: true, lives: this.lives });
+    this.emit({ e: 'wave', t: this.time, n: 0, phase: 'build' });
   }
 
   // ─────────────────────────────────────────────────────────────── queries
@@ -276,6 +302,22 @@ export class Game {
     const p = this.player(playerId);
     if (!p) return { ok: false, error: 'Unknown player' };
     if (this.over) return { ok: false, error: 'The game is over' };
+    if (this.phase === 'setup') {
+      if (cmd.c === 'setup' || cmd.c === 'setupDone') {
+        if (p.id !== this.chooser) return { ok: false, error: 'Only the rule chooser can do that' };
+        if (cmd.c === 'setupDone') {
+          this.lockSetup();
+          return { ok: true };
+        }
+        const st = cmd.settings ?? {};
+        if (st.difficulty && st.difficulty in DIFFICULTIES) this.settings.difficulty = st.difficulty;
+        if (st.raceMode && ['pick', 'double', 'random', 'same'].includes(st.raceMode)) this.settings.raceMode = st.raceMode;
+        if (typeof st.endless === 'boolean') this.settings.endless = st.endless;
+        this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: DIFFICULTIES[this.settings.difficulty].lives });
+        return { ok: true };
+      }
+      if (cmd.c !== 'ready') return { ok: false, error: 'Waiting for the rules to be chosen' };
+    }
     switch (cmd.c) {
       case 'build':
         return this.build(p, cmd.tower, cmd.x | 0, cmd.y | 0);
@@ -295,6 +337,9 @@ export class Game {
       case 'ready':
         p.ready = !!cmd.value;
         return { ok: true };
+      case 'setup':
+      case 'setupDone':
+        return { ok: false, error: 'The rules are already set' };
       case 'gift': {
         const to = this.player(cmd.to);
         const amount = Math.floor(cmd.amount);
@@ -320,10 +365,16 @@ export class Game {
     if (p.races.length >= 3) return { ok: false, error: 'You already command three races' };
     const available = RACES.filter((r) => !p.races.includes(r.id)).map((r) => r.id);
     let chosen = race;
-    if (race === 'random' || this.settings.raceMode === 'random') chosen = this.rng.pick(available);
+    const random = race === 'random' || this.settings.raceMode === 'random';
+    if (random) chosen = this.rng.pick(available);
     if (!RACE_BY_ID[chosen]) return { ok: false, error: 'Unknown race' };
     if (p.races.includes(chosen)) return { ok: false, error: 'You already have that race' };
     this.grantRace(p, chosen);
+    if (race === 'random' && this.settings.raceMode !== 'random' && !p.isBot) {
+      p.gold += RANDOM_RACE_BONUS;
+      p.goldEarned += RANDOM_RACE_BONUS;
+      this.emit({ e: 'bonus', t: this.time, p: p.id, gold: RANDOM_RACE_BONUS, reason: 'random race' });
+    }
     return { ok: true };
   }
 
@@ -487,6 +538,12 @@ export class Game {
   }
 
   private updatePhase(): void {
+    if (this.phase === 'setup') {
+      this.countdown -= DT;
+      const chooser = this.player(this.chooser);
+      if (this.countdown <= 0 || !chooser || !chooser.connected) this.lockSetup();
+      return;
+    }
     if (this.phase === 'build') {
       const humans = this.players.filter((p) => !p.isBot && p.connected);
       if (humans.length > 0 && humans.every((p) => p.ready) && this.countdown > READY_SKIP_TO) {
@@ -1426,6 +1483,7 @@ export class Game {
       lives: this.lives,
       maxLives: this.maxLives,
       finalWave: this.settings.endless ? 0 : FINAL_WAVE,
+      chooser: this.chooser,
     };
   }
 
@@ -1460,7 +1518,7 @@ export class Game {
     const c: number[] = [];
     for (const cr of this.creeps.values()) {
       if (!cr.alive) continue;
-      c.push(cr.id, Math.round(cr.x * 100), Math.round(cr.y * 100), Math.max(1, Math.round(cr.hp)), this.creepFlags(cr));
+      c.push(cr.id, cr.lane, Math.round(cr.x * 100), Math.round(cr.y * 100), Math.max(1, Math.round(cr.hp)), this.creepFlags(cr));
     }
     const p: number[] = [];
     for (const pl of this.players) p.push(Math.floor(pl.gold), pl.lumber, pl.kills, pl.leaks, pl.ready ? 1 : 0, pl.connected ? 1 : 0);

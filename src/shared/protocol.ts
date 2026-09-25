@@ -34,7 +34,9 @@ export type GameCommand =
   | { c: 'target'; ids: number[]; mode: TargetMode }
   | { c: 'race'; race: string } // race id or 'random'
   | { c: 'ready'; value: boolean }
-  | { c: 'gift'; to: number; amount: number };
+  | { c: 'gift'; to: number; amount: number }
+  | { c: 'setup'; settings: Partial<GameSettings> } // the rule chooser only, during setup
+  | { c: 'setupDone' };
 
 // ---------------------------------------------------------------------------
 // Replicated game state
@@ -88,11 +90,12 @@ export interface NetCreep {
 
 export interface WaveState {
   n: number; // current (or last started) wave
-  phase: 'build' | 'wave' | 'victory' | 'defeat';
+  phase: 'setup' | 'build' | 'wave' | 'victory' | 'defeat';
   countdown: number; // seconds until next wave (build phase)
   lives: number;
   maxLives: number;
   finalWave: number;
+  chooser: number; // player who picks the rules during setup (-1 = none)
 }
 
 export interface FullState {
@@ -132,9 +135,10 @@ export type GameEvent =
   | { e: 'gift'; t: number; from: number; to: number; amount: number }
   | { e: 'split'; t: number; id: number }
   | { e: 'heal'; t: number; id: number }
-  | { e: 'endless'; t: number; def: import('./types').CreepDef };
+  | { e: 'endless'; t: number; def: import('./types').CreepDef }
+  | { e: 'setup'; t: number; settings: GameSettings; done: boolean; lives: number };
 
-/** Compact per-tick state. Creeps: flat array of [id, x*100, y*100, hp, flags] per creep. */
+/** Compact per-tick state. Creeps: flat array of [id, lane, x*100, y*100, hp, flags] per creep. */
 export interface Snapshot {
   t: number;
   c: number[];
@@ -144,7 +148,8 @@ export interface Snapshot {
   ev: GameEvent[];
 }
 
-export const PHASES: WaveState['phase'][] = ['build', 'wave', 'victory', 'defeat'];
+export const PHASES: WaveState['phase'][] = ['setup', 'build', 'wave', 'victory', 'defeat'];
+export const SNAP_CREEP_STRIDE = 6;
 
 export const CREEP_FLAG = {
   slowed: 1,

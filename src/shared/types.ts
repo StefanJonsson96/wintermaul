@@ -108,23 +108,7 @@ export interface EconDef {
 }
 
 export interface TowerArt {
-  shape:
-    | 'crystal'
-    | 'turret'
-    | 'orb'
-    | 'totem'
-    | 'brazier'
-    | 'coil'
-    | 'tree'
-    | 'mortar'
-    | 'obelisk'
-    | 'vault'
-    | 'spire'
-    | 'rock'
-    | 'pool'
-    | 'shrine';
-  primary: string;
-  secondary: string;
+  /** Accent colour of the tower's magic: projectiles, beams and glows use it. */
   glow: string;
 }
 

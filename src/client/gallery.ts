@@ -61,6 +61,54 @@ export function showGallery(): void {
   root.appendChild(creeps);
 }
 
+/** /?gallery=towers[&race=frost]: tower sprites with their heads and animations, labelled. */
+export function showTowers(race: string | null): void {
+  document.documentElement.style.cssText = 'overflow:auto;height:auto';
+  document.body.style.cssText = 'overflow:auto;height:auto;margin:0';
+  document.body.innerHTML = '';
+  const root = document.createElement('div');
+  root.style.cssText = 'padding:10px;background:#b9c9dc;font:12px sans-serif;color:#0b1424';
+  document.body.appendChild(root);
+  const scale = race ? 1.3 : 0.62;
+  for (const r of RACES) {
+    if (race && r.id !== race) continue;
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:flex-end;gap:2px;margin-bottom:4px;${race ? 'flex-wrap:wrap' : ''}`;
+    const label = document.createElement('div');
+    label.style.cssText = 'width:74px;font-weight:bold';
+    label.textContent = r.name;
+    row.appendChild(label);
+    for (const def of towersOfRace(r.id)) {
+      const cell = document.createElement('div');
+      cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;background:#d3dfec;border-radius:6px';
+      const c = document.createElement('canvas');
+      c.width = TW * scale;
+      c.height = TH * scale;
+      const ctx = c.getContext('2d')!;
+      ctx.scale(scale, scale);
+      ctx.drawImage(towerSprite(def), 0, 0);
+      ctx.save();
+      ctx.scale(SP, SP);
+      const m = towerMeta(def);
+      const head = towerHead(def);
+      if (head && m.head !== null) {
+        ctx.save();
+        ctx.translate(GX / SP, GY / SP - m.head);
+        ctx.rotate(-0.5);
+        ctx.drawImage(head, -1, -1, 2, 2);
+        ctx.restore();
+      }
+      drawTowerAnim(ctx, def, GX / SP, GY / SP, 1.3, 10, 3);
+      ctx.restore();
+      const name = document.createElement('div');
+      name.textContent = def.name;
+      cell.append(c, name);
+      row.appendChild(cell);
+    }
+    root.appendChild(row);
+  }
+}
+
 /** /?gallery=creeps: every wave's creature, large and labelled. */
 export function showCreeps(): void {
   document.documentElement.style.cssText = 'overflow:auto;height:auto';

@@ -16,7 +16,12 @@ import { MenuScreen } from './ui/menu';
 const qs = new URLSearchParams(location.search);
 if (qs.has('gallery')) {
   const which = qs.get('gallery');
-  void import('./gallery').then((m) => (which === 'creeps' ? m.showCreeps() : which ? m.showCreep(which) : m.showGallery()));
+  void import('./gallery').then((m) => {
+    if (which === 'creeps') m.showCreeps();
+    else if (which === 'towers') m.showTowers(qs.get('race'));
+    else if (which) m.showCreep(which);
+    else m.showGallery();
+  });
 } else boot();
 
 function boot(): void {

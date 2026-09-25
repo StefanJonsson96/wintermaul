@@ -67,6 +67,8 @@ export interface ViewState {
   ghost: Ghost | null;
   box: { x0: number; y0: number; x1: number; y1: number } | null;
   pings: { x: number; y: number; color: string; start: number }[];
+  /** Pulsing highlights on lane cells (the tutorial's "build here"). */
+  marks: { lane: number; x: number; y: number; w: number; h: number }[];
   showPath: boolean;
   showGrid: boolean;
 }
@@ -272,6 +274,18 @@ export class Renderer {
         const r = t.tdef.attack?.range ?? t.tdef.pulse?.radius ?? t.tdef.aura?.radius;
         if (r) this.rangeCircle(p.x, p.y, r, '#ffffff', 0.35);
       }
+    }
+
+    for (const m of view.marks) {
+      const p = toWorld(m.lane, m.x, m.y);
+      const pulse = 0.55 + 0.45 * Math.sin(now * 5);
+      ctx.fillStyle = `rgba(255,196,60,${0.08 + 0.1 * pulse})`;
+      ctx.fillRect(p.x, p.y, m.w, m.h);
+      ctx.strokeStyle = `rgba(255,190,50,${0.6 + 0.4 * pulse})`;
+      ctx.lineWidth = 0.08;
+      ctx.setLineDash([0.22, 0.14]);
+      ctx.strokeRect(p.x + 0.05, p.y + 0.05, m.w - 0.1, m.h - 0.1);
+      ctx.setLineDash([]);
     }
 
     // ── screen space ──

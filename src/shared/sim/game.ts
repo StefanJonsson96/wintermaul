@@ -38,6 +38,23 @@ import {
 import { Rng } from '../rng';
 import type { AttackDef, CreepDef, DamageType, OnHit, TargetKind, TargetMode, TowerDef, WaveDef } from '../types';
 
+/** Per-game rule changes for tutorials, campaign stages and the like. */
+export interface GameRules {
+  /** The game is won after this wave (default 40). */
+  finalWave?: number;
+  startGold?: number;
+  startLumber?: number;
+  /** Fixed team lives instead of the difficulty's. */
+  lives?: number;
+  /** Multipliers on creep health, creep speed and kill gold. */
+  hpMul?: number;
+  speedMul?: number;
+  bountyMul?: number;
+  firstWaveDelay?: number;
+  /** Only these races can be picked. */
+  races?: string[];
+}
+
 export interface PlayerInit {
   id: number;
   name: string;
@@ -199,17 +216,22 @@ export class Game {
   private lastSpawnAt = 0;
   private phaseCounter = 0;
   private hpMul: number;
+  readonly rules: GameRules;
+  /** The game is won when this wave is cleared (unless endless). */
+  readonly finalWave: number;
   private endlessDefs: CreepDef[] = [];
   /** Wave the game was lost/won on and when. */
   endedAt = 0;
   stats = { leakedTotal: 0 };
 
-  constructor(settings: GameSettings, players: PlayerInit[], seed = Date.now(), opts: { skipSetup?: boolean } = {}) {
+  constructor(settings: GameSettings, players: PlayerInit[], seed = Date.now(), opts: { skipSetup?: boolean; rules?: GameRules } = {}) {
     this.settings = { ...settings };
+    this.rules = opts.rules ?? {};
+    this.finalWave = this.rules.finalWave ?? FINAL_WAVE;
     this.rng = new Rng(seed);
     const diff = DIFFICULTIES[settings.difficulty];
-    this.lives = this.maxLives = startingLives(settings.difficulty, players.length);
-    this.hpMul = diff.hp;
+    this.lives = this.maxLives = this.rules.lives ?? startingLives(settings.difficulty, players.length);
+    this.hpMul = diff.hp * (this.rules.hpMul ?? 1);
     const sorted = [...players].sort((a, b) => a.id - b.id);
     sorted.forEach((p, i) => {
       this.players.push({
@@ -219,8 +241,8 @@ export class Game {
         isBot: p.isBot,
         connected: true,
         lane: i,
-        gold: START_GOLD,
-        lumber: START_LUMBER,
+        gold: this.rules.startGold ?? START_GOLD,
+        lumber: this.rules.startLumber ?? START_LUMBER,
         races: [],
         legends: [],
         kills: 0,
@@ -239,24 +261,24 @@ export class Game {
   /** Applies the chosen rules and starts the countdown to wave 1. */
   private lockSetup(): void {
     const diff = DIFFICULTIES[this.settings.difficulty];
-    this.lives = this.maxLives = startingLives(this.settings.difficulty, this.players.length);
-    this.hpMul = diff.hp;
+    this.lives = this.maxLives = this.rules.lives ?? startingLives(this.settings.difficulty, this.players.length);
+    this.hpMul = diff.hp * (this.rules.hpMul ?? 1);
     const mode = this.settings.raceMode;
     for (const p of this.players) {
-      p.lumber = mode === 'double' ? 2 : START_LUMBER;
-      p.goldMul = mode === 'random' ? 1.15 : 1;
+      p.lumber = (this.rules.startLumber ?? START_LUMBER) + (mode === 'double' ? 1 : 0);
+      p.goldMul = (mode === 'random' ? 1.15 : 1) * (this.rules.bountyMul ?? 1);
     }
     if (mode === 'same') {
-      const race = this.rng.pick(RACES).id;
+      const race = this.rng.pick(this.allowedRaces());
       for (const p of this.players) this.grantRace(p, race);
     } else if (mode === 'random') {
       for (const p of this.players) this.pickRace(p, 'random');
     }
     this.phase = 'build';
-    this.countdown = FIRST_WAVE_DELAY;
+    this.countdown = this.rules.firstWaveDelay ?? FIRST_WAVE_DELAY;
     this.phaseCounter++;
     for (const p of this.players) p.ready = false;
-    this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: true, lives: this.lives });
+    this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: true, lives: this.lives, finalWave: this.settings.endless ? 0 : this.finalWave });
     this.emit({ e: 'wave', t: this.time, n: 0, phase: 'build' });
   }
 
@@ -316,7 +338,7 @@ export class Game {
         if (st.raceMode && ['pick', 'double', 'random', 'same'].includes(st.raceMode)) this.settings.raceMode = st.raceMode;
         if (typeof st.endless === 'boolean') this.settings.endless = st.endless;
         this.lives = this.maxLives = startingLives(this.settings.difficulty, this.players.length);
-        this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: this.lives });
+        this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: this.lives, finalWave: this.settings.endless ? 0 : this.finalWave });
         return { ok: true };
       }
       if (cmd.c !== 'ready') return { ok: false, error: 'Waiting for the rules to be chosen' };
@@ -366,11 +388,13 @@ export class Game {
   pickRace(p: Player, race: string): CommandResult {
     if (p.lumber < 1) return { ok: false, error: 'You need lumber to pick a race' };
     if (p.races.length >= 3) return { ok: false, error: 'You already command three races' };
-    const available = RACES.filter((r) => !p.races.includes(r.id)).map((r) => r.id);
+    const available = this.allowedRaces().filter((r) => !p.races.includes(r));
+    if (available.length === 0) return { ok: false, error: 'No races left to pick' };
     let chosen = race;
     const random = race === 'random' || this.settings.raceMode === 'random';
     if (random) chosen = this.rng.pick(available);
     if (!RACE_BY_ID[chosen]) return { ok: false, error: 'Unknown race' };
+    if (!available.includes(chosen) && !p.races.includes(chosen)) return { ok: false, error: 'That race is not available here' };
     if (p.races.includes(chosen)) return { ok: false, error: 'You already have that race' };
     this.grantRace(p, chosen);
     if (race === 'random' && this.settings.raceMode !== 'random' && !p.isBot) {
@@ -379,6 +403,11 @@ export class Game {
       this.emit({ e: 'bonus', t: this.time, p: p.id, gold: RANDOM_RACE_BONUS, reason: 'random race' });
     }
     return { ok: true };
+  }
+
+  /** Races that can be picked in this game (campaign stages may restrict them). */
+  allowedRaces(): string[] {
+    return this.rules.races?.length ? this.rules.races : RACES.map((r) => r.id);
   }
 
   private countLimit(p: Player, group: string): number {
@@ -588,7 +617,7 @@ export class Game {
       const pendingForWave = this.spawnQueue.some((s) => s.wave === this.wave);
       if (pendingForWave) return;
       const alive = this.aliveByWave.get(this.wave) ?? 0;
-      const isFinal = !this.settings.endless && this.wave >= FINAL_WAVE;
+      const isFinal = !this.settings.endless && this.wave >= this.finalWave;
       if (alive === 0) {
         // older overlapping waves still count before we can win
         if (isFinal) {
@@ -676,7 +705,7 @@ export class Game {
       this.repathCreeps(lane.index);
       this.emit({ e: 'rubble', t: this.time, lane: lane.index, cells });
     }
-    if (!this.settings.endless && n >= FINAL_WAVE && cleared) {
+    if (!this.settings.endless && n >= this.finalWave && cleared) {
       this.finish(true);
       return;
     }
@@ -786,7 +815,7 @@ export class Game {
     if (this.time < c.stunUntil || this.time < c.rootUntil) return 0;
     let slow = Math.max(this.time < c.slowUntil ? c.slowPct : 0, c.auraSlow);
     slow = Math.min(slow, c.def.boss ? 0.5 : 0.75);
-    return c.def.speed * (1 - slow);
+    return c.def.speed * (1 - slow) * (this.rules.speedMul ?? 1);
   }
 
   private updateCreeps(): void {
@@ -1516,7 +1545,7 @@ export class Game {
       countdown: Math.max(0, this.countdown),
       lives: this.lives,
       maxLives: this.maxLives,
-      finalWave: this.settings.endless ? 0 : FINAL_WAVE,
+      finalWave: this.settings.endless ? 0 : this.finalWave,
       chooser: this.chooser,
     };
   }

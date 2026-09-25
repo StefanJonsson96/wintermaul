@@ -44,6 +44,10 @@ export class GameView {
   buildDef: TowerDef | null = null;
   prefs = loadPrefs();
   private tips = new TipDeck();
+  /** Cells to highlight (set by the tutorial coach). */
+  marks: ViewState['marks'] = [];
+  /** Called every frame, e.g. by the tutorial coach. */
+  frameHooks: ((now: number) => void)[] = [];
   private ghost: Ghost | null = null;
   private ghostKey = '';
   private pings: ViewState['pings'] = [];
@@ -591,10 +595,12 @@ export class GameView {
       ghost: this.ghost,
       box: this.box,
       pings: this.pings,
+      marks: this.marks,
       showPath: this.prefs.showPath,
       showGrid: this.prefs.showGrid && !!this.buildDef,
     };
     this.renderer.render(now, dt, view);
+    for (const hook of this.frameHooks) hook(now);
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
       this.hudTimer = 0.1;

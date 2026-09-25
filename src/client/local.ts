@@ -1,6 +1,7 @@
 import type { ChatLine, ClientMsg, EndStats, GameSettings, ServerMsg } from '../shared/protocol';
 import { Bot } from '../shared/sim/bot';
-import { Game } from '../shared/sim/game';
+import { Game, type GameRules } from '../shared/sim/game';
+import type { GameView } from './game/view';
 import { endStats, GameRunner } from '../shared/sim/runner';
 
 /** What a game view needs from its connection: a server socket or a game in the browser. */
@@ -23,10 +24,13 @@ export interface LocalOptions {
   bots?: { name: string; races?: string[] }[];
   /** Skip the rules dialog (tutorial and campaign stages fix the rules). */
   skipSetup?: boolean;
+  rules?: GameRules;
+  /** Called with the game view once the game is on screen (tutorial coach, stage banners). */
+  attach?: (view: GameView, local: LocalGame) => void;
   /** Last chance to adjust a fresh game: stage modifiers, talents, scripted tutorials. */
   prepare?: (game: Game) => void;
   /** Buttons on the end screen; defaults to play again / main menu. */
-  endActions?: (victory: boolean, stats: EndStats) => EndAction[];
+  endActions?: (victory: boolean, stats: EndStats, local: LocalGame) => EndAction[];
   onGameOver?: (victory: boolean, stats: EndStats, game: Game) => void;
 }
 
@@ -69,7 +73,7 @@ export class LocalGame implements Link {
     const seed = (Math.random() * 2 ** 31) | 0;
     const bots = this.opts.bots ?? [];
     const players = [{ id: 0, name: this.opts.name, color: 0, isBot: false }, ...bots.map((b, i) => ({ id: i + 1, name: b.name, color: i + 1, isBot: true }))];
-    this.game = new Game({ ...this.opts.settings }, players, seed, { skipSetup: this.opts.skipSetup });
+    this.game = new Game({ ...this.opts.settings }, players, seed, { skipSetup: this.opts.skipSetup, rules: this.opts.rules });
     this.opts.prepare?.(this.game);
     const brains = bots.map((b, i) => new Bot(i + 1, seed + i + 1, b.races));
     this.runner = new GameRunner(this.game, brains, (s) => this.deliver({ type: 'snap', s }), () => this.finish());
@@ -123,7 +127,7 @@ export class LocalGame implements Link {
 
   endActions(victory: boolean, stats: EndStats): EndAction[] {
     return (
-      this.opts.endActions?.(victory, stats) ?? [
+      this.opts.endActions?.(victory, stats, this) ?? [
         { label: 'Play again', kind: 'primary', run: () => this.start() },
         { label: 'Main menu', kind: 'danger', run: () => this.send({ type: 'leave' }) },
       ]

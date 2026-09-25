@@ -142,7 +142,7 @@ export type GameEvent =
   | { e: 'split'; t: number; id: number }
   | { e: 'heal'; t: number; id: number }
   | { e: 'endless'; t: number; def: import('./types').CreepDef }
-  | { e: 'setup'; t: number; settings: GameSettings; done: boolean; lives: number };
+  | { e: 'setup'; t: number; settings: GameSettings; done: boolean; lives: number; finalWave: number };
 
 /** Compact per-tick state. Creeps: flat array of [id, lane, x*100, y*100, hp, flags] per creep. */
 export interface Snapshot {

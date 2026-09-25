@@ -217,6 +217,8 @@ export class Hud {
 
   waveInfo(n: number): { creep: CreepDef; title: string; hint: string } | null {
     if (n < 1) return null;
+    const last = this.state.wave.finalWave;
+    if (last && n > last) return null;
     if (n > FINAL_WAVE) {
       if (!this.state.settings.endless) return null;
       const d = this.state.creepDef(`e${n}`);

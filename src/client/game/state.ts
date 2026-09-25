@@ -277,7 +277,7 @@ export class ClientState {
         break;
       case 'setup':
         this.settings = ev.settings;
-        this.wave = { ...this.wave, lives: ev.lives, maxLives: ev.done ? ev.lives : this.wave.maxLives, finalWave: ev.settings.endless ? 0 : 40 };
+        this.wave = { ...this.wave, lives: ev.lives, maxLives: ev.done ? ev.lives : this.wave.maxLives, finalWave: ev.finalWave };
         if (ev.done) this.wave.maxLives = ev.lives;
         break;
       case 'endless':

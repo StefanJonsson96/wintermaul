@@ -9,6 +9,7 @@ import type { RoomState, ServerMsg } from '../shared/protocol';
 import { GameView } from './game/view';
 import { type Link, LocalGame, type LocalOptions } from './local';
 import { skirmishOptions } from './modes/skirmish';
+import { tutorialOptions } from './modes/tutorial';
 import { Net } from './net';
 import { Backdrop } from './ui/background';
 import { $, toast } from './ui/dom';
@@ -37,7 +38,7 @@ function boot(): void {
   let pendingJoin = qs.get('room')?.toUpperCase() ?? null;
 
   const menu = new MenuScreen($('#screen-menu'), net, {
-    tutorial: () => toast('The tutorial is on its way.', 'warn', 2000),
+    tutorial: () => startLocal(tutorialOptions({ campaign: () => (local?.send({ type: 'leave' }), toast('The campaign is on its way.', 'warn', 2000)), menu: () => local?.send({ type: 'leave' }) })),
     campaign: () => toast('The campaign is on its way.', 'warn', 2000),
     skirmish: () => startLocal(skirmishOptions()),
     campaignProgress: () => '12 stages, earn runestones',
@@ -109,6 +110,7 @@ function boot(): void {
         show('game');
         game?.destroy();
         game = new GameView(from, $('#game-canvas') as HTMLCanvasElement, $('#hud'), msg.state, msg.you, () => !!room?.players.find((p) => p.id === room?.you)?.host);
+        if (from.local) from.local.opts.attach?.(game, from.local);
         return;
       case 'snap':
         game?.onSnapshot(msg.s);

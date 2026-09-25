@@ -1,4 +1,4 @@
-import { creepSprite, FRAMES } from '../art/creeps';
+import { creepSprite, creepTop, FRAMES } from '../art/creeps';
 import { drawGate, drawPortal, pillarSprite, PILLAR_SPRITE_GROUND, renderBottomRidge, renderLaneChunk } from '../art/terrain';
 import { drawTowerAnim, GX, GY, TH, towerHead, towerMeta, towerSprite, TW } from '../art/towers';
 import { alpha, ellipse, glow, SP, shade, type Ctx } from '../art/util';
@@ -583,8 +583,7 @@ export class Renderer {
       const hurt = c.hp < c.maxHp;
       if (!hurt && !c.def.boss) continue;
       const p = toWorld(c.rlane, c.x, c.y);
-      const lift = c.def.air ? 0.6 : c.def.shape === 'wisp' || c.def.shape === 'wraith' || c.def.shape === 'elemental' ? 0.15 : 0;
-      const top = p.y - c.def.size * (c.def.shape === 'boss' || c.def.shape === 'giant' || c.def.shape === 'knight' || c.def.shape === 'troll' || c.def.shape === 'biped' || c.def.shape === 'golem' ? 2.75 : 2.1) - lift;
+      const top = p.y - creepTop(c.def) - 0.12;
       const s = cam.toScreen(p.x, top);
       if (s.x < -50 || s.y < -50 || s.x > cam.w + 50 || s.y > cam.h + 50) continue;
       const bw = c.def.boss ? w * 2.2 : w * (0.7 + c.def.size);

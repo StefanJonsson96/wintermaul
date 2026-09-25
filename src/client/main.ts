@@ -14,8 +14,10 @@ import { LobbyScreen } from './ui/lobby';
 import { MenuScreen } from './ui/menu';
 
 const qs = new URLSearchParams(location.search);
-if (qs.has('gallery')) void import('./gallery').then((m) => (qs.get('gallery') ? m.showCreep(qs.get('gallery')!) : m.showGallery()));
-else boot();
+if (qs.has('gallery')) {
+  const which = qs.get('gallery');
+  void import('./gallery').then((m) => (which === 'creeps' ? m.showCreeps() : which ? m.showCreep(which) : m.showGallery()));
+} else boot();
 
 function boot(): void {
 const net = new Net();

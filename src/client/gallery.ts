@@ -61,6 +61,39 @@ export function showGallery(): void {
   root.appendChild(creeps);
 }
 
+/** /?gallery=creeps: every wave's creature, large and labelled. */
+export function showCreeps(): void {
+  document.documentElement.style.cssText = 'overflow:auto;height:auto';
+  document.body.style.cssText = 'overflow:auto;height:auto;margin:0';
+  document.body.innerHTML = '';
+  const root = document.createElement('div');
+  root.style.cssText = 'display:grid;grid-template-columns:repeat(8, 1fr);gap:6px;padding:10px;background:#b9c9dc;font:12px sans-serif;color:#0b1424';
+  document.body.appendChild(root);
+  for (const def of Object.values(CREEPS)) {
+    if (def.id.endsWith('s')) continue;
+    const spr = creepSprite(def);
+    const cell = document.createElement('div');
+    cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;background:#d3dfec;border-radius:8px;padding:4px';
+    const c = document.createElement('canvas');
+    const px = 170;
+    c.width = px;
+    c.height = px;
+    const ctx = c.getContext('2d')!;
+    const k = Math.min(1.6, (px * 0.95) / spr.size);
+    ctx.translate(px / 2 - spr.gx * k, px * 0.86 - spr.gy * k);
+    ctx.scale(k, k);
+    ctx.fillStyle = 'rgba(20,30,50,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(spr.gx, spr.gy, def.size * SP * 0.9, def.size * SP * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.drawImage(spr.frames[1], 0, -spr.lift * SP);
+    const label = document.createElement('div');
+    label.textContent = `${def.id.slice(1)} ${def.name}`;
+    cell.append(c, label);
+    root.appendChild(cell);
+  }
+}
+
 export function showCreep(id: string): void {
   const def = CREEPS[id];
   const spr = creepSprite(def);

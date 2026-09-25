@@ -162,24 +162,30 @@ export interface RaceDef {
 }
 
 export type CreepShape =
-  | 'hare'
+  | 'ghoul'
+  | 'wendigo'
+  | 'biped'
+  | 'imp'
+  | 'rat'
   | 'wolf'
   | 'boar'
-  | 'biped'
   | 'troll'
-  | 'spider'
-  | 'bird'
-  | 'wisp'
-  | 'golem'
-  | 'crab'
-  | 'wraith'
-  | 'dragon'
-  | 'knight'
-  | 'beetle'
-  | 'bat'
-  | 'elemental'
   | 'giant'
-  | 'boss';
+  | 'knight'
+  | 'boss'
+  | 'spider'
+  | 'crab'
+  | 'beetle'
+  | 'hydra'
+  | 'bird'
+  | 'bat'
+  | 'dragon'
+  | 'skull'
+  | 'wraith'
+  | 'banshee'
+  | 'lich'
+  | 'elemental'
+  | 'golem';
 
 export interface CreepDef {
   id: string;

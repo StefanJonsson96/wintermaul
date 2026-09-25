@@ -1,3 +1,4 @@
+import { creepLift } from '../art/creeps';
 import { towerMeta } from '../art/towers';
 import { audio } from '../audio';
 import { LANE_H, LANE_MARGIN_X, LANE_W, laneOriginY, PLAYER_COLORS } from '../../shared/constants';
@@ -254,8 +255,7 @@ export class GameView {
   // ───────────────────────────────────────── events → effects
   private worldOfCreep(c: CCreep): Point {
     const p = toWorld(c.rlane, c.x, c.y);
-    const lift = c.def.air ? 0.6 : c.def.shape === 'wisp' || c.def.shape === 'wraith' || c.def.shape === 'elemental' ? 0.15 : 0;
-    return { x: p.x, y: p.y - c.def.size * 1.1 - lift };
+    return { x: p.x, y: p.y - c.def.size * 1.1 - creepLift(c.def) };
   }
 
   private muzzle(t: CTower): Point {

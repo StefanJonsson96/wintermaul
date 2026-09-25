@@ -26,6 +26,12 @@ await page.click('text=Lock in & start');
 await page.waitForTimeout(500);
 const send = (msg: unknown) => page.evaluate((m) => (window as any).winterward.net.send(m), msg);
 await send({ type: 'cmd', cmd: { c: 'race', race } });
+const race2 = process.env.RACE2;
+if (race2) {
+  await send({ type: 'chat', text: '-lumber 1' });
+  await page.waitForTimeout(200);
+  await send({ type: 'cmd', cmd: { c: 'race', race: race2 } });
+}
 await page.keyboard.press('Escape');
 await send({ type: 'chat', text: '-gold 20000' });
 await send({ type: 'chat', text: '-lumber 2' });
@@ -46,11 +52,12 @@ await page.waitForTimeout(12000);
 await page.screenshot({ path: `${out}/late-1.png` });
 await page.waitForTimeout(6000);
 await page.screenshot({ path: `${out}/late-2.png` });
-// zoom in a bit on the action
-await page.mouse.move(800, 450);
-await page.mouse.wheel(0, -500);
-await page.waitForTimeout(1500);
+// zoom in on the densest cluster of creeps
+await page.evaluate(`(() => { const g = window.winterward.game; const cs = [...g.state.creeps.values()].filter(c => g.state.isVisible(c) && c.rlane === g.state.myLane); if (!cs.length) return; cs.sort((a, b) => a.x - b.x); const c = cs[Math.floor(cs.length / 2)]; g.renderer.cam.zoom = 62; g.renderer.cam.x = 5 + c.x; g.renderer.cam.y = 6 + g.state.myLane * 30 + c.y; })()`);
+await page.waitForTimeout(700);
 await page.screenshot({ path: `${out}/late-3.png` });
+await page.waitForTimeout(350);
+await page.screenshot({ path: `${out}/late-4.png` });
 const fps = await page.evaluate(`new Promise((res) => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else res(n / 2); }; requestAnimationFrame(f); })`);
 console.log('fps (swiftshader, headless):', fps);
 const perf = await page.evaluate(`new Promise((res) => {

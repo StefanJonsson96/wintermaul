@@ -325,28 +325,28 @@ const DEFS: Def[] = [
   // ─────────────────────────────── STONEWARDENS ────────────────────────────
   {
     id: 'stone_1', name: 'Rubble Wall', race: 'stone', tier: 1, cost: 6, buildTime: 0.8,
-    attack: { dmg: [6, 10], cd: 1.3, range: 3, type: 'impact', targets: 'both', proj: 'rock', projSpeed: 9,
+    attack: { dmg: [8, 12], cd: 1.3, range: 4, type: 'impact', targets: 'both', proj: 'rock', projSpeed: 9,
       crit: { chance: 0.1, mult: 2 } },
     desc: 'The cheapest wall in the game. Throws the odd pebble.',
     art: { shape: 'rock', primary: '#8c8479', secondary: '#6d9c4a', glow: '#c9b08a' },
   },
   {
     id: 'stone_2a', name: 'Boulder Sling', race: 'stone', tier: 2, cost: 40, parent: 'stone_1', buildTime: 2,
-    attack: { dmg: [40, 52], cd: 1.2, range: 3.5, type: 'impact', targets: 'both', proj: 'rock', projSpeed: 10,
+    attack: { dmg: [40, 52], cd: 1.2, range: 4, type: 'impact', targets: 'both', proj: 'rock', projSpeed: 10,
       crit: { chance: 0.15, mult: 2 } },
     desc: 'Short range, heavy hits, frequent crits.',
     art: { shape: 'turret', primary: '#8a7d6c', secondary: '#5a4a3a', glow: '#d8c09a' },
   },
   {
     id: 'stone_3a', name: 'Granite Fist', race: 'stone', tier: 3, cost: 110, parent: 'stone_2a', buildTime: 3,
-    attack: { dmg: [140, 170], cd: 1.2, range: 3.5, type: 'impact', targets: 'both', proj: 'rock', projSpeed: 11,
+    attack: { dmg: [140, 170], cd: 1.2, range: 4, type: 'impact', targets: 'both', proj: 'rock', projSpeed: 11,
       crit: { chance: 0.2, mult: 2.5 } },
     desc: 'Crushing blows with 20% chance to deal 2.5x damage.',
     art: { shape: 'totem', primary: '#7d7466', secondary: '#4f4539', glow: '#e8cf9a' },
   },
   {
     id: 'stone_4a', name: 'Mountain Heart', race: 'stone', tier: 4, cost: 300, parent: 'stone_3a', buildTime: 4,
-    attack: { dmg: [420, 500], cd: 1.2, range: 4, type: 'impact', targets: 'both', proj: 'rock', projSpeed: 12,
+    attack: { dmg: [420, 500], cd: 1.2, range: 4.5, type: 'impact', targets: 'both', proj: 'rock', projSpeed: 12,
       crit: { chance: 0.25, mult: 3 } },
     desc: 'A living mountain. 25% chance to deal triple damage.',
     art: { shape: 'rock', primary: '#6f675c', secondary: '#9fd46a', glow: '#ffd98a' },
@@ -609,7 +609,7 @@ const DEFS: Def[] = [
   // ─────────────────────────────── SUNGUARD ────────────────────────────────
   {
     id: 'sun_1', name: 'Candle Shrine', race: 'sun', tier: 1, cost: 10, buildTime: 1,
-    attack: { dmg: [6, 8], cd: 0.8, range: 4, type: 'magic', targets: 'both', proj: 'holy', projSpeed: 13 },
+    attack: { dmg: [6, 8], cd: 0.8, range: 4.5, type: 'magic', targets: 'both', proj: 'holy', projSpeed: 13 },
     desc: 'A small shrine of holy light.',
     art: { shape: 'shrine', primary: '#e9e1c8', secondary: '#ffd35a', glow: '#fff1b0' },
   },
@@ -846,8 +846,24 @@ const DEFS: Def[] = [
  */
 export const TIER_DAMAGE = [1, 1.15, 1.3, 1.3, 1.25, 1.1];
 
+/** Per-race damage multipliers (balance knobs). */
+export const RACE_DAMAGE: Record<string, number> = {
+  frost: 1,
+  fire: 1,
+  storm: 1.3,
+  stone: 1.15,
+  arcane: 1.1,
+  venom: 0.64,
+  tech: 1,
+  shadow: 1.2,
+  sun: 1.05,
+  grove: 1.1,
+  gold: 1.1,
+  prism: 0.95,
+};
+
 function scaled(d: Def): Def {
-  const m = TIER_DAMAGE[d.tier];
+  const m = TIER_DAMAGE[d.tier] * (RACE_DAMAGE[d.race] ?? 1);
   const out: Def = structuredClone(d);
   if (out.attack) {
     out.attack.dmg = [Math.round(out.attack.dmg[0] * m), Math.round(out.attack.dmg[1] * m)];

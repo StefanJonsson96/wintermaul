@@ -54,7 +54,7 @@ export const PLAYER_COLORS: PlayerColor[] = [
 export const START_GOLD = 120; // ~12 basic towers: build fast, then keep building with every bounty
 export const START_LUMBER = 1;
 export const SELL_REFUND = 0.75;
-export const LUMBER_WAVES = [10, 25]; // +1 lumber after clearing these waves
+export const LUMBER_WAVES = [7, 20]; // +1 lumber after clearing these waves
 export const waveBonus = (wave: number) => 10 + 2 * wave; // classic Wintermaul level bonus
 
 // ---- Wave flow -------------------------------------------------------------

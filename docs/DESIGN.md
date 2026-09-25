@@ -14,12 +14,12 @@ creeps, art (drawn procedurally in code) and sounds (synthesized).
 | Anti-juggle (Wintermaul One Revamped) | Selling while creeps are on the field leaves **rubble** until the wave ends |
 | Leaks flow into the next players' areas (classic) / rotate to the next lane (Wintermaul One) | A leak **costs lives and teleports the creep into the next player's lane** with the health it has left. If it gets through that maze too, it escapes. |
 | Kills pay the killer — kill stealing drama | Same: whoever kills a leaked creep gets the bounty |
-| Start with 1 lumber for an element; +1 lumber at level 15 | 1 lumber for a race; **+1 after wave 10 and wave 25** → second race, third race, or a Legend |
+| Start with 1 lumber for an element; +1 lumber at level 15 | 1 lumber for a race; **+1 after wave 7 and wave 20** → second race, third race, or a Legend |
 | 60 s before level 1, 30 s between cleared levels | Setup (30 s), then 45 s to wave 1 and 25 s between cleared waves; **Call wave** skips ahead when everyone is ready |
 | Level bonus: 10 gold + 2 per level | Same formula: `10 + 2 × wave` |
-| Red picks the difficulty in the first 30 s (Very Easy…Perfection) | Same ritual: the first player gets a rules dialog for 30 s (Casual / Normal / Hard / Brutal / Perfection, race mode, endless) |
+| Red picks the difficulty in the first 30 s (Very Easy…Perfection) | Same ritual: the first player gets a rules dialog for 30 s (Casual / Normal / Hard / Brutal / Perfection, race mode, endless). Lives grow with the number of players (Normal: 30, +20 per extra player), because every lane can leak |
 | `-random` | **Random** race card (or type `-random`) for +15 gold |
-| Air levels, fortified levels, boss on level 30 | Air, swarm, fortified, spirit, immune, healers, splitters, shields; bosses on 10/20/30; the **Winter Tyrant** on 40 |
+| Air levels, fortified levels, boss on level 30 (if Duke Wintermaul boards, you lose) | Air, swarm, fortified, spirit, immune, healers, splitters, shields; bosses on 10/20/30; the **Winter Tyrant** on 40 — if he escapes, you lose |
 | Sell for 75% | 75% (100% if you undo during the same build phase) |
 
 ## The lane
@@ -87,7 +87,30 @@ Heavy / Fortified / Spirit) plus Warcraft-style numeric armor make race choice m
 ## Balance workflow
 
 `npm run balance -- --players 2 --games 6` plays full games with bots headlessly and prints how far
-they got and where lives were lost. HP per wave follows one curve (`baseHp` in
-`src/shared/data/waves.ts`) and tower damage has a per-tier multiplier (`TIER_DAMAGE` in
-`src/shared/data/races.ts`), so global tuning is two numbers away. The bots are deliberately
-mediocre — the difficulty is tuned for humans.
+they got and where lives were lost. Useful options: `--races stone` (bots start with that race),
+`--difficulty hard`, `--quiet` (one summary line) and `--patch '{"stone_1.attack.range": 4}'` to try a
+data change without editing files (numbers multiply arrays such as `dmg`, and replace everything else).
+`scripts/debug-bot.ts`, `debug-wave.ts` and `debug-boss.ts` show what a bot built, what one wave did
+and how the bosses fared.
+
+The knobs, from global to local:
+
+- `baseHp` in `src/shared/data/waves.ts`: the health curve of every wave (+7% per wave).
+- `TIER_DAMAGE` and `RACE_DAMAGE` in `src/shared/data/races.ts`: damage per tier and per race.
+- per-wave `hpMul`, `armorAdd`, `regen` and heal values in the wave list.
+- `DIFFICULTIES` in `src/shared/protocol.ts`: lives, lives per extra player and creep health.
+  Extra health on Hard and Brutal phases in over the first 15 waves so the opening stays survivable.
+
+Where the bots end up (6–8 games each; the bots follow a fixed maze plan and a simple upgrade
+heuristic, so humans should do better):
+
+| Setting | Bots reach |
+|---|---|
+| Casual, solo | wave 38–40; they usually beat the Tyrant on his second pass |
+| Normal, solo, any race | wave 29–37 (average ~32) |
+| Normal, 2 or 4 players | wave ~27–29 |
+| Hard, solo | wave ~22 (either an early collapse or the high 20s) |
+| Brutal, solo | wave ~12 |
+
+The bots are deliberately mediocre, so the difficulty is tuned for humans: Normal should be
+beatable by a team that mazes well and prepares for air and fortified waves.

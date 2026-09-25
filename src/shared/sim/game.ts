@@ -23,6 +23,7 @@ import { CELL_FREE, CELL_RUBBLE, CELL_TOWER, LaneGrid } from '../grid';
 import {
   CREEP_FLAG,
   DIFFICULTIES,
+  startingLives,
   type FullState,
   type GameCommand,
   type GameEvent,
@@ -97,6 +98,7 @@ export interface Creep {
   lastOwner: number;
   lastTower: number;
   nextHeal: number;
+  healedUntil: number;
   /** Damage already in flight towards this creep (so towers don't all overkill the same target). */
   incoming: number;
 }
@@ -206,7 +208,7 @@ export class Game {
     this.settings = { ...settings };
     this.rng = new Rng(seed);
     const diff = DIFFICULTIES[settings.difficulty];
-    this.lives = this.maxLives = diff.lives;
+    this.lives = this.maxLives = startingLives(settings.difficulty, players.length);
     this.hpMul = diff.hp;
     const sorted = [...players].sort((a, b) => a.id - b.id);
     sorted.forEach((p, i) => {
@@ -237,7 +239,7 @@ export class Game {
   /** Applies the chosen rules and starts the countdown to wave 1. */
   private lockSetup(): void {
     const diff = DIFFICULTIES[this.settings.difficulty];
-    this.lives = this.maxLives = diff.lives;
+    this.lives = this.maxLives = startingLives(this.settings.difficulty, this.players.length);
     this.hpMul = diff.hp;
     const mode = this.settings.raceMode;
     for (const p of this.players) {
@@ -313,7 +315,8 @@ export class Game {
         if (st.difficulty && st.difficulty in DIFFICULTIES) this.settings.difficulty = st.difficulty;
         if (st.raceMode && ['pick', 'double', 'random', 'same'].includes(st.raceMode)) this.settings.raceMode = st.raceMode;
         if (typeof st.endless === 'boolean') this.settings.endless = st.endless;
-        this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: DIFFICULTIES[this.settings.difficulty].lives });
+        this.lives = this.maxLives = startingLives(this.settings.difficulty, this.players.length);
+        this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: this.lives });
         return { ok: true };
       }
       if (cmd.c !== 'ready') return { ok: false, error: 'Waiting for the rules to be chosen' };
@@ -700,7 +703,10 @@ export class Game {
   }
 
   private spawnCreep(def: CreepDef, lane: number, wave: number, at?: { x: number; y: number; cell: number; history: number[]; visits: number; leakedFrom: number }): Creep {
-    const hp = Math.round(def.hp * this.hpMul);
+    // Extra health on hard difficulties phases in over the first waves, so the opening stays
+    // tight but survivable; easier settings are easier from the start.
+    const mul = this.hpMul > 1 ? 1 + (this.hpMul - 1) * Math.min(1, wave / 15) : this.hpMul;
+    const hp = Math.round(def.hp * mul);
     const air = !!def.air;
     const grid = this.lanes[lane].grid;
     let x: number, y: number, cell: number;
@@ -748,6 +754,7 @@ export class Game {
       lastOwner: -1,
       lastTower: -1,
       nextHeal: this.time + (def.heal?.every ?? 0),
+      healedUntil: 0,
       incoming: 0,
     };
     if (!air) {
@@ -794,11 +801,15 @@ export class Game {
           const r2 = c.def.heal.radius * c.def.heal.radius;
           let healed = false;
           for (const o of lane.creeps) {
-            if (!o.alive || o.hp >= o.maxHp) continue;
+            // healers mend others, not themselves, and heals don't stack: a creep is mended at
+            // most once per heal cycle
+            if (o === c || !o.alive || o.hp >= o.maxHp || this.time < o.healedUntil) continue;
+            if (o.def.boss && !c.def.boss) continue; // bosses only take orders (and heals) from bosses
             const dx = o.x - c.x;
             const dy = o.y - c.y;
             if (dx * dx + dy * dy <= r2) {
               o.hp = Math.min(o.maxHp, o.hp + o.maxHp * c.def.heal.pct);
+              o.healedUntil = this.time + c.def.heal.every - 0.01;
               healed = true;
             }
           }
@@ -887,6 +898,8 @@ export class Game {
     this.emit({ e: 'leak', t: this.time, id: c.id, from, to, cost, escaped, x: c.x, y: c.y });
     if (escaped) {
       this.removeCreep(c);
+      // the Winter Tyrant getting away ends the game, whatever the lives
+      if (c.def.boss && c.wave === FINAL_WAVE) this.lives = Math.min(this.lives, 0);
       return;
     }
     // Teleport into the next player's lane, keeping its current health.

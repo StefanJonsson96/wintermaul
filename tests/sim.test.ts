@@ -3,7 +3,7 @@ import { FIRST_WAVE_DELAY, LANE_H, LUMBER_WAVES, RANDOM_RACE_BONUS, SETUP_TIME, 
 import { TOWERS, totalCost } from '../src/shared/data/races';
 import { CREEPS, WAVES } from '../src/shared/data/waves';
 import { CELL_ROCK, CELL_TOWER, LaneGrid } from '../src/shared/grid';
-import type { GameSettings } from '../src/shared/protocol';
+import { startingLives, type GameSettings } from '../src/shared/protocol';
 import { Bot } from '../src/shared/sim/bot';
 import { Game } from '../src/shared/sim/game';
 
@@ -70,7 +70,7 @@ describe('setup phase', () => {
     expect(g.command(0, { c: 'race', race: 'frost' }).ok).toBe(false);
     expect(g.command(0, { c: 'setupDone' }).ok).toBe(true);
     expect(g.phase).toBe('build');
-    expect(g.lives).toBe(20);
+    expect(g.lives).toBe(startingLives('hard', 2));
     expect(g.countdown).toBe(FIRST_WAVE_DELAY);
   });
 
@@ -159,7 +159,7 @@ describe('waves and leaks', () => {
     }
     expect(leaks[0].escaped).toBe(false);
     expect(leaks[0].to).toBe((leaks[0].from + 1) % 2);
-    expect(g.lives).toBeLessThan(30);
+    expect(g.lives).toBeLessThan(startingLives('normal', 2));
   });
 
   it('pays the level bonus when a wave is cleared, and lumber on schedule', () => {
@@ -189,6 +189,39 @@ describe('waves and leaks', () => {
       g.step();
     }
     expect(g.phase).toBe('victory');
+  });
+
+  it('the Winter Tyrant getting away is a defeat, whatever the lives', () => {
+    const g = new Game({ ...settings, difficulty: 'casual' }, players(1), 5, { skipSetup: true });
+    g.devSkipTo(WAVES.length);
+    g.lives = 1000;
+    run(g, 900);
+    expect(g.phase).toBe('defeat');
+  });
+
+  it('healers mend their neighbours once per cycle, never themselves', () => {
+    const g = new Game(settings, players(1), 3, { skipSetup: true });
+    g.devSkipTo(26);
+    run(g, 6);
+    const healers = [...g.creeps.values()];
+    expect(healers.length).toBeGreaterThan(3);
+    for (const c of healers) c.hp = c.maxHp / 2;
+    run(g, 3.2);
+    const pct = CREEPS.w26.heal!.pct;
+    for (const c of healers) expect(c.hp).toBeLessThanOrEqual(c.maxHp * (0.5 + pct) + 1);
+    // the leader has nobody in front of it to heal it
+    expect(healers.some((c) => c.hp === c.maxHp / 2)).toBe(true);
+  });
+
+  it('extra creep health on hard phases in over the first waves', () => {
+    const g = new Game({ ...settings, difficulty: 'hard' }, players(1), 3, { skipSetup: true });
+    run(g, FIRST_WAVE_DELAY + 1);
+    const early = [...g.creeps.values()][0];
+    expect(early.maxHp).toBeLessThan(CREEPS.w01.hp * 1.05);
+    g.devSkipTo(20);
+    run(g, 10);
+    const boss = [...g.creeps.values()].find((c) => c.def.boss)!;
+    expect(boss.maxHp).toBe(Math.round(CREEPS.w20.hp * 1.2));
   });
 
   it('every wave references a real creep; bosses are single units', () => {

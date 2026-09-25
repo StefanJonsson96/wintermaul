@@ -3,7 +3,8 @@
 import { Bot } from '../src/shared/sim/bot';
 import { Game } from '../src/shared/sim/game';
 import type { Difficulty } from '../src/shared/protocol';
-import { RACES } from '../src/shared/data/races';
+import { RACES, TOWERS } from '../src/shared/data/races';
+import { CREEPS } from '../src/shared/data/waves';
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: string) => {
@@ -16,6 +17,18 @@ const difficulty = opt('difficulty', 'normal') as Difficulty;
 const races = opt('races', '').split(',').filter(Boolean);
 const seed0 = Number(opt('seed', '1'));
 const verbose = args.includes('--verbose');
+const quiet = args.includes('--quiet');
+
+// --patch '{"stone_1.attack.range": 4, "w21.hp": 1500}' tweaks tower or creep data for this run.
+const patch = JSON.parse(opt('patch', '{}')) as Record<string, number>;
+for (const [path, value] of Object.entries(patch)) {
+  const [id, ...keys] = path.split('.');
+  let obj: Record<string, unknown> = (TOWERS[id] ?? CREEPS[id]) as unknown as Record<string, unknown>;
+  if (!obj) throw new Error(`unknown id ${id}`);
+  for (const k of keys.slice(0, -1)) obj = obj[k] as Record<string, unknown>;
+  const last = keys[keys.length - 1];
+  obj[last] = typeof obj[last] === 'object' && Array.isArray(obj[last]) ? (obj[last] as number[]).map((v) => v * value) : value;
+}
 
 interface Result {
   wave: number;
@@ -65,8 +78,12 @@ for (let g = 0; g < games; g++) {
   const r = play(seed0 + g * 101);
   results.push(r);
   const leaks = r.leaksByWave.map((l, w) => (l ? `${w}:${l}` : '')).filter(Boolean).join(' ');
-  console.log(`game ${g}: ${r.victory ? 'WIN ' : 'LOSS'} wave=${r.wave} lives=${r.lives} races=${r.races.map((x) => x.join('+')).join(' | ')} (${r.seconds.toFixed(1)}s)\n   lives lost per wave: ${leaks}`);
+  if (!quiet) console.log(`game ${g}: ${r.victory ? 'WIN ' : 'LOSS'} wave=${r.wave} lives=${r.lives} races=${r.races.map((x) => x.join('+')).join(' | ')} (${r.seconds.toFixed(1)}s)\n   lives lost per wave: ${leaks}`);
 }
 const avgWave = results.reduce((s, r) => s + r.wave, 0) / results.length;
-console.log(`\nwins ${results.filter((r) => r.victory).length}/${results.length}, average wave ${avgWave.toFixed(1)}`);
+const waves = results.map((r) => r.wave).sort((a, b) => a - b);
+const lost = new Map<number, number>();
+for (const r of results) r.leaksByWave.forEach((l, w) => l && lost.set(w, (lost.get(w) ?? 0) + l));
+const worst = [...lost].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([w, l]) => `${w}:${(l / results.length).toFixed(1)}`).join(' ');
+console.log(`${quiet ? '' : '\n'}wins ${results.filter((r) => r.victory).length}/${results.length}, average wave ${avgWave.toFixed(1)}, median ${waves[Math.floor(waves.length / 2)]}, waves [${waves.join(' ')}], lives lost/game at ${worst}`);
 void RACES;

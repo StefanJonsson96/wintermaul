@@ -74,7 +74,7 @@ export class MenuScreen {
         { class: 'feature-list' },
         feature('maze', 'Maze the field', 'Every tower is a wall. Force the longest walk past your guns.'),
         feature('arrows', 'Leaks are shared', 'Creeps you miss cost a life and invade the next lane.'),
-        feature('star', '12 races, 96 towers', 'Pick a race, add a second at wave 10, a Legend later.'),
+        feature('star', '12 races, 96 towers', 'Pick a race, add a second after wave 7, a Legend later.'),
         feature('people', '1–8 players, no login', 'Share a 4-letter room code. Add bots to fill seats.'),
       ),
       h('div', { style: { marginTop: '22px', display: 'flex', gap: '10px' } }, h('button', { class: 'btn', onclick: () => openHelp() }, icon('help', 16), 'How to play')),

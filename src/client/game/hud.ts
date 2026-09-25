@@ -5,7 +5,7 @@ import { PLAYER_COLORS, SELL_REFUND } from '../../shared/constants';
 import { ARMOR_LABEL } from '../../shared/combat';
 import { RACE_BY_ID, RACES, TOWERS, towersOfRace } from '../../shared/data/races';
 import { CREEPS, FINAL_WAVE, waveDef } from '../../shared/data/waves';
-import { DIFFICULTIES, type EndStats, type GameSettings, RACE_MODES } from '../../shared/protocol';
+import { DIFFICULTIES, type Difficulty, type EndStats, type GameSettings, RACE_MODES, startingLives } from '../../shared/protocol';
 import { TARGET_MODES, type CreepDef, type TargetMode, type TowerDef } from '../../shared/types';
 import { ChatBox } from '../ui/chat';
 import { clear, fmt, h, hideTooltip, toast, tooltip } from '../ui/dom';
@@ -516,7 +516,9 @@ export class Hud {
       };
       const diffRow = h('div', { class: 'setup-grid' });
       for (const [id, d] of Object.entries(DIFFICULTIES)) {
-        diffRow.append(h('div', { class: `choice${st.difficulty === id ? ' on' : ''}${isChooser ? '' : ' locked'}`, onclick: () => set({ difficulty: id as GameSettings['difficulty'] }) }, h('div', { class: 't' }, d.label), h('div', { class: 'd' }, d.blurb)));
+        const lives = startingLives(id as Difficulty, this.state.players.length);
+        const note = `${lives} ${lives === 1 ? 'life' : 'lives'} · ${d.blurb}`;
+        diffRow.append(h('div', { class: `choice${st.difficulty === id ? ' on' : ''}${isChooser ? '' : ' locked'}`, onclick: () => set({ difficulty: id as GameSettings['difficulty'] }) }, h('div', { class: 't' }, d.label), h('div', { class: 'd' }, note)));
       }
       const modeRow = h('div', { class: 'setup-grid', style: { gridTemplateColumns: 'repeat(4, 1fr)' } });
       for (const [id, m] of Object.entries(RACE_MODES)) {
@@ -524,7 +526,7 @@ export class Hud {
       }
       const endRow = h('div', { class: 'setup-grid', style: { gridTemplateColumns: 'repeat(2, 1fr)' } });
       endRow.append(
-        h('div', { class: `choice${!st.endless ? ' on' : ''}${isChooser ? '' : ' locked'}`, onclick: () => set({ endless: false }) }, h('div', { class: 't' }, 'Classic'), h('div', { class: 'd' }, '40 waves, then the Winter Tyrant')),
+        h('div', { class: `choice${!st.endless ? ' on' : ''}${isChooser ? '' : ' locked'}`, onclick: () => set({ endless: false }) }, h('div', { class: 't' }, 'Classic'), h('div', { class: 'd' }, '40 waves, ending with the Winter Tyrant')),
         h('div', { class: `choice${st.endless ? ' on' : ''}${isChooser ? '' : ' locked'}`, onclick: () => set({ endless: true }) }, h('div', { class: 't' }, 'Endless'), h('div', { class: 'd' }, 'Keep going after wave 40 — how far can you get?')),
       );
       body.append(

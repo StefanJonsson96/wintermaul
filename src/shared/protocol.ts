@@ -10,16 +10,22 @@ export interface GameSettings {
   endless: boolean;
 }
 
-export const DIFFICULTIES: Record<Difficulty, { label: string; lives: number; hp: number; blurb: string }> = {
-  casual: { label: 'Casual', lives: 60, hp: 0.7, blurb: '60 lives, weaker creeps' },
-  normal: { label: 'Normal', lives: 30, hp: 1.0, blurb: '30 lives — the classic experience' },
-  hard: { label: 'Hard', lives: 20, hp: 1.3, blurb: '20 lives, +30% creep health' },
-  brutal: { label: 'Brutal', lives: 10, hp: 1.6, blurb: '10 lives, +60% creep health' },
-  perfection: { label: 'Perfection', lives: 1, hp: 1.0, blurb: 'One leak and it is over' },
+export const DIFFICULTIES: Record<Difficulty, { label: string; lives: number; perPlayer: number; hp: number; blurb: string }> = {
+  casual: { label: 'Casual', lives: 60, perPlayer: 40, hp: 0.7, blurb: 'weaker creeps' },
+  normal: { label: 'Normal', lives: 30, perPlayer: 20, hp: 1.0, blurb: 'the classic experience' },
+  hard: { label: 'Hard', lives: 20, perPlayer: 12, hp: 1.2, blurb: '+20% creep health' },
+  brutal: { label: 'Brutal', lives: 12, perPlayer: 8, hp: 1.4, blurb: '+40% creep health' },
+  perfection: { label: 'Perfection', lives: 1, perPlayer: 0, hp: 1.0, blurb: 'one leak and it is over' },
 };
 
+/** Team lives: more lanes means more places to leak, so bigger teams get a few extra. */
+export function startingLives(d: Difficulty, players: number): number {
+  const def = DIFFICULTIES[d];
+  return def.lives + def.perPlayer * Math.max(0, players - 1);
+}
+
 export const RACE_MODES: Record<RaceMode, { label: string; blurb: string }> = {
-  pick: { label: 'All Pick', blurb: 'Choose your race. A second pick unlocks at wave 10.' },
+  pick: { label: 'All Pick', blurb: 'Choose your race. A second pick unlocks after wave 7.' },
   double: { label: 'All Pick Double', blurb: 'Start with two races.' },
   random: { label: 'All Random', blurb: 'Races are rolled for you. +15% gold.' },
   same: { label: 'Same Race', blurb: 'Everyone starts with the same random race.' },

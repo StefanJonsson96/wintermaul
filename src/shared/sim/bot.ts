@@ -1,5 +1,6 @@
 import { BUILD_MAX_X, BUILD_MIN_X, LANE_H, PILLAR_LINES } from '../constants';
 import { RACES, TOWERS } from '../data/races';
+import { CREEPS, WAVES } from '../data/waves';
 import { Rng } from '../rng';
 import type { TowerDef } from '../types';
 import type { Game, Tower } from './game';
@@ -14,6 +15,7 @@ export class Bot {
   private plan: { x: number; y: number }[] = [];
   private planIndex = 0;
   private built = new Set<number>();
+  private wallsBuilt = 0;
   private nextThink = 0;
   private branchPref = new Map<string, 'a' | 'b'>();
   private coverageVersion = -1;
@@ -150,19 +152,28 @@ export class Bot {
     if (!best) return;
     const spot = this.plan[best.i];
     const res = game.command(this.playerId, { c: 'build', tower: wallDef.id, x: spot.x, y: spot.y });
-    if (res.ok) this.built.add(best.i);
+    if (res.ok) {
+      this.built.add(best.i);
+      this.wallsBuilt++;
+    }
     while (this.planIndex < this.plan.length && this.built.has(this.planIndex)) this.planIndex++;
   }
 
   private wallDef(races: string[]): TowerDef {
-    // cheapest tier-1 among our races (stone walls are the classic mazing trick)
-    return races.map((r) => TOWERS[`${r}_1`]).sort((a, b) => a.cost - b.cost)[0];
+    // take turns between our races so a second race actually gets towers to upgrade
+    return TOWERS[`${races[this.wallsBuilt % races.length]}_1`];
   }
 
   private refreshCoverage(game: Game): void {
     const lane = game.laneOf(this.playerId)!;
-    if (lane.grid.version === this.coverageVersion) return;
-    this.coverageVersion = lane.grid.version;
+    // flyers cross the middle rows: before an air wave, towers there matter a lot more
+    const airSoon = [0, 1, 2].some((k) => {
+      const w = WAVES[game.wave - 1 + k];
+      return !!w && !!CREEPS[w.creep].air && (k > 0 || game.phase === 'wave');
+    });
+    const version = lane.grid.version * 2 + (airSoon ? 1 : 0);
+    if (version === this.coverageVersion) return;
+    this.coverageVersion = version;
     const grid = lane.grid;
     const path = grid.tracePath(grid.spawnCells[Math.floor(grid.spawnCells.length / 2)]);
     this.coverage.clear();
@@ -175,8 +186,7 @@ export class Bot {
         const y = Math.floor(i / grid.w) + 0.5;
         if ((x - t.cx) ** 2 + (y - t.cy) ** 2 <= r * r) n++;
       }
-      // flyers cross the middle rows
-      if (Math.abs(t.cy - LANE_H / 2) < r) n += 6;
+      if (Math.abs(t.cy - LANE_H / 2) < r) n += airSoon ? 30 : 6;
       this.coverage.set(t.id, n);
     }
   }
@@ -192,7 +202,8 @@ export class Bot {
     // mix in some variety for support branches: at most a few of them
     if (this.rng.chance(0.15)) choice = choice === a ? b : a;
     // keep air coverage near the middle
-    if (Math.abs(t.cy - LANE_H / 2) < 4 && choice.attack?.targets === 'ground') choice = choice === a ? b : a;
+    const groundOnly = (d: TowerDef) => (d.attack?.targets ?? d.pulse?.targets) === 'ground';
+    if (Math.abs(t.cy - LANE_H / 2) < 4 && groundOnly(choice) && !groundOnly(choice === a ? b : a)) choice = choice === a ? b : a;
     return choice;
   }
 
@@ -218,9 +229,10 @@ export class Bot {
     }
     const p = def.pulse;
     if (p) {
-      v += ((p.dmg ?? 0) / p.every) * 3;
+      // a pulse hits everything nearby: count ~2.5 creeps per pulse
+      v += ((p.dmg ?? 0) / p.every) * 2.5;
       if (p.onHit?.percentCurrent) v += 80 * def.tier * def.tier;
-      if (p.onHit?.stun) v += 40 * def.tier * def.tier;
+      if (p.onHit?.stun) v += ((p.onHit.stun.chance * p.onHit.stun.dur) / p.every) * 60 * def.tier * def.tier;
       if (p.pull) v += 50 * def.tier * def.tier;
       if (p.annihilate) v += 3000;
     }

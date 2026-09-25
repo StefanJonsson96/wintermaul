@@ -40,8 +40,8 @@ npm run dev           # then open http://localhost:5173
 5. **Leaks are shared.** A creep that reaches your gate costs the team lives and runs into the next
    player's lane with the health it has left. Kill your neighbour's leaks for their bounty — or help
    them with a gold gift (right-click them in the scoreboard).
-6. You get more lumber after waves 10 and 25: a second race, a third, or a **Legend** tower.
-   Survive 40 waves and the Winter Tyrant.
+6. You get more lumber after waves 7 and 20: a second race, a third, or a **Legend** tower.
+   Survive 40 waves. The last is led by the Winter Tyrant — if he escapes, the north falls.
 
 | Control | Action |
 |---|---|

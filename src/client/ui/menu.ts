@@ -1,4 +1,5 @@
 import type { RoomInfo } from '../../shared/protocol';
+import { VERSION } from '../../shared/version';
 import { DIFFICULTIES } from '../../shared/protocol';
 import type { Net } from '../net';
 import { openHelp } from './help';
@@ -117,7 +118,7 @@ export class MenuScreen {
         { class: 'menu-wrap' },
         brand,
         h('div', { class: 'menu-cards' }, soloCard, card),
-        h('div', { class: 'menu-footer' }, h('span', null, 'Inspired by Wintermaul for Warcraft III. All art is procedurally drawn.'), h('span', null, 'Tip: add ?room=CODE to the URL to share an invite.')),
+        h('div', { class: 'menu-footer' }, h('span', null, `Winterward ${VERSION} · Inspired by Wintermaul for Warcraft III. All art is procedurally drawn.`), h('span', null, 'Tip: add ?room=CODE to the URL to share an invite.')),
       ),
     );
     this.setRooms([]);

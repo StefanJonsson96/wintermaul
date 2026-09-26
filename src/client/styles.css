@@ -2673,3 +2673,11 @@ kbd {
   background: #c79bff;
   box-shadow: 0 0 8px #c79bff;
 }
+
+.end-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 8px;
+}

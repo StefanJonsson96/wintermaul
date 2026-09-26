@@ -4,6 +4,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import type { ClientMsg } from '../shared/protocol';
+import { VERSION } from '../shared/version';
 import { Lobby } from './rooms';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -31,7 +32,7 @@ const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   if (url.pathname === '/healthz') {
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, rooms: lobby.rooms.size, sessions: lobby.sessions.size }));
+    res.end(JSON.stringify({ ok: true, version: VERSION, rooms: lobby.rooms.size, sessions: lobby.sessions.size }));
     return;
   }
   if (url.pathname === '/api/rooms') {
@@ -92,6 +93,6 @@ setInterval(() => lobby.update(), 20);
 setInterval(() => lobby.cleanup(), 5000);
 
 server.listen(PORT, HOST, () => {
-  console.log(`\n  ❄  Winterward server running on http://localhost:${PORT}`);
+  console.log(`\n  ❄  Winterward ${VERSION} running on http://localhost:${PORT}`);
   console.log(`     serving client from ${STATIC_DIR}\n`);
 });

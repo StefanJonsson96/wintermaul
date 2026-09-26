@@ -10,6 +10,7 @@ import type { RoomState, ServerMsg } from '../shared/protocol';
 import { stageOptions } from './campaign/play';
 import { loadSave, progressLine } from './campaign/save';
 import { CampaignScreen } from './campaign/screen';
+import { VERSION } from '../shared/version';
 import { GameView } from './game/view';
 import { type Link, LocalGame, type LocalOptions } from './local';
 import { skirmishOptions } from './modes/skirmish';
@@ -85,6 +86,7 @@ function boot(): void {
       case 'welcome':
         menu.setName(msg.name);
         sendTalents();
+        if (msg.version !== VERSION) toast(`The server runs Winterward ${msg.version} (you have ${VERSION}). Reload the page to update.`, 'warn', 8000);
         if (pendingJoin) {
           net.send({ type: 'join', code: pendingJoin });
           pendingJoin = null;

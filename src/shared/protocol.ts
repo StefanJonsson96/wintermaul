@@ -241,7 +241,7 @@ export type ClientMsg =
   | { type: 'talents'; loadout: Record<string, number> };
 
 export type ServerMsg =
-  | { type: 'welcome'; id: string; token: string; name: string }
+  | { type: 'welcome'; id: string; token: string; name: string; version: string }
   | { type: 'rooms'; rooms: RoomInfo[] }
   | { type: 'room'; room: RoomState }
   | { type: 'left' }

@@ -15,6 +15,7 @@ import {
 import { Bot } from '../shared/sim/bot';
 import { Game, type GameRules } from '../shared/sim/game';
 import { type Loadout, modsFromLoadout, sanitizeLoadout, totalSpent } from '../shared/talents';
+import { VERSION } from '../shared/version';
 import { endStats, GameRunner } from '../shared/sim/runner';
 import { botName, cleanChat, cleanName, randomName } from './names';
 
@@ -470,7 +471,7 @@ export class Lobby {
       case 'hello': {
         const name = cleanName(msg.name);
         if (name) s.name = name;
-        send(s, { type: 'welcome', id: s.id, token: s.token, name: s.name });
+        send(s, { type: 'welcome', id: s.id, token: s.token, name: s.name, version: VERSION });
         if (s.room) s.room.join(s);
         else send(s, { type: 'rooms', rooms: this.listRooms() });
         return;

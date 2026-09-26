@@ -340,6 +340,14 @@ export class Room {
       case 'speed':
         this.runner?.setSpeed(Math.max(0.25, Math.min(8, Number.isFinite(n) ? n : 1)));
         break;
+      case 'autopilot': {
+        // a bot plays your lane (handy for testing and screenshots)
+        const seat = this.seats[slot];
+        if (!seat || seat.bot || !this.runner) return false;
+        seat.bot = new Bot(slot, (Math.random() * 2 ** 31) | 0);
+        this.runner.bots.push(seat.bot);
+        break;
+      }
       default:
         return false;
     }

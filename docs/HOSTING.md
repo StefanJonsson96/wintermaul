@@ -61,4 +61,4 @@ and sends ~5–40 KB/s to each player. A 0.1 vCPU free instance is fine for a co
 |---|---|---|
 | `PORT` | `8787` | HTTP + WebSocket port |
 | `HOST` | `0.0.0.0` | Bind address |
-| `WINTERWARD_DEV` | unset | `1` enables testing chat commands (`-gold`, `-wave`, `-speed`, `-lumber`). Never enable on a public server. |
+| `WINTERWARD_DEV` | unset | `1` enables testing chat commands (`-gold`, `-wave`, `-speed`, `-lumber`, `-autopilot`). Never enable on a public server. |

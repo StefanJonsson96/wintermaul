@@ -73,6 +73,84 @@ Heavy / Fortified / Spirit) plus Warcraft-style numeric armor make race choice m
 - **Bots** that build real mazes, for solo play or to fill seats.
 - **Endless mode** after wave 40.
 
+## Single player
+
+Solo games do not need the server: `LocalGame` runs the same simulation in the browser through the
+same `GameRunner` the server uses, and speaks the same protocol, so the game view cannot tell the
+difference. That makes pausing (P) and 2×/3× speed (F) possible; snapshots carry the speed so the
+client clock keeps in step, and a hidden tab pauses the game.
+
+- **Tutorial**: a real 8-wave Emberforge game (20 lives, a long first countdown) with a coach that
+  shows one idea at a time, highlights the cells or buttons involved and moves on when the player has
+  done it. A player who follows along wins with a few leaks; one who stops building loses.
+- **Skirmish**: a solo game with the classic rules dialog.
+
+## The campaign
+
+*The Long Winter* is twelve stages on a painted map, each a rule set for the ordinary game
+(`src/shared/campaign.ts`). The rules can change the first and last wave, lives, starting gold and
+lumber, creep health, speed, armor and regeneration, the number of creeps per wave, bounty, and the
+races that can be picked. Late stages drop the player into the war (wave 15, 20, 30…) with a war
+chest and a long first countdown, which makes them a different puzzle: build a whole maze at once.
+
+Three stars per stage: reach a wave, win, win losing at most a few lives. Stars pay **runestones**
+(6 to 16 per stage, 125 in all); winning a stage opens the next. The Endless Frontier (open after
+stage 6) pays one runestone per 5 waves past wave 20 the first time they are reached, a long tail for
+players who want the whole tree.
+
+### Talents
+
+The talent tree (`src/shared/talents.ts`) has four branches with gated rows, a capstone each, and a
+Kinship branch with a mastery per race. The whole tree costs 125 runestones, exactly what every
+star of the campaign pays; the Endless Frontier makes up for stars a player skips. Talents are data: each rank
+adds to a `PlayerMods` record (`src/shared/sim/mods.ts`), and the simulation reads those bonuses per
+player: damage by type and race, attack speed and range, poison and burn damage, slow strength, stun
+length, kill gold and wave bonus, refunds, wall prices, interest, lives, extra build time, slower
+creeps in your lane, softer boss leaks, Last Stand and Second Wind.
+
+Per-rank values are small (+2% damage, +5% for one damage type, +4% for one race), so a player
+halfway through the campaign is roughly 30–40% stronger than a new one, and later stages are tuned
+for that. Respec is free, so trying builds costs nothing.
+
+In multiplayer the host can switch **Campaign talents** on (off by default). Each browser sends its
+loadout; the server keeps only what is possible (known talents, ranks within limits, gates met, at
+most the cost of the whole tree) and gives each player's lane their bonuses.
+
+### Campaign balance
+
+`npm run balance:campaign` plays every stage with a bot that owns the talents a player would have by
+then (every earlier stage won, no third stars). Latest results, 10 games per stage with random race
+pairs:
+
+| Stage | Bot wins | Notes |
+|---|---|---|
+| 1 Hollowmere | 10/10 | ~3 lives lost; 3 of 10 flawless |
+| 2 Pinewatch | 10/10 | ~6 lives lost |
+| 3 The Drowned Mill | 9/10 | ~10 lives lost |
+| 4 Crowspire | 10/10 | ~7 lives lost |
+| 5 Frostfen | 9/10 | ~13 of 24 lives lost: tense |
+| 6 The Iron Pass | 10/10 | ~11 lives lost |
+| 7 Glimmerdeep | 9/10 | depends a lot on the race pair |
+| 8 Wolfsmoor | 8/10 | the Queen of Rime decides it |
+| 9 The Ashen Gate | 8/10 | |
+| 10 Silent Barrow | 7/10 | |
+| 11 The Rimewall | 4/10 | the Winter Tyrant; losses are at wave 37–40 |
+| 12 Throne of Winter | 5/10 | all 40 waves on Brutal |
+
+## Code architecture
+
+- `src/shared/sim/game.ts` holds the state, the commands and the wave flow; `horde.ts` moves, heals,
+  leaks and kills creeps; `combat.ts` does targeting, attacks, damage and on-hit effects;
+  `entities.ts` has the plain data types. The simulation is deterministic for a given seed.
+- `npm run fingerprint` plays seeded bot games (with and without talents and stage rules) and hashes
+  every event. A refactor that must not change behaviour has to leave its output identical; the split
+  of the simulation into these modules was checked this way.
+- The client splits the game screen into the view (input, camera, frame loop), the renderer, the HUD,
+  its dialogs and the combat effects. The procedural art lives in `src/client/art`, with a building kit
+  per race and creatures grouped by body type.
+- Versions follow semantic versioning (see `CHANGELOG.md`). The server reports its version on
+  `/healthz` and when a browser connects, and an outdated tab is asked to reload.
+
 ## Multiplayer architecture
 
 - The server runs the authoritative simulation at 20 ticks/s per room and broadcasts compact

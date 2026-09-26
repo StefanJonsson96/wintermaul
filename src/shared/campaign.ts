@@ -87,7 +87,7 @@ export const STAGES: Stage[] = [
     y: 0.44,
     story: 'Nothing dies easily in the fen. Its mist knits wounds shut as fast as you open them.',
     difficulty: 'normal',
-    rules: { firstWave: 11, finalWave: 22, lives: 20, startGold: 1100, startLumber: 2, firstWaveDelay: 100, regen: 0.006, hpMul: 1.2 },
+    rules: { firstWave: 11, finalWave: 22, lives: 20, startGold: 1100, startLumber: 2, firstWaveDelay: 100, regen: 0.006, hpMul: 1.25 },
     mutators: [
       { name: 'Fen mist', text: 'Creeps regenerate 0.6% of their health every second.' },
     ],
@@ -102,7 +102,7 @@ export const STAGES: Stage[] = [
     y: 0.7,
     story: 'The horde has brought its siege-plate through the pass. Only the heaviest blows will do.',
     difficulty: 'normal',
-    rules: { firstWave: 15, finalWave: 25, lives: 20, startGold: 1500, startLumber: 2, firstWaveDelay: 110, armor: 4, hpMul: 1.4 },
+    rules: { firstWave: 15, finalWave: 25, lives: 20, startGold: 1500, startLumber: 2, firstWaveDelay: 110, armor: 4, hpMul: 1.5 },
     mutators: [
       { name: 'Iron hides', text: 'Creeps have 4 extra armor.' },
     ],

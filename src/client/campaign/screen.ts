@@ -56,7 +56,7 @@ export class CampaignScreen {
   private selected: Stage;
 
   constructor(
-    private root: HTMLElement,
+    root: HTMLElement,
     private actions: CampaignActions,
   ) {
     this.selected = currentStage(this.save);

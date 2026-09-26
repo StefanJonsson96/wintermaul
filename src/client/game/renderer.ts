@@ -1,7 +1,7 @@
 import { creepSprite, creepTop, FRAMES } from '../art/creeps';
 import { drawGate, drawPortal, pillarSprite, PILLAR_SPRITE_GROUND, renderBottomRidge, renderLaneChunk } from '../art/terrain';
 import { drawTowerAnim, GX, GY, TH, towerHead, towerMeta, towerSprite, TW } from '../art/towers';
-import { alpha, ellipse, glow, SP, shade, type Ctx } from '../art/util';
+import { alpha, ellipse, glow, SP, shade } from '../art/util';
 import {
   GATE_MAX_Y,
   GATE_MIN_Y,

@@ -8,12 +8,11 @@ import { clear, h, toast } from './dom';
 import { icon } from './icons';
 
 export class LobbyScreen {
-  private room: RoomState | null = null;
   private main!: HTMLElement;
   chat: ChatBox;
 
   constructor(
-    private root: HTMLElement,
+    root: HTMLElement,
     private net: Net,
     private talentsChanged: () => void,
   ) {
@@ -35,7 +34,6 @@ export class LobbyScreen {
   }
 
   update(room: RoomState): void {
-    this.room = room;
     const me = room.players.find((p) => p.id === room.you);
     const isHost = !!me?.host;
     clear(this.main);

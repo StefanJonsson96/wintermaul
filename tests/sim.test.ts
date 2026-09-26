@@ -172,7 +172,7 @@ describe('waves and leaks', () => {
     // wipe the wave instantly
     let guard = 0;
     while (g.phase === 'wave' && guard++ < 20 * 200) {
-      for (const c of [...g.creeps.values()]) (g as unknown as { killCreep: (c: unknown, o: number, t: number) => void }).killCreep(c, -1, -1);
+      for (const c of [...g.creeps.values()]) g.horde.killCreep(c, -1, -1);
       g.step();
     }
     expect(g.phase).toBe('build');
@@ -185,7 +185,7 @@ describe('waves and leaks', () => {
     g.devSkipTo(WAVES.length);
     let guard = 0;
     while (!g.over && guard++ < 20 * 400) {
-      for (const c of [...g.creeps.values()]) (g as unknown as { killCreep: (c: unknown, o: number, t: number) => void }).killCreep(c, -1, -1);
+      for (const c of [...g.creeps.values()]) g.horde.killCreep(c, -1, -1);
       g.step();
     }
     expect(g.phase).toBe('victory');

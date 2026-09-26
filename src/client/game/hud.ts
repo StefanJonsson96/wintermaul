@@ -138,7 +138,6 @@ export class Hud {
     const s = this.state;
     const me = s.me;
     const w = s.wave;
-    // wave block
     let title = '';
     let name = '';
     let sub: (string | HTMLElement)[] = [];
@@ -182,7 +181,6 @@ export class Hud {
       this.waveSub.append(...sub.map((x) => (typeof x === 'string' ? h('span', null, x) : x)));
     }
     this.timerFill.style.width = `${Math.max(0, Math.min(1, fill)) * 100}%`;
-    // lives
     this.setText(this.livesNum, String(Math.max(0, w.lives)));
     if (this.lastLives >= 0 && w.lives < this.lastLives) {
       this.livesBlock.classList.remove('hit');
@@ -190,10 +188,8 @@ export class Hud {
       this.livesBlock.classList.add('hit');
     }
     this.lastLives = w.lives;
-    // resources
     this.setText(this.goldEl, fmt(me?.gold ?? 0));
     this.setText(this.lumberEl, String(me?.lumber ?? 0));
-    // ready button
     const humans = s.players.filter((p) => !p.isBot && p.connected);
     const readyN = humans.filter((p) => p.ready).length;
     const canReady = w.phase === 'build' && s.you >= 0;
@@ -201,7 +197,6 @@ export class Hud {
     this.readyBtn.classList.toggle('on', !!me?.ready);
     this.setText(this.readyBtn, canReady ? (me?.ready ? `Ready ${readyN}/${humans.length}` : humans.length > 1 ? `Call wave ${readyN}/${humans.length}` : 'Call wave') : 'Call wave');
 
-    // preview chips
     const pk = `${w.n}|${w.phase}`;
     if (this.preview.dataset.k !== pk) {
       this.preview.dataset.k = pk;
@@ -411,7 +406,6 @@ export class Hud {
       this.selectPanel.append(grid, h('div', { class: 'sel-desc' }, def.desc));
     }
     if (mine.length === 0) return;
-    // upgrades
     const options = new Map<string, number[]>();
     for (const t of mine) for (const u of t.tdef.upgrades) options.set(u, [...(options.get(u) ?? []), t.id]);
     const actions = h('div', { class: 'sel-actions' });

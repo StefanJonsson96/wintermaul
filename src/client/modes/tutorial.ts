@@ -196,7 +196,6 @@ class Coach {
     if (!this.panel.isConnected) return;
     const s = STEPS[this.step];
     const c = this.ctx(now);
-    // highlights
     const lane = this.view.state.myLane;
     this.view.marks = (s.marks?.(c) ?? []).map((r) => ({ lane, ...r }));
     const target = s.pulse ? document.querySelector(s.pulse) : null;

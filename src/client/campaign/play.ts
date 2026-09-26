@@ -21,7 +21,7 @@ class GoalTracker {
   private key = '';
 
   constructor(
-    private view: GameView,
+    view: GameView,
     private local: LocalGame,
     private stage: Stage,
   ) {

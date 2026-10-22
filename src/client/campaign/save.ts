@@ -1,6 +1,7 @@
 // Campaign progress lives in localStorage: stars per stage, runestones and the talent loadout.
 import { ENDLESS, ENDLESS_AFTER, STAGES, endlessReward, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
 import { type Loadout, sanitizeLoadout, totalSpent } from '../../shared/talents';
+import { CloudSave } from './cloud';
 
 const KEY = 'winterward.campaign.v1';
 
@@ -45,20 +46,61 @@ export function parseSave(json: string | null): CampaignSave {
   }
 }
 
+/** The latest save, for when browser storage is blocked. */
+let memory: CampaignSave | null = null;
+
 export function loadSave(): CampaignSave {
   try {
-    return parseSave(localStorage.getItem(KEY));
+    const json = localStorage.getItem(KEY);
+    if (json) return parseSave(json);
   } catch {
-    return emptySave();
+    // storage blocked: fall back to this visit's copy
   }
+  return memory ? parseSave(JSON.stringify(memory)) : emptySave();
 }
 
+const cloud = new CloudSave();
+
 export function storeSave(s: CampaignSave): void {
+  const json = JSON.stringify(s);
+  memory = parseSave(json);
   try {
-    localStorage.setItem(KEY, JSON.stringify(s));
+    localStorage.setItem(KEY, json);
   } catch {
-    // private mode or full storage: progress just won't persist
+    // private mode or full storage: only the cloud copy (if any) keeps it
   }
+  cloud.store(json);
+}
+
+/** True when `a` has come further than `b` (more runestones earned, then more stars). */
+export function aheadOf(a: CampaignSave, b: CampaignSave): boolean {
+  if (a.stones !== b.stones) return a.stones > b.stones;
+  if (totalStars(a) !== totalStars(b)) return totalStars(a) > totalStars(b);
+  return a.endlessBest > b.endlessBest;
+}
+
+/**
+ * Syncs with the cloud copy when the game runs as an artifact: whichever save has come further
+ * wins (the cloud one on a tie, so talents follow you between devices). `onChange` runs when
+ * the local save was replaced.
+ */
+export function syncCloud(onChange: () => void): void {
+  void cloud.connect((json) => {
+    const remote = parseSave(json);
+    const local = loadSave();
+    if (JSON.stringify(remote) === JSON.stringify(local)) return;
+    if (aheadOf(local, remote)) {
+      cloud.store(JSON.stringify(local));
+      return;
+    }
+    try {
+      localStorage.setItem(KEY, JSON.stringify(remote));
+    } catch {
+      // nothing local to update
+    }
+    memory = remote;
+    onChange();
+  });
 }
 
 export function unspent(s: CampaignSave): number {

@@ -35,6 +35,24 @@ export function openModal(content: HTMLElement, opts: { narrow?: boolean; wide?:
   return { el: box, close };
 }
 
+/** A yes/no question inside the page (the browser's own confirm() is not available everywhere). */
+export function confirmDialog(question: string, opts: { ok: string; cancel?: string; danger?: boolean }, onOk: () => void): void {
+  const modal = openModal(
+    h(
+      'div',
+      { class: 'confirm' },
+      h('div', { class: 'confirm-q' }, question),
+      h(
+        'div',
+        { class: 'field-row', style: { justifyContent: 'flex-end' } },
+        h('button', { class: 'btn', onclick: () => modal.close() }, opts.cancel ?? 'Cancel'),
+        h('button', { class: `btn ${opts.danger ? 'danger' : 'primary'}`, onclick: () => (modal.close(), onOk()) }, opts.ok),
+      ),
+    ),
+    { narrow: true },
+  );
+}
+
 export function anyModalOpen(): boolean {
   return (document.getElementById('modal-root')?.children.length ?? 0) > 0;
 }

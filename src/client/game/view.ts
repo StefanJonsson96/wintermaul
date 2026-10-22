@@ -9,7 +9,7 @@ import type { TargetMode, TowerDef } from '../../shared/types';
 import { type Link, SPEEDS } from '../local';
 import { toast } from '../ui/dom';
 import { openHelp } from '../ui/help';
-import { anyModalOpen } from '../ui/modal';
+import { anyModalOpen, confirmDialog } from '../ui/modal';
 import { Effects } from './effects';
 import { Fx, type Point } from './fx';
 import { BUILD_KEYS, Hud } from './hud';
@@ -17,6 +17,8 @@ import { nearestLane, toLane, toWorld } from './layout';
 import { type Ghost, Renderer, type ViewState } from './renderer';
 import { ClientState, type CTower } from './state';
 import { TipDeck } from './tips';
+import { TouchControls } from './touch';
+import { touchDevice } from '../ui/device';
 
 interface Prefs {
   showPath: boolean;
@@ -27,7 +29,7 @@ interface Prefs {
 }
 
 function loadPrefs(): Prefs {
-  const d: Prefs = { showPath: true, showGrid: true, edgePan: false, hq: true, tips: true };
+  const d: Prefs = { showPath: true, showGrid: true, edgePan: false, hq: !touchDevice, tips: true };
   try {
     return { ...d, ...JSON.parse(localStorage.getItem('winterward.prefs') ?? '{}') };
   } catch {
@@ -235,8 +237,9 @@ export class GameView {
 
   confirmLeave(): void {
     const over = this.state.wave.phase === 'victory' || this.state.wave.phase === 'defeat';
-    const question = this.link.local ? 'Leave the game? This single-player game will end.' : 'Leave the game? Your towers keep fighting without you.';
-    if (over || confirm(question)) this.leave();
+    if (over) return this.leave();
+    const question = this.link.local ? 'Leave the game? This game will end.' : 'Leave the game? Your towers keep fighting without you.';
+    confirmDialog(question, { ok: 'Leave', cancel: 'Keep playing', danger: true }, () => this.leave());
   }
 
   leave(): void {
@@ -578,59 +581,101 @@ export class GameView {
       cam.x += before.x - after.x;
       cam.y += before.y - after.y;
     }, { passive: false });
+    new TouchControls(c, {
+      camera: () => this.renderer.cam,
+      building: () => !!this.buildDef,
+      aim: (p) => this.pointAt(p),
+      release: (p) => {
+        this.pointAt(p);
+        this.placeGhost(true);
+        this.pointAway();
+      },
+      stopAim: () => this.pointAway(),
+      tap: (p) => {
+        this.pointAt(p);
+        this.selectAt(false);
+        this.pointAway();
+      },
+      longPress: (p) => {
+        this.pointAt(p);
+        this.selectAt(true);
+        this.pointAway();
+        navigator.vibrate?.(12);
+      },
+    }).bind((target, ev, fn) => on(target, ev, fn, { passive: false }));
     on(window, 'keydown', (e) => this.keyDown(e));
     on(window, 'keyup', (e) => this.keys.delete(e.key.toLowerCase()));
     on(window, 'blur', () => this.keys.clear());
   }
 
   private leftClick(e: MouseEvent): void {
-    const s = this.state;
-    const w = this.mouseWorld();
     if (e.altKey) {
+      const s = this.state;
+      const w = this.mouseWorld();
       const lane = nearestLane(w.y, s.laneOwners.length);
       this.link.send({ type: 'ping', lane, x: w.x - LANE_MARGIN_X, y: w.y - laneOriginY(lane) });
       return;
     }
-    if (this.buildDef) {
-      const g = this.ghost;
-      if (!g) return;
-      if (!g.ok) {
-        toast(g.reason, 'error', 1400);
-        audio.play('error', 0.4);
-        return;
-      }
-      this.send({ c: 'build', tower: this.buildDef.id, x: g.x, y: g.y });
-      const me = s.me;
-      const cost = s.costOf(this.buildDef);
-      const keep = e.shiftKey && this.buildDef.tier !== 5 && (me?.gold ?? 0) - cost >= cost;
-      if (!keep) this.cancelBuild();
+    if (this.buildDef) this.placeGhost(e.shiftKey);
+    else this.selectAt(e.shiftKey);
+  }
+
+  /** Builds the tower the ghost shows. With `keep`, stays in build mode for the next one. */
+  private placeGhost(keep: boolean): void {
+    const g = this.ghost;
+    const def = this.buildDef;
+    if (!g || !def) return;
+    if (!g.ok) {
+      toast(g.reason, 'error', 1400);
+      audio.play('error', 0.4);
       return;
     }
-    const id = this.towerAt(w);
+    this.send({ c: 'build', tower: def.id, x: g.x, y: g.y });
+    const cost = this.state.costOf(def);
+    if (!keep || def.tier === 5 || (this.state.me?.gold ?? 0) - cost < cost) this.cancelBuild();
+  }
+
+  /** Selects the tower under the pointer; `add` toggles it in the selection. Twice quickly selects all of its kind on screen. */
+  private selectAt(add: boolean): void {
+    const s = this.state;
+    const id = this.towerAt(this.mouseWorld());
     const now = performance.now();
-    if (id >= 0) {
-      if (now - this.lastClick.t < 350 && this.lastClick.id === id) {
-        // double click: select all own towers of this type in view
-        const def = s.towers.get(id)!.def;
-        const cam = this.renderer.cam;
-        const tl = cam.toWorld(0, 0);
-        const br = cam.toWorld(cam.w, cam.h);
-        this.selected.clear();
-        for (const t of s.towers.values()) {
-          if (t.def !== def || t.owner !== s.towers.get(id)!.owner) continue;
-          const p = toWorld(t.lane, t.x + 1, t.y + 1);
-          if (p.x >= tl.x && p.x <= br.x && p.y >= tl.y && p.y <= br.y) this.selected.add(t.id);
-        }
-      } else if (e.shiftKey) {
-        if (this.selected.has(id)) this.selected.delete(id);
-        else this.selected.add(id);
-      } else {
-        this.selected.clear();
-        this.selected.add(id);
+    if (id < 0) {
+      if (!add) this.selected.clear();
+      return;
+    }
+    if (now - this.lastClick.t < 380 && this.lastClick.id === id) {
+      const tower = s.towers.get(id)!;
+      const cam = this.renderer.cam;
+      const tl = cam.toWorld(0, 0);
+      const br = cam.toWorld(cam.w, cam.h);
+      this.selected.clear();
+      for (const t of s.towers.values()) {
+        if (t.def !== tower.def || t.owner !== tower.owner) continue;
+        const p = toWorld(t.lane, t.x + 1, t.y + 1);
+        if (p.x >= tl.x && p.x <= br.x && p.y >= tl.y && p.y <= br.y) this.selected.add(t.id);
       }
-      this.lastClick = { t: now, id };
-      audio.play('click', 0.3);
-    } else if (!e.shiftKey) this.selected.clear();
+    } else if (add) {
+      if (this.selected.has(id)) this.selected.delete(id);
+      else this.selected.add(id);
+    } else {
+      this.selected.clear();
+      this.selected.add(id);
+    }
+    this.lastClick = { t: now, id };
+    audio.play('click', 0.3);
+  }
+
+  /** Touch input points at `p` (as if the mouse were there). */
+  private pointAt(p: Point): void {
+    this.mouse = { x: p.x, y: p.y, in: true };
+    this.updateGhost();
+  }
+
+  private pointAway(): void {
+    this.mouse.in = false;
+    this.ghost = null;
+    this.ghostKey = '';
   }
 
   private finishBox(add: boolean): void {

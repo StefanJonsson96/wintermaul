@@ -6,6 +6,7 @@ import type { Net } from '../net';
 import { ChatBox } from './chat';
 import { clear, h, toast } from './dom';
 import { icon } from './icons';
+import { confirmDialog } from './modal';
 
 export class LobbyScreen {
   private main!: HTMLElement;
@@ -164,8 +165,8 @@ export class LobbyScreen {
           {
             class: 'btn primary big',
             onclick: () => {
-              if (!allReady && !confirm('Not everyone is ready. Start anyway?')) return;
-              this.net.send({ type: 'start' });
+              if (allReady) this.net.send({ type: 'start' });
+              else confirmDialog('Not everyone is ready. Start anyway?', { ok: 'Start' }, () => this.net.send({ type: 'start' }));
             },
           },
           icon('play', 16),

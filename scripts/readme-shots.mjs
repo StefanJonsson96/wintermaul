@@ -50,7 +50,6 @@ const shots = {
     await page.click('button:has-text("Private room")');
     await wait(page, 500);
     await page.click('.lobby-actions button:has-text("Add bot")');
-    page.once('dialog', (d) => d.accept());
     await page.click('button:has-text("Start game")');
     await wait(page, 1200);
     await page.click('button:has-text("Lock in & start")');

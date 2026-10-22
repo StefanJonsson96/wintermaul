@@ -116,13 +116,16 @@ export class Renderer {
     this.canvas.height = Math.round(h * this.dpr);
     this.cam.w = w;
     this.cam.h = h;
+    // short screens (phones on their side) may zoom out further to see the whole lane
+    this.cam.minZoom = h < 520 ? 8 : 12;
     this.flakes = Array.from({ length: Math.round((w * h) / 12000) }, () => ({ x: Math.random() * w, y: Math.random() * h, s: 0.6 + Math.random() * 1.8, v: 14 + Math.random() * 26, p: Math.random() * 6.28 }));
   }
 
-  /** Fit the whole width of a lane on screen. */
+  /** Fit the whole width of a lane on screen, leaving room for the HUD above and below. */
   focusLane(lane: number, instant = true): void {
     const target = laneOriginY(lane) + LANE_H / 2;
-    this.cam.zoom = Math.max(this.cam.minZoom, Math.min(this.cam.maxZoom, Math.min(this.cam.w / (LANE_W + 5), (this.cam.h - 170) / (LANE_H + 3))));
+    const hud = this.cam.h < 520 ? 96 : 170;
+    this.cam.zoom = Math.max(this.cam.minZoom, Math.min(this.cam.maxZoom, Math.min(this.cam.w / (LANE_W + 5), (this.cam.h - hud) / (LANE_H + 3))));
     this.cam.x = LANE_MARGIN_X + LANE_W / 2;
     if (instant) this.cam.y = target + 1.2;
   }
@@ -612,6 +615,8 @@ export class Renderer {
 
   private drawLaneLabels(nLanes: number): void {
     const { ctx, cam, state } = this;
+    // alone, the lane is obviously yours
+    if (state.players.length === 1) return;
     ctx.save();
     ctx.textBaseline = 'middle';
     for (let lane = 0; lane < nLanes; lane++) {

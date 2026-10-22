@@ -5,7 +5,7 @@ Up to 8 players, no login, 12 races and 96 towers, 40 waves and a final boss. Bu
 snowfield: whatever slips through your maze runs straight into your neighbour's. Alone? Play the tutorial,
 a 12-stage campaign with a talent tree, or a quick skirmish, all running right in your browser.
 
-Version **1.0.0** · [Changelog](CHANGELOG.md)
+Version **1.1.0** · [Changelog](CHANGELOG.md)
 
 ![Gameplay](docs/images/gameplay.png)
 
@@ -43,6 +43,17 @@ npm run dev           # then open http://localhost:5173
 
 Single-player games are simulated in your browser: press **P** to pause (they also pause when you switch
 tabs) and **F** to play at 2× or 3× speed.
+
+### On a phone or tablet
+
+Everything single-player works by touch. Tap a tower in the Build panel, then tap the map to build (keep
+your finger down to aim before you let go); you stay in build mode until you tap **Done**. Drag to move the
+camera, pinch to zoom, tap a tower to select it, double-tap to select every tower of that kind, and press and
+hold a button to see what it does. Turn the phone sideways: the lane is wide.
+
+`npm run build:artifact` packs the single-player game into one stand-alone page
+(`dist/artifact/winterward.html`) that can be hosted anywhere static, for example as a claude.ai artifact.
+Multiplayer still needs the server.
 
 ### The campaign
 
@@ -145,6 +156,8 @@ docs/                research notes, design, hosting guide
 | `npm run play` | Build and start (production) on port 8787 |
 | `npm run dev` | Server + Vite dev server with hot reload |
 | `npm run check` | Typecheck and unit tests (what CI runs, plus the build) |
+| `npm run build:artifact` | The single-player game as one stand-alone page, `dist/artifact/winterward.html` |
+| `node scripts/mobile-test.mjs` | Plays the tutorial on an emulated phone with touch input |
 | `npm run balance -- --players 2 --games 6` | Headless bot games for balancing |
 | `npm run balance:campaign` | Plays every campaign stage with bots holding typical talents |
 | `npm run fingerprint` | Hashes seeded bot games: a refactor that changes nothing leaves it identical |

@@ -4,6 +4,7 @@ import { PILLAR_LINES } from '../../shared/constants';
 import type { Game } from '../../shared/sim/game';
 import type { GameView } from '../game/view';
 import type { LocalGame, LocalOptions } from '../local';
+import { touchDevice } from '../ui/device';
 import { h } from '../ui/dom';
 
 interface Ctx {
@@ -23,6 +24,8 @@ interface Rect {
 interface Step {
   title: string;
   body: (string | HTMLElement)[];
+  /** The same advice for a touch screen, where it differs. */
+  touch?: (string | HTMLElement)[];
   /** Cells to light up on the map. */
   marks?: (c: Ctx) => Rect[];
   /** HUD element to pulse. */
@@ -74,6 +77,7 @@ const STEPS: Step[] = [
   {
     title: 'Build a wall',
     body: ['Every tower is also a wall. Press ', key('Q'), ' (or click the Cinder Pot in the Build panel) and place it on a glowing spot between the pillars.'],
+    touch: ['Every tower is also a wall. Tap the ', b('Cinder Pot'), ' in the Build panel, then tap a glowing spot between the pillars. Keep your finger down and slide to aim before you let go.'],
     marks: (c) => spotMarks(c.game, FIRST),
     pulse: '.build-grid .cmd-btn',
     done: (c) => mine(c.game).length >= 1,
@@ -81,6 +85,7 @@ const STEPS: Step[] = [
   {
     title: 'Plug the gaps',
     body: ['The gaps between pillars are exactly one tower wide. Plug the other glowing gaps — hold ', key('Shift'), ' to keep placing. The bottom gap stays open, so the creeps have to walk down to it.'],
+    touch: ['The gaps between pillars are exactly one tower wide. Plug the other glowing gaps: you stay in build mode, so keep tapping, then tap ', b('Done'), '. The bottom gap stays open, so the creeps have to walk down to it.'],
     marks: (c) => spotMarks(c.game, FIRST),
     done: (c) => openSpots(c.game, FIRST).length <= 0 || (mine(c.game).length >= 6 && c.age > 20),
   },
@@ -93,6 +98,7 @@ const STEPS: Step[] = [
   {
     title: 'Call the first wave',
     body: ['Your gold is almost gone — kills pay the rest. Press ', key('G'), ' or ', b('Call wave'), ' when you are ready. Calling early even pays a small bonus.'],
+    touch: ['Your gold is almost gone; kills pay the rest. Tap ', b('Call wave'), ' when you are ready. Calling early even pays a small bonus.'],
     pulse: '.ready-btn',
     done: (c) => c.game.wave >= 1,
   },
@@ -105,17 +111,20 @@ const STEPS: Step[] = [
   {
     title: 'Upgrades',
     body: ['Wave cleared! Click one of your towers to select it. Upgrades happen ', b('in place'), ', so they never break your maze.'],
+    touch: ['Wave cleared! Tap one of your towers to select it. Upgrades happen ', b('in place'), ', so they never break your maze.'],
     done: (c) => c.view.selected.size > 0 || mine(c.game).some((t) => t.def.tier >= 2),
   },
   {
     title: 'Pick a branch',
     body: ['Each tower upgrades along one of two branches. Press ', key('Q'), ' or ', key('W'), ' (or click an upgrade) to upgrade it. Hover a button to compare them.'],
+    touch: ['Each tower upgrades along one of two branches. Tap an upgrade to buy it. Press and hold a button to see what it does.'],
     pulse: '.upg-btn',
     done: (c) => mine(c.game).some((t) => t.def.tier >= 2),
   },
   {
     title: 'Upgrade many at once',
     body: ['Drag a box over several towers (or double-click one) to select them all, then upgrade them together. Call the next waves when you are ready.'],
+    touch: ['Double-tap a tower to select every tower of its kind on screen (press and hold to add or remove one), then upgrade them together. Call the next waves when you are ready.'],
     done: (c) => c.game.wave >= 3,
   },
   {
@@ -137,12 +146,14 @@ const STEPS: Step[] = [
   {
     title: 'Lumber',
     body: ['After wave 7 you get ', b('lumber'), '. Press ', key('L'), ' to add a second race — or save it for a Legend tower (800 gold + 1 lumber) later.'],
+    touch: ['After wave 7 you get ', b('lumber'), '. Tap ', b('New race'), ' to add a second race, or save it for a Legend tower (800 gold + 1 lumber) later.'],
     pulse: '.cmd-btn.special',
     done: (c) => (c.game.player(0)?.races.length ?? 0) >= 2 || c.age > 30 || c.game.wave >= 8,
   },
   {
     title: 'The last wave',
     body: ['Wave 8 is the end of the tutorial. Hold the line! Tip: ', key('P'), ' pauses the game and ', key('F'), ' fast-forwards.'],
+    touch: ['Wave 8 is the end of the tutorial. Hold the line! Tip: the buttons at the top right pause the game and speed it up.'],
     done: () => false,
   },
 ];
@@ -177,7 +188,7 @@ class Coach {
     this.panel.replaceChildren(
       h('div', { class: 'coach-head' }, h('span', null, 'Tutorial'), h('span', null, `${this.step + 1} / ${STEPS.length}`)),
       h('div', { class: 'coach-title' }, s.title),
-      h('div', { class: 'coach-body' }, ...s.body.map((part) => (typeof part === 'string' ? document.createTextNode(part) : part.cloneNode(true)))),
+      h('div', { class: 'coach-body' }, ...((touchDevice && s.touch) || s.body).map((part) => (typeof part === 'string' ? document.createTextNode(part) : part.cloneNode(true)))),
       buttons,
     );
     this.panel.classList.remove('coach-in');

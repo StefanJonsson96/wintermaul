@@ -1,5 +1,6 @@
 import type { RoomInfo } from '../../shared/protocol';
 import { VERSION } from '../../shared/version';
+import { OFFLINE } from '../mode';
 import { DIFFICULTIES } from '../../shared/protocol';
 import type { Net } from '../net';
 import { openHelp } from './help';
@@ -13,6 +14,17 @@ export interface SoloActions {
   skirmish(): void;
   /** Short progress line for the campaign tile, e.g. "Stage 3 · 7 stars". */
   campaignProgress(): string;
+}
+
+/** Stand-alone, there is no server to meet friends on. */
+function offlineCard(): HTMLElement {
+  return h(
+    'div',
+    { class: 'panel menu-card mp-offline' },
+    h('h3', null, 'Multiplayer'),
+    h('p', null, 'Co-op for up to 8 players needs a Winterward server. Get the game, run ', h('code', null, 'npm run play'), ' and share your room code with friends.'),
+    h('a', { class: 'btn', href: 'https://github.com/StefanJonsson96/wintermaul', target: '_blank', rel: 'noopener' }, 'Get the game on GitHub'),
+  );
 }
 
 export class MenuScreen {
@@ -117,8 +129,8 @@ export class MenuScreen {
         'div',
         { class: 'menu-wrap' },
         brand,
-        h('div', { class: 'menu-cards' }, soloCard, card),
-        h('div', { class: 'menu-footer' }, h('span', null, `Winterward ${VERSION} · Inspired by Wintermaul for Warcraft III. All art is procedurally drawn.`), h('span', null, 'Tip: add ?room=CODE to the URL to share an invite.')),
+        h('div', { class: 'menu-cards' }, soloCard, OFFLINE ? offlineCard() : card),
+        h('div', { class: 'menu-footer' }, h('span', null, `Winterward ${VERSION} · Inspired by Wintermaul for Warcraft III. All art is procedurally drawn.`), OFFLINE ? null : h('span', null, 'Tip: add ?room=CODE to the URL to share an invite.')),
       ),
     );
     this.setRooms([]);

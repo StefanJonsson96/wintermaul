@@ -40,9 +40,10 @@ body {
   user-select: none;
 }
 
+/* the app keeps clear of a phone's notch and home bar */
 #app {
   position: fixed;
-  inset: 0;
+  inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
 
 #bg-canvas {
@@ -54,7 +55,7 @@ body {
 }
 
 .screen {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 1;
 }
@@ -191,13 +192,13 @@ input:focus {
 
 #screen-menu {
   display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 24px;
   overflow: auto;
 }
 
+/* auto margins centre the menu when it fits and let it scroll from the top when it doesn't */
 .menu-wrap {
+  margin: auto;
   width: min(1060px, 100%);
   display: grid;
   grid-template-columns: 1.1fr 1fr;
@@ -2545,7 +2546,7 @@ kbd {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 900px) and (min-height: 521px) {
   #screen-campaign {
     padding: 10px;
     overflow: auto;
@@ -2680,4 +2681,519 @@ kbd {
   height: 10px;
   border-radius: 3px;
   margin-right: 8px;
+}
+
+/* ─────────────────────────── PHONES & TABLETS ─────────────────────────── */
+
+#game-canvas {
+  touch-action: none;
+}
+
+.touch button,
+.touch .race-card,
+.touch .tnode,
+.touch .solo-tile {
+  touch-action: manipulation;
+}
+
+.touch .cmd-btn .hk {
+  display: none;
+}
+
+/* a finger leaves hover styles stuck on: keep them for mice */
+.touch .cmd-btn:hover:not(.active) {
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+
+.touch .race-card:hover {
+  transform: none;
+}
+
+.done-btn {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  color: #eafff4;
+  font-size: 11px;
+  font-weight: 800;
+  background: radial-gradient(circle at 50% 30%, rgba(98, 227, 160, 0.42), rgba(8, 36, 28, 0.95));
+  border-color: rgba(98, 227, 160, 0.65);
+}
+
+.confirm-q {
+  font-size: 16px;
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
+
+.rotate-hint {
+  display: none;
+}
+
+@media (orientation: portrait) and (max-width: 760px) {
+  .rotate-hint {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    background: rgba(5, 10, 20, 0.88);
+  }
+  .rotate-hint b {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 0.04em;
+  }
+  .rotate-hint span {
+    max-width: 280px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+}
+
+/* Compact HUD for phones on their side and other small screens */
+@media (max-height: 520px), (max-width: 760px) {
+  .topbar {
+    top: 6px;
+    left: 8px;
+    transform: none;
+    gap: 6px;
+  }
+  .top-block {
+    padding: 4px 9px;
+    gap: 6px;
+  }
+  .wave-block {
+    min-width: 0;
+    width: 196px;
+    padding: 5px 10px;
+    gap: 2px;
+  }
+  .wave-title .num {
+    font-size: 14px;
+  }
+  .wave-title .name {
+    font-size: 11.5px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .wave-sub {
+    font-size: 10.5px;
+    gap: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .trait {
+    font-size: 9px;
+    padding: 0 4px;
+  }
+  .lives-block {
+    min-width: 52px;
+  }
+  .lives-num {
+    font-size: 18px;
+  }
+  .lives-label {
+    font-size: 8px;
+    letter-spacing: 0.1em;
+  }
+  .res-block {
+    gap: 8px;
+  }
+  .res {
+    font-size: 13px;
+    gap: 4px;
+  }
+  .res .icon {
+    width: 14px;
+    height: 14px;
+  }
+  .ready-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .top-right {
+    top: 6px;
+    right: 8px;
+    gap: 5px;
+  }
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
+  .speed-btn {
+    min-width: 34px;
+    font-size: 12px;
+  }
+  .roomy-only,
+  .wave-preview,
+  .scoreboard,
+  .minimap {
+    display: none !important;
+  }
+  .game-chat {
+    left: 8px;
+    bottom: 8px;
+    width: 190px;
+    font-size: 11px;
+  }
+  .game-chat .chat-log {
+    max-height: 62px;
+  }
+  .command-card {
+    bottom: 6px;
+    gap: 6px;
+    max-width: calc(100vw - 220px);
+  }
+  .command-card.selecting .build-panel {
+    display: none;
+  }
+  .build-panel,
+  .select-panel {
+    padding: 6px;
+  }
+  .panel-title {
+    font-size: 9px;
+    margin: 0 2px 4px;
+  }
+  .build-grid {
+    grid-auto-columns: 48px;
+    grid-template-rows: 48px;
+    gap: 5px;
+  }
+  .cmd-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 9px;
+  }
+  .cmd-btn.special {
+    font-size: 9.5px;
+  }
+  .cmd-btn .cost {
+    font-size: 10px;
+  }
+  .select-panel {
+    width: 300px;
+    gap: 5px;
+  }
+  .sel-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .sel-name {
+    font-size: 14px;
+  }
+  .sel-sub {
+    font-size: 10.5px;
+  }
+  .stat-grid {
+    font-size: 11px;
+    gap: 2px 8px;
+  }
+  .sel-desc {
+    display: none;
+  }
+  .upg-btn {
+    flex-basis: 120px;
+    padding: 5px 6px;
+  }
+  .upg-btn canvas {
+    width: 30px;
+    height: 30px;
+  }
+  .upg-btn .t {
+    font-size: 11.5px;
+  }
+  .coach {
+    top: 52px;
+    left: 8px;
+    width: min(262px, 42vw);
+    padding: 9px 11px;
+  }
+  .coach-title {
+    font-size: 15px;
+    margin-top: 3px;
+  }
+  .coach-body {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .stage-badge {
+    top: 52px;
+    left: 8px;
+    width: min(236px, 38vw);
+    padding: 7px 9px;
+    gap: 3px;
+  }
+  .sb-goal {
+    font-size: 11px;
+  }
+  .banner .big {
+    font-size: 28px;
+  }
+  .banner .small {
+    font-size: 12px;
+  }
+  .paused-banner {
+    padding: 12px 22px;
+  }
+  .paused-banner b {
+    font-size: 22px;
+  }
+  #toasts {
+    top: 56px;
+  }
+  .toast {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  .modal-back {
+    padding: 8px;
+  }
+  .modal {
+    padding: 16px;
+  }
+  .modal h2 {
+    font-size: 20px;
+  }
+  .race-grid {
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    gap: 8px;
+  }
+  .race-card {
+    padding: 9px;
+  }
+  .end-table {
+    display: block;
+    overflow-x: auto;
+    font-size: 11.5px;
+  }
+}
+
+/* narrow screens: the command card moves right so the chat keeps the left corner */
+@media (max-width: 760px) {
+  .command-card {
+    left: auto;
+    right: 8px;
+    transform: none;
+  }
+}
+
+/* menus on short screens: lead with the buttons */
+@media (max-height: 520px) {
+  #screen-menu {
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  }
+  .menu-wrap {
+    grid-template-columns: 1fr 1.3fr;
+    gap: 16px;
+    align-items: center;
+  }
+  .brand h1 {
+    font-size: 40px;
+  }
+  .brand .pitch,
+  .feature-list {
+    display: none;
+  }
+  .menu-cards {
+    gap: 10px;
+  }
+  .menu-card {
+    padding: 14px;
+  }
+  .solo-tile {
+    padding: 10px;
+  }
+  .menu-footer {
+    display: none;
+  }
+}
+
+/* the tutorial coach takes less room on a phone */
+@media (max-height: 520px), (max-width: 760px) {
+  .coach {
+    width: min(250px, 38vw);
+    padding: 8px 10px;
+  }
+  .coach-head {
+    font-size: 9.5px;
+  }
+  .coach-title {
+    font-size: 14px;
+  }
+  .coach-body {
+    font-size: 11.5px;
+    line-height: 1.4;
+  }
+  .coach-actions .btn {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  .stat.minor,
+  .mode-row .label {
+    display: none;
+  }
+  .mode-row .btn {
+    padding: 3px 6px;
+    font-size: 10.5px;
+  }
+}
+
+.mp-offline p {
+  margin: 8px 0 14px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.mp-offline code {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.mp-offline .btn {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+/* phones: page zoom would fight the game's own pinch zoom */
+.touch,
+.touch body {
+  touch-action: pan-x pan-y;
+}
+
+/* campaign on a phone on its side: map and briefing side by side */
+@media (max-height: 520px) {
+  #screen-campaign {
+    padding: 8px max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
+  }
+  .camp-wrap {
+    gap: 8px;
+  }
+  .camp-head {
+    gap: 10px;
+  }
+  .camp-head .btn {
+    padding: 6px 12px;
+  }
+  .camp-title h2 {
+    font-size: 19px;
+  }
+  .camp-title span {
+    display: none;
+  }
+  .camp-body {
+    gap: 8px;
+  }
+  .camp-brief {
+    width: 290px;
+    flex-basis: 290px;
+    padding: 12px;
+    gap: 8px;
+  }
+  .cb-name {
+    font-size: 20px;
+  }
+  .cb-story {
+    font-size: 12.5px;
+  }
+  .cb-facts {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .cb-facts div {
+    padding: 5px 7px;
+  }
+  .cb-mut,
+  .cb-goal {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  .tree-top .sub {
+    display: none;
+  }
+}
+
+/* narrow screens: a header that fits */
+@media (max-width: 600px) {
+  .camp-head {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .camp-title {
+    order: -1;
+    flex-basis: 100%;
+  }
+  .camp-title h2 {
+    font-size: 22px;
+  }
+  .camp-head-right {
+    margin-left: auto;
+  }
+  .camp-purse span {
+    display: none;
+  }
+  .brand .pitch,
+  .feature-list,
+  .menu-card > div:first-child > .muted {
+    display: none;
+  }
+  .brand h1 {
+    font-size: 44px;
+  }
+  .menu-wrap {
+    gap: 18px;
+  }
+}
+
+/* short screens: the start button stays in reach while the briefing scrolls */
+@media (max-height: 520px) {
+  .cb-actions {
+    position: sticky;
+    bottom: -12px;
+    margin: 0 -12px -12px;
+    padding: 10px 12px 12px;
+    background: linear-gradient(180deg, rgba(13, 21, 38, 0), var(--panel-solid) 30%);
+  }
+}
+
+/* rules dialog and chat on short screens */
+@media (max-height: 520px) {
+  .setup-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .setup-section {
+    margin-top: 8px;
+  }
+  .choice {
+    padding: 7px 8px;
+  }
+  .choice .t {
+    font-size: 13px;
+  }
+  .choice .d {
+    font-size: 10.5px;
+  }
+  .modal .sub {
+    font-size: 12px;
+  }
+}
+
+@media (max-height: 520px), (max-width: 760px) {
+  .game-chat .chat-line {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
 }

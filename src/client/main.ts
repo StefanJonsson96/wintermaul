@@ -8,7 +8,7 @@ import './styles.css';
 import type { Stage } from '../shared/campaign';
 import type { RoomState, ServerMsg } from '../shared/protocol';
 import { stageOptions } from './campaign/play';
-import { loadSave, progressLine } from './campaign/save';
+import { loadSave, progressLine, syncCloud } from './campaign/save';
 import { CampaignScreen } from './campaign/screen';
 import { VERSION } from '../shared/version';
 import { GameView } from './game/view';
@@ -17,12 +17,15 @@ import { skirmishOptions } from './modes/skirmish';
 import { tutorialOptions } from './modes/tutorial';
 import { Net } from './net';
 import { Backdrop } from './ui/background';
+import { markDevice } from './ui/device';
 import { $, toast } from './ui/dom';
 import { LobbyScreen } from './ui/lobby';
 import { MenuScreen } from './ui/menu';
+import { OFFLINE } from './mode';
 
 const qs = new URLSearchParams(location.search);
-if (qs.has('gallery')) {
+// the art gallery is a development page, left out of the stand-alone build
+if (import.meta.env.MODE !== 'artifact' && qs.has('gallery')) {
   const which = qs.get('gallery');
   void import('./gallery').then((m) => {
     if (which === 'creeps') m.showCreeps();
@@ -35,6 +38,7 @@ if (qs.has('gallery')) {
 type Screen = 'menu' | 'lobby' | 'campaign' | 'game';
 
 function boot(): void {
+  markDevice();
   const net = new Net();
   const backdrop = new Backdrop($('#bg-canvas') as HTMLCanvasElement);
   let game: GameView | null = null;
@@ -58,7 +62,9 @@ function boot(): void {
   const sendTalents = () => net.send({ type: 'talents', loadout: loadSave().talents });
   const campaign = new CampaignScreen($('#screen-campaign'), { play: playStage, back: () => show('menu'), talentsChanged: sendTalents });
 
+  let current: Screen = 'menu';
   function show(screen: Screen): void {
+    current = screen;
     for (const s of ['menu', 'lobby', 'campaign', 'game'] as const) $(`#screen-${s}`).classList.toggle('hidden', screen !== s);
     backdrop.setRunning(screen !== 'game');
     if (screen !== 'game' && game) {
@@ -146,7 +152,12 @@ function boot(): void {
   net.onStatus = (ok) => menu.setStatus(ok);
   net.onAny((msg) => route(msg, net));
   show('menu');
-  net.connect();
+  if (!OFFLINE) net.connect();
+  // as an artifact, campaign progress also lives in the host's per-player store
+  syncCloud(() => {
+    if (current === 'menu') menu.refresh();
+    if (current === 'campaign') campaign.show();
+  });
 
   // handy for debugging in the console
   (window as unknown as { winterward: unknown }).winterward = {

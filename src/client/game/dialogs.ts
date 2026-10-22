@@ -6,6 +6,7 @@ import { raceEmblem } from '../art/emblems';
 import { towerIcon } from '../art/towers';
 import { audio } from '../audio';
 import type { EndAction } from '../local';
+import { touchDevice } from '../ui/device';
 import { clear, fmt, h, toast, tooltip } from '../ui/dom';
 import { type ModalHandle, openModal } from '../ui/modal';
 import { towerTooltip } from './describe';
@@ -67,7 +68,7 @@ export function openRacePicker(view: GameView, onClose: () => void): ModalHandle
       'div',
       null,
       h('h2', null, me.races.length === 0 ? 'Choose your race' : 'Choose another race'),
-      h('div', { class: 'sub' }, `You have ${me.lumber} lumber. Each race costs 1. Stars show how tricky a race is to play well. Hover the little towers for details.${s.races ? ' This stage allows only the races shown.' : ''}`),
+      h('div', { class: 'sub' }, `You have ${me.lumber} lumber. Each race costs 1. Stars show how tricky a race is to play well. ${touchDevice ? 'Press and hold' : 'Hover'} the little towers for details.${s.races ? ' This stage allows only the races shown.' : ''}`),
       grid,
       legendNote,
     ),

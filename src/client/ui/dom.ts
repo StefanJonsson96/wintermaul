@@ -62,22 +62,66 @@ export function fmt(n: number): string {
 }
 
 let tooltipEl: HTMLElement | null = null;
+/** Touches also fire mouse events; those must not open hover tooltips. */
+let lastTouch = -1e9;
+/** A long press that showed a tooltip swallows the click that follows it. */
+let swallowClickUntil = 0;
+addEventListener('touchstart', () => {
+  lastTouch = performance.now();
+  hideTooltip();
+}, { capture: true, passive: true });
+addEventListener('click', (e) => {
+  if (performance.now() > swallowClickUntil) return;
+  swallowClickUntil = 0;
+  e.stopPropagation();
+  e.preventDefault();
+}, { capture: true });
 
-/** Rich hover tooltip: content is built lazily when the pointer enters. */
+/** Rich tooltip, built lazily: on hover with a mouse, on a long press with a finger. */
 export function tooltip(target: HTMLElement, build: () => Node | string): void {
-  target.addEventListener('mouseenter', (e) => showTooltip(build(), e as MouseEvent));
+  target.addEventListener('mouseenter', (e) => {
+    if (performance.now() - lastTouch > 1200) showTooltip(build(), e as MouseEvent);
+  });
   target.addEventListener('mousemove', (e) => positionTooltip(e as MouseEvent));
   target.addEventListener('mouseleave', hideTooltip);
   target.addEventListener('mousedown', hideTooltip);
+  let timer = 0;
+  const stop = () => window.clearTimeout(timer);
+  target.addEventListener('touchstart', () => {
+    stop();
+    timer = window.setTimeout(() => {
+      showTooltipAt(build(), target);
+      swallowClickUntil = performance.now() + 900;
+    }, 480);
+  }, { passive: true });
+  target.addEventListener('touchmove', stop, { passive: true });
+  target.addEventListener('touchend', stop);
+  target.addEventListener('touchcancel', stop);
 }
 
-export function showTooltip(content: Node | string, e: MouseEvent): void {
+function fillTooltip(content: Node | string): HTMLElement | null {
   tooltipEl ??= document.getElementById('tooltip');
-  if (!tooltipEl) return;
+  if (!tooltipEl) return null;
   clear(tooltipEl);
   tooltipEl.append(typeof content === 'string' ? document.createTextNode(content) : content);
   tooltipEl.classList.remove('hidden');
-  positionTooltip(e);
+  return tooltipEl;
+}
+
+export function showTooltip(content: Node | string, e: MouseEvent): void {
+  if (fillTooltip(content)) positionTooltip(e);
+}
+
+/** Shows a tooltip above (or below) an element, for touch screens. */
+function showTooltipAt(content: Node | string, anchor: HTMLElement): void {
+  const el = fillTooltip(content);
+  if (!el) return;
+  const a = anchor.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const x = Math.max(8, Math.min(innerWidth - r.width - 8, a.left + a.width / 2 - r.width / 2));
+  const y = a.top - r.height - 10 >= 8 ? a.top - r.height - 10 : Math.min(innerHeight - r.height - 8, a.bottom + 10);
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
 }
 
 export function positionTooltip(e: MouseEvent): void {

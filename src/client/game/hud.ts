@@ -14,6 +14,7 @@ import type { EndAction } from '../local';
 import { openHelp } from '../ui/help';
 import { icon } from '../ui/icons';
 import { type ModalHandle } from '../ui/modal';
+import { touchDevice } from '../ui/device';
 import { towerTooltip, dps } from './describe';
 import { openEndDialog, openGiftDialog, openRacePicker, openSettingsDialog, openSetupDialog } from './dialogs';
 import type { GameView } from './view';
@@ -45,6 +46,8 @@ export class Hud {
   private lastLives = -1;
   private countdownKey = '';
   private countdownFrom = 1;
+  private buildHint!: HTMLElement;
+  private card!: HTMLElement;
   private pauseBtn?: HTMLButtonElement;
   private speedBtn?: HTMLButtonElement;
   private pausedBanner?: HTMLElement;
@@ -92,7 +95,7 @@ export class Hud {
     const top = h('div', { class: 'topbar' }, waveBlock, this.livesBlock, res);
     this.preview = h('div', { class: 'wave-preview' });
 
-    const sound = h('button', { class: 'btn icon-btn', title: 'Sound' }, icon('sound', 17));
+    const sound = h('button', { class: 'btn icon-btn roomy-only', title: 'Sound' }, icon('sound', 17));
     sound.addEventListener('click', () => {
       audio.setMuted(!audio.muted);
       sound.style.opacity = audio.muted ? '0.45' : '1';
@@ -109,7 +112,7 @@ export class Hud {
       { class: 'top-right' },
       this.pauseBtn ?? null,
       this.speedBtn ?? null,
-      h('button', { class: 'btn icon-btn', title: 'How to play (F1)', onclick: () => openHelp() }, icon('help', 17)),
+      h('button', { class: 'btn icon-btn roomy-only', title: 'How to play (F1)', onclick: () => openHelp() }, icon('help', 17)),
       sound,
       h('button', { class: 'btn icon-btn', title: 'Settings', onclick: () => this.openSettings() }, icon('gear', 17)),
       h('button', { class: 'btn icon-btn', title: 'Leave game', onclick: () => v.confirmLeave() }, icon('exit', 17)),
@@ -123,11 +126,20 @@ export class Hud {
     const mini = h('div', { class: 'panel minimap' }, this.minimap);
 
     this.buildGrid = h('div', { class: 'build-grid' });
-    this.buildPanel = h('div', { class: 'panel build-panel' }, h('div', { class: 'panel-title' }, h('span', null, 'Build'), h('span', null, 'Shift = keep placing')), this.buildGrid);
+    this.buildHint = h('span', null, touchDevice ? 'Tap a tower, then the map' : 'Shift = keep placing');
+    this.buildPanel = h('div', { class: 'panel build-panel' }, h('div', { class: 'panel-title' }, h('span', null, 'Build'), this.buildHint), this.buildGrid);
     this.selectPanel = h('div', { class: 'panel select-panel hidden' });
     const card = h('div', { class: 'command-card' }, this.buildPanel, this.selectPanel);
+    this.card = card;
 
-    this.root.append(top, this.preview, topRight, this.scoreboard, this.chat.el, mini, card);
+    const rotate = h(
+      'div',
+      { class: 'rotate-hint' },
+      h('b', null, 'Turn your phone sideways'),
+      h('span', null, 'The lane is wide: you will see all of it in landscape.'),
+      h('button', { class: 'btn small', onclick: () => rotate.remove() }, 'Play upright anyway'),
+    );
+    this.root.append(top, this.preview, topRight, this.scoreboard, this.chat.el, mini, card, rotate);
     if (this.pausedBanner) this.root.append(this.pausedBanner);
     if (this.state.you < 0) this.root.append(h('div', { class: 'panel spectating' }, 'Spectating — enjoy the show'));
     this.chat.onCommand = (cmd, args) => v.chatCommand(cmd, args);
@@ -340,6 +352,12 @@ export class Hud {
     if (this.buildButtons.length === 0) {
       this.buildGrid.append(h('div', { class: 'muted', style: { gridColumn: 'span 4', padding: '8px', width: '240px', alignSelf: 'center' } }, s.wave.phase === 'setup' ? 'Waiting for the rules…' : 'No races yet.'));
     }
+    // on a touch screen you stay in build mode until you say you're done
+    const building = this.view.buildDef;
+    if (touchDevice && building) {
+      this.buildGrid.append(h('button', { class: 'cmd-btn done-btn', onclick: () => this.view.cancelBuild() }, icon('check', 22), h('span', null, 'Done')));
+    }
+    this.buildHint.textContent = touchDevice ? (building ? 'Tap the map to build' : 'Tap a tower, then the map') : 'Shift = keep placing';
   }
 
   private towerButton(def: TowerDef, cost: number, affordable: boolean, active: boolean): HTMLElement {
@@ -363,9 +381,11 @@ export class Hud {
     this.selectionKeys = [];
     if (towers.length === 0) {
       this.selectPanel.classList.add('hidden');
+      this.card.classList.remove('selecting');
       return;
     }
     this.selectPanel.classList.remove('hidden');
+    this.card.classList.add('selecting');
     clear(this.selectPanel);
     const mine = towers.filter((t) => t.owner === s.you);
     const first = towers[0];
@@ -391,7 +411,7 @@ export class Hud {
     if (towers.length === 1) {
       const a = def.attack;
       const grid = h('div', { class: 'stat-grid' });
-      const stat = (label: string, value: string) => grid.append(h('div', { class: 'stat' }, label, h('b', null, value)));
+      const stat = (label: string, value: string, minor = false) => grid.append(h('div', { class: `stat${minor ? ' minor' : ''}` }, label, h('b', null, value)));
       if (a) {
         stat('Damage', a.beam ? `${a.dmg[0]}/s` : `${a.dmg[0]}–${a.dmg[1]}`);
         stat('Speed', a.beam ? 'beam' : `${a.cd}s`);
@@ -399,8 +419,8 @@ export class Hud {
         stat('Range', String(+attackRange(a.range, m).toFixed(1)));
         stat('DPS', String(Math.round(dps(def, m))));
       }
-      stat('Kills', String(first.kills));
-      stat('Damage dealt', fmt(first.damage));
+      stat('Kills', String(first.kills), true);
+      stat('Damage dealt', fmt(first.damage), true);
       if (def.growth) stat('Level', `${first.level}/${def.growth.maxLevel}`);
       stat('Value', `${Math.floor(first.invested * sellRefund(s.modsOf(first.owner)))}g`);
       this.selectPanel.append(grid, h('div', { class: 'sel-desc' }, def.desc));
@@ -413,7 +433,7 @@ export class Hud {
     for (const [to, tids] of options) {
       const up = TOWERS[to];
       const cost = up.cost * tids.length;
-      const hk = BUILD_KEYS[k++];
+      const hk = touchDevice ? undefined : BUILD_KEYS[k++];
       const icon = h('canvas', { width: 36, height: 36 }) as HTMLCanvasElement;
       icon.getContext('2d')!.drawImage(towerIcon(up, 64), 0, 0, 36, 36);
       const act = () => this.view.upgrade(tids, to);
@@ -428,7 +448,7 @@ export class Hud {
       if (hk) this.selectionKeys.push({ key: hk, action: act });
     }
     const refund = mine.reduce((sum, t) => sum + Math.floor(t.invested * sellRefund(s.modsOf(s.you))), 0);
-    const sellBtn = h('button', { class: 'btn danger small', onclick: () => this.view.sell(mine.map((t) => t.id)) }, `Sell [X] +${refund}`);
+    const sellBtn = h('button', { class: 'btn danger small', onclick: () => this.view.sell(mine.map((t) => t.id)) }, `Sell${touchDevice ? '' : ' [X]'} +${refund}`);
     tooltip(sellBtn, () => `Refunds ${Math.round(sellRefund(s.modsOf(s.you)) * 100)}% (100% if you built it during this build phase). Selling while creeps are on the field leaves rubble until the wave ends.`);
     this.selectionKeys.push({ key: 'x', action: () => this.view.sell(mine.map((t) => t.id)) });
     if (options.size === 0 && mine.length > 0) actions.append(h('div', { class: 'muted', style: { fontSize: '12px', flex: '1' } }, 'Fully upgraded.'));
@@ -436,7 +456,7 @@ export class Hud {
     const hasAttack = mine.some((t) => t.tdef.attack);
     const row = h('div', { class: 'mode-row' });
     if (hasAttack) {
-      row.append(h('span', null, 'Target:'));
+      row.append(h('span', { class: 'label' }, 'Target:'));
       for (const m of TARGET_MODES) {
         row.append(h('button', { class: `btn small${mine.every((t) => t.mode === m) ? ' on' : ''}`, onclick: () => this.view.setMode(mine.map((t) => t.id), m) }, MODE_LABEL[m]));
       }

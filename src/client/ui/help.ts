@@ -1,3 +1,4 @@
+import { touchDevice } from './device';
 import { h } from './dom';
 import { openModal } from './modal';
 
@@ -22,20 +23,30 @@ export function openHelp(): void {
           'div',
           null,
           h('h4', null, 'Controls'),
-          h(
-            'div',
-            { class: 'keys' },
-            ...key('LMB', 'Select / place tower (hold Shift to keep placing)'),
-            ...key('RMB Esc', 'Cancel placement / deselect'),
-            ...key('Q W E R', 'Build buttons, or upgrades when a tower is selected'),
-            ...key('X', 'Sell selected towers'),
-            ...key('Drag', 'Box-select towers (then upgrade them all at once)'),
-            ...key('Wheel', 'Zoom'),
-            ...key('Arrows / RMB-drag', 'Move the camera (or drag with the middle button)'),
-            ...key('Space', 'Jump to your lane'),
-            ...key('Alt+Click', 'Ping the map for your team'),
-            ...key('Enter', 'Chat (try -random, -ready)'),
-          ),
+          touchDevice
+            ? h(
+                'div',
+                { class: 'keys' },
+                ...key('Tap', 'Pick a tower in the Build panel, then tap the map to build; Done stops building'),
+                ...key('Hold', 'Keep a finger down to aim before you build. On a tower: add it to the selection. On a button: see what it does'),
+                ...key('Double-tap', 'Select every tower of that kind on screen (then upgrade them all at once)'),
+                ...key('Drag', 'Move the camera'),
+                ...key('Pinch', 'Zoom (two fingers also move the camera)'),
+              )
+            : h(
+                'div',
+                { class: 'keys' },
+                ...key('LMB', 'Select / place tower (hold Shift to keep placing)'),
+                ...key('RMB Esc', 'Cancel placement / deselect'),
+                ...key('Q W E R', 'Build buttons, or upgrades when a tower is selected'),
+                ...key('X', 'Sell selected towers'),
+                ...key('Drag', 'Box-select towers (then upgrade them all at once)'),
+                ...key('Wheel', 'Zoom'),
+                ...key('Arrows / RMB-drag', 'Move the camera (or drag with the middle button)'),
+                ...key('Space', 'Jump to your lane'),
+                ...key('Alt+Click', 'Ping the map for your team'),
+                ...key('Enter', 'Chat (try -random, -ready)'),
+              ),
         ),
         h(
           'div',

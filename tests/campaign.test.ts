@@ -113,3 +113,64 @@ describe('campaign save', () => {
     expect(r.record).toBe(true);
   });
 });
+
+describe('cloud saves', () => {
+  it('prefer the save that came further', async () => {
+    const { aheadOf } = await import('../src/client/campaign/save');
+    const a = emptySave();
+    const b = emptySave();
+    b.stones = 4;
+    expect(aheadOf(b, a)).toBe(true);
+    expect(aheadOf(a, b)).toBe(false);
+    a.stones = 4;
+    a.stars = { hollowmere: 3 };
+    b.stars = { hollowmere: 2 };
+    expect(aheadOf(a, b)).toBe(true);
+    expect(aheadOf(b, a)).toBe(false);
+  });
+
+  it('load from and write to the host store, one write at a time', async () => {
+    const { CloudSave } = await import('../src/client/campaign/cloud');
+    const writes: string[] = [];
+    let inFlight = 0;
+    let maxInFlight = 0;
+    let stored: string | undefined = '{"stones":7}';
+    const doc = {
+      get: async () => ({ exists: stored !== undefined, data: () => (stored === undefined ? undefined : { save: stored }) }),
+      set: async (data: Record<string, unknown>) => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((r) => setTimeout(r, 5));
+        stored = data.save as string;
+        writes.push(stored);
+        inFlight--;
+      },
+    };
+    const host = { use: async (name: string) => (name === 'db' ? { doc: () => doc } : name === 'user' ? { id: async () => 'u1' } : null) };
+    (globalThis as { claude?: unknown }).claude = host;
+    try {
+      const cloud = new CloudSave();
+      let remote = '';
+      await cloud.connect((json) => (remote = json));
+      expect(remote).toBe('{"stones":7}');
+      cloud.store('{"stones":8}');
+      cloud.store('{"stones":9}');
+      cloud.store('{"stones":10}');
+      await new Promise((r) => setTimeout(r, 50));
+      expect(maxInFlight).toBe(1);
+      expect(writes[writes.length - 1]).toBe('{"stones":10}');
+      expect(writes.length).toBeLessThanOrEqual(2);
+    } finally {
+      delete (globalThis as { claude?: unknown }).claude;
+    }
+  });
+
+  it('do nothing outside the artifact host', async () => {
+    const { CloudSave } = await import('../src/client/campaign/cloud');
+    const cloud = new CloudSave();
+    let called = false;
+    await cloud.connect(() => (called = true));
+    cloud.store('{}');
+    expect(called).toBe(false);
+  });
+});

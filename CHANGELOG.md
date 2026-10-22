@@ -4,6 +4,24 @@ All notable changes to Winterward. The format follows [Keep a Changelog](https:/
 and the project uses [Semantic Versioning](https://semver.org/): the major number changes when saves or the
 network protocol break, the minor number for new features, the patch number for fixes and balance.
 
+## [1.1.0] - 2026-10-22
+
+### Added
+- **Play on a phone or tablet.** Touch controls: tap a tower in the Build panel, then tap the map to build
+  (keep a finger down to aim first); you stay in build mode until you tap Done. Drag to move the camera, pinch
+  to zoom, tap to select, double-tap to select every tower of a kind, press and hold to add one to the
+  selection or to see what a button does.
+- A compact HUD for phones on their side, menus and campaign screens that fit small screens, and a hint to
+  turn the phone sideways during a game.
+- `npm run build:artifact` packs the single-player game (tutorial, campaign, skirmish) into one stand-alone
+  page. Hosted as a claude.ai artifact, campaign progress is also kept in the host's private per-player store,
+  so it survives a cleared browser and follows you between devices.
+
+### Changed
+- Leaving a game and starting a lobby with players not ready now ask inside the page instead of a browser
+  dialog.
+- The tutorial and the help screen explain the touch controls on touch screens.
+
 ## [1.0.0] - 2026-09-26
 
 ### Added
@@ -67,6 +85,7 @@ network protocol break, the minor number for new features, the patch number for 
 - Procedural art and sound: no image or audio files.
 - Docs (design notes, hosting guide), Dockerfile and unit tests.
 
+[1.1.0]: https://github.com/StefanJonsson96/wintermaul/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/StefanJonsson96/wintermaul/compare/v0.4.0...v1.0.0
 [0.4.0]: https://github.com/StefanJonsson96/wintermaul/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/StefanJonsson96/wintermaul/compare/v0.2.0...v0.3.0

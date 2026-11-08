@@ -15,8 +15,8 @@ export interface StageActions {
   map(): void;
 }
 
-/** The goal list on the left of the HUD, updated as the game goes. */
-class GoalTracker {
+/** The goal list on the left of the HUD, updated as the game goes (stars, or a daily's medals). */
+export class GoalTracker {
   private el: HTMLElement;
   private key = '';
 
@@ -24,6 +24,8 @@ class GoalTracker {
     view: GameView,
     private local: LocalGame,
     private stage: Stage,
+    private kicker = stage.endless ? 'Endless' : stageLabel(stage),
+    private marks: (string | (() => Node))[] = ['★', '★★', '★★★'],
   ) {
     this.el = h('div', { class: 'panel stage-badge' });
     document.getElementById('hud')?.append(this.el);
@@ -39,12 +41,12 @@ class GoalTracker {
     if (key === this.key || !this.el.isConnected) return;
     this.key = key;
     clear(this.el);
-    this.el.append(h('div', { class: 'sb-kicker' }, s.endless ? 'Endless' : stageLabel(s), h('span', null, s.name)));
+    this.el.append(h('div', { class: 'sb-kicker' }, this.kicker, h('span', null, s.name)));
     if (s.endless) {
       this.el.append(h('div', { class: 'sb-goal' }, h('span', { class: 'sb-star' }, icon('infinity', 14)), `Wave ${g.wave} · a runestone every 5 waves past 20`));
       return;
     }
-    const row = (stars: number, text: string, state: 'done' | 'failed' | '') => h('div', { class: `sb-goal ${state}` }, h('span', { class: 'sb-star' }, '★'.repeat(stars)), h('span', null, text), state === 'done' ? icon('check', 13) : null);
+    const row = (stars: number, text: string, state: 'done' | 'failed' | '') => h('div', { class: `sb-goal ${state}` }, h('span', { class: 'sb-star' }, ((m) => (typeof m === 'string' ? m : m()))(this.marks[stars - 1])), h('span', null, text), state === 'done' ? icon('check', 13) : null);
     const won = g.phase === 'victory';
     this.el.append(
       row(1, `Reach wave ${s.reach}`, g.wave >= s.reach || won ? 'done' : over ? 'failed' : ''),

@@ -39,6 +39,8 @@ export interface LocalOptions {
   onGameOver?: (victory: boolean, stats: EndStats, game: Game) => void;
   /** Saves the game as it goes, so it can be continued after the page closes. */
   save?: { kind: SavedKind; title: string };
+  /** A fixed seed (the daily challenge is the same game for everyone). */
+  seed?: number;
 }
 
 export const SPEEDS = [1, 2, 3];
@@ -93,7 +95,7 @@ export class LocalGame implements Link {
   }
 
   start(): void {
-    this.setUp((Math.random() * 2 ** 31) | 0);
+    this.setUp(this.opts.seed ?? (Math.random() * 2 ** 31) | 0);
     this.launch(false);
   }
 

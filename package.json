@@ -21,6 +21,7 @@
     "check": "npm run typecheck && npm test",
     "balance": "tsx scripts/balance.ts",
     "balance:campaign": "tsx scripts/campaign-balance.ts",
+    "balance:daily": "tsx scripts/daily-balance.ts",
     "fingerprint": "tsx scripts/fingerprint.ts"
   },
   "dependencies": {

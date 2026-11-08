@@ -54,6 +54,23 @@ export function stageRoster(stage: Stage, max = 12): { wave: number; id: string 
   return [...picked, ...bosses].sort((a, b) => a.wave - b.wave);
 }
 
+/** Portraits of the creeps a stage throws at you, with what each can do in its tooltip. */
+export function enemyRoster(s: Stage): HTMLElement | null {
+  const roster = stageRoster(s);
+  if (!roster.length) return null;
+  return h(
+    'div',
+    { class: 'cb-enemies' },
+    ...roster.map(({ wave, id }) => {
+      const def = CREEPS[id];
+      const c = creepPortrait(def, 44);
+      const el = h('div', { class: `cb-enemy${def.boss ? ' boss' : ''}${def.air ? ' air' : ''}` }, c, h('span', null, String(wave)));
+      tooltip(el, () => h('div', null, h('div', { class: 'tt-title' }, def.name), h('div', { class: 'tt-meta' }, `Wave ${wave} · ${ARMOR_LABEL[def.armorType]}${def.boss ? ' · Boss' : ''}${def.air ? ' · Air' : ''}${def.immune ? ' · Immune' : ''}`), ...abilityLines(def).map((l) => h('div', null, l))));
+      return el;
+    }),
+  );
+}
+
 export class CampaignScreen {
   private save: CampaignSave = loadSave();
   private map: CampaignMap;
@@ -173,22 +190,6 @@ export class CampaignScreen {
     this.renderBrief();
   }
 
-  private enemies(s: Stage): HTMLElement | null {
-    const roster = stageRoster(s);
-    if (!roster.length) return null;
-    return h(
-      'div',
-      { class: 'cb-enemies' },
-      ...roster.map(({ wave, id }) => {
-        const def = CREEPS[id];
-        const c = creepPortrait(def, 44);
-        const el = h('div', { class: `cb-enemy${def.boss ? ' boss' : ''}${def.air ? ' air' : ''}` }, c, h('span', null, String(wave)));
-        tooltip(el, () => h('div', null, h('div', { class: 'tt-title' }, def.name), h('div', { class: 'tt-meta' }, `Wave ${wave} · ${ARMOR_LABEL[def.armorType]}${def.boss ? ' · Boss' : ''}${def.air ? ' · Air' : ''}${def.immune ? ' · Immune' : ''}`), ...abilityLines(def).map((l) => h('div', null, l))));
-        return el;
-      }),
-    );
-  }
-
   /** Begin, play again, or continue the game in progress on this stage. */
   private playButtons(s: Stage): HTMLElement[] {
     const saved = this.actions.saved?.();
@@ -226,7 +227,7 @@ export class CampaignScreen {
       h('p', { class: 'cb-story' }, s.story),
       facts,
       mutators.length ? h('div', { class: 'cb-mutators' }, ...mutators.map((m) => h('div', { class: 'cb-mut' }, h('b', null, m.name), h('span', null, m.text)))) : null,
-      this.enemies(s),
+      enemyRoster(s),
       races ? h('div', { class: 'cb-races' }, h('span', { class: 'muted' }, 'Races'), ...races.map((r) => {
         const c = raceEmblem(r, 64) as HTMLCanvasElement;
         c.title = RACE_BY_ID[r]?.name ?? r;

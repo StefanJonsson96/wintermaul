@@ -16,6 +16,9 @@ export interface SoloActions {
   skirmish(): void;
   /** Short progress line for the campaign tile, e.g. "Stage 3 · 7 stars". */
   campaignProgress(): string;
+  daily(): void;
+  /** Today's challenge and medal, for its tile. */
+  dailyLine(): string;
   /** The game in progress, if there is one. */
   saved(): SavedGame | null;
   resume(): void;
@@ -39,6 +42,7 @@ export class MenuScreen {
   private nameInput!: HTMLInputElement;
   private codeInput!: HTMLInputElement;
   private campaignSub!: HTMLElement;
+  private dailySub!: HTMLElement;
   private continueRow!: HTMLElement;
 
   constructor(
@@ -52,6 +56,7 @@ export class MenuScreen {
   /** Called whenever the menu is shown again. */
   refresh(): void {
     this.campaignSub.textContent = this.solo.campaignProgress();
+    this.dailySub.textContent = this.solo.dailyLine();
     this.renderContinue();
   }
 
@@ -95,6 +100,7 @@ export class MenuScreen {
     const tile = (ic: string, title: string, sub: HTMLElement | string, onclick: () => void, extra = '') =>
       h('button', { class: `solo-tile ${extra}`, onclick: () => (this.commitName(), onclick()) }, h('span', { class: 'solo-icon' }, icon(ic, 22)), h('b', null, title), typeof sub === 'string' ? h('span', null, sub) : sub);
     this.campaignSub = h('span', null, '');
+    this.dailySub = h('span', null, '');
     this.continueRow = h('div', { class: 'continue-row hidden' });
     const soloCard = h(
       'div',
@@ -106,7 +112,8 @@ export class MenuScreen {
         { class: 'solo-grid' },
         tile('book', 'Tutorial', 'Learn to maze in 8 waves', () => this.solo.tutorial(), 'accent'),
         tile('map', 'Campaign', this.campaignSub, () => this.solo.campaign()),
-        tile('sword', 'Skirmish', 'Solo game, classic rules', () => this.solo.skirmish()),
+        tile('sword', 'Skirmish', 'Solo game, your rules', () => this.solo.skirmish()),
+        tile('target', 'Daily', this.dailySub, () => this.solo.daily(), 'daily'),
       ),
     );
     const card = h(

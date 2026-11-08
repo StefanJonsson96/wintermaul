@@ -13,6 +13,7 @@ import { CampaignScreen } from './campaign/screen';
 import { VERSION } from '../shared/version';
 import { GameView } from './game/view';
 import { type Link, LocalGame, type LocalOptions } from './local';
+import { dailyLine, dailyOptions, openDaily } from './modes/daily';
 import { skirmishOptions } from './modes/skirmish';
 import { tutorialOptions } from './modes/tutorial';
 import { Net } from './net';
@@ -58,12 +59,15 @@ function boot(): void {
     campaign: () => show('campaign'),
     skirmish: () => startLocal(skirmishOptions()),
     campaignProgress: () => progressLine(loadSave()),
+    daily: () => openDaily(dailyActions),
+    dailyLine: () => dailyLine(loadSave()),
     saved: loadGame,
     resume: () => void continueGame(),
     abandon: clearGame,
   });
   const lobby = new LobbyScreen($('#screen-lobby'), net, () => sendTalents());
   const stageActions = { play: (stage: Stage) => playStage(stage), map: leaveTo('campaign') };
+  const dailyActions = { play: (date: string) => startLocal(dailyOptions(date, dailyActions)), menu: leaveTo('menu'), saved: loadGame, resume: () => void continueGame() };
   const playStage = (stage: Stage) => startLocal(stageOptions(stage, loadSave(), stageActions));
   const sendTalents = () => net.send({ type: 'talents', loadout: loadSave().talents });
   const campaign = new CampaignScreen($('#screen-campaign'), {
@@ -114,6 +118,8 @@ function boot(): void {
         const stage = STAGE_BY_ID[kind.stage];
         return stage ? stageOptions(stage, loadSave(), stageActions, kind.talents) : null;
       }
+      case 'daily':
+        return dailyOptions(kind.date, dailyActions);
       default:
         return null;
     }

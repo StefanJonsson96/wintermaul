@@ -1,5 +1,6 @@
 // Campaign progress lives in localStorage: stars per stage, runestones and the talent loadout.
 import { ALL_STAGES, type Chapter, CHAPTERS, chapterOf, ENDLESS_AFTER, endlessReward, STAGES, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
+import { type Daily, dayKey, type Medal, medalFor } from '../../shared/daily';
 import { type Loadout, NODE_BY_ID, sanitizeLoadout, totalSpent } from '../../shared/talents';
 import { CloudSave } from './cloud';
 
@@ -17,15 +18,39 @@ export interface CampaignSave {
   last?: string;
   /** Set when the save held talents from the old tree, which were refunded (shown once). */
   refunded?: boolean;
+  /** Daily challenge results by date: the best medal and wave. */
+  daily: Record<string, DailyResult>;
+}
+
+export interface DailyResult {
+  medal: Medal;
+  wave: number;
+  /** Games played that day. */
+  plays: number;
 }
 
 export function emptySave(): CampaignSave {
-  return { stars: {}, best: {}, stones: 0, talents: {}, endlessBest: 0 };
+  return { stars: {}, best: {}, stones: 0, talents: {}, endlessBest: 0, daily: {} };
 }
 
 function numbers(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {};
   if (raw && typeof raw === 'object') for (const [k, v] of Object.entries(raw)) if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+  return out;
+}
+
+/** Daily results from a save, keeping the last two months. */
+function dailies(raw: unknown): Record<string, DailyResult> {
+  const out: Record<string, DailyResult> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  const days = Object.entries(raw as Record<string, Partial<DailyResult>>)
+    .filter(([d, r]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && r && typeof r === 'object')
+    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .slice(0, 60);
+  for (const [d, r] of days) {
+    const medal = Math.max(0, Math.min(3, Math.floor(Number(r.medal) || 0))) as Medal;
+    out[d] = { medal, wave: Math.max(0, Math.floor(Number(r.wave) || 0)), plays: Math.max(1, Math.floor(Number(r.plays) || 1)) };
+  }
   return out;
 }
 
@@ -45,6 +70,7 @@ export function parseSave(json: string | null): CampaignSave {
       endlessBest: typeof raw.endlessBest === 'number' ? raw.endlessBest : 0,
       last: typeof raw.last === 'string' ? raw.last : undefined,
       refunded: old || raw.refunded === true || undefined,
+      daily: dailies(raw.daily),
     };
   } catch {
     return emptySave();
@@ -81,7 +107,8 @@ export function storeSave(s: CampaignSave): void {
 export function aheadOf(a: CampaignSave, b: CampaignSave): boolean {
   if (a.stones !== b.stones) return a.stones > b.stones;
   if (totalStars(a) !== totalStars(b)) return totalStars(a) > totalStars(b);
-  return a.endlessBest > b.endlessBest;
+  if (a.endlessBest !== b.endlessBest) return a.endlessBest > b.endlessBest;
+  return Object.keys(a.daily).length > Object.keys(b.daily).length;
 }
 
 /**
@@ -177,4 +204,26 @@ export function progressLine(s: CampaignSave): string {
   const free = unspent(s);
   const acts = CHAPTERS.filter((c) => chapterOpen(c, s)).map((c) => `${c.act} ${count(c)}/${c.stages.length}`).join(' · ');
   return `${acts} · ${totalStars(s)}★${free > 0 ? ` · ${free} runestone${free > 1 ? 's' : ''} to spend` : ''}`;
+}
+
+/** Records a daily challenge game; returns the medal and whether it beat the day's best. */
+export function recordDaily(s: CampaignSave, d: Daily, r: { victory: boolean; wave: number; livesLost: number }): { medal: Medal; improved: boolean } {
+  const medal = medalFor(d, r);
+  const before = s.daily[d.date];
+  const improved = !before || medal > before.medal || (medal === before.medal && r.wave > before.wave);
+  s.daily[d.date] = { medal: Math.max(medal, before?.medal ?? 0) as Medal, wave: Math.max(r.wave, before?.wave ?? 0), plays: (before?.plays ?? 0) + 1 };
+  storeSave(s);
+  return { medal, improved };
+}
+
+/** Days in a row with a daily challenge played, up to today (or yesterday, if today is not played yet). */
+export function dailyStreak(s: CampaignSave, today = new Date()): number {
+  const day = new Date(today);
+  if (!s.daily[dayKey(day)]) day.setDate(day.getDate() - 1);
+  let n = 0;
+  while (s.daily[dayKey(day)]) {
+    n++;
+    day.setDate(day.getDate() - 1);
+  }
+  return n;
 }

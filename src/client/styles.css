@@ -283,8 +283,68 @@ input:focus {
 
 .solo-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
+}
+
+.solo-tile.daily .solo-icon {
+  background: rgba(255, 138, 92, 0.16);
+  color: #ff9a6a;
+}
+
+/* the daily challenge: medals, the week, the streak */
+.medal {
+  display: inline-block;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.35), inset 0 2px 2px rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.45);
+}
+
+.medal.m0 {
+  opacity: 0.45;
+}
+
+.rw-medal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+}
+
+.daily {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.daily-week {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 12px 0 6px;
+}
+
+.dw-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dw-day.today {
+  color: #fff;
+  font-weight: 700;
+}
+
+.daily-streak {
+  font-size: 12.5px;
+}
+
+.daily .cb-goal .medal {
+  margin-right: 8px;
 }
 
 .solo-tile {
@@ -3089,7 +3149,7 @@ kbd {
     flex-wrap: wrap;
   }
   .solo-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .solo-tile.continue {
     min-width: 0;

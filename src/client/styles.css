@@ -1182,6 +1182,59 @@ input:focus {
   right: auto;
 }
 
+/* commander spells, with their cooldown filling down */
+.spell-panel {
+  padding: 10px;
+}
+
+.spell-grid {
+  display: flex;
+  gap: 6px;
+}
+
+.cmd-btn.spell {
+  display: grid;
+  place-items: center;
+  color: var(--spell);
+  background: radial-gradient(circle at 50% 35%, rgba(60, 90, 140, 0.4), rgba(14, 22, 40, 0.95));
+}
+
+.cmd-btn.spell svg {
+  filter: drop-shadow(0 0 6px var(--spell));
+}
+
+.cmd-btn.spell .sp-cd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background: rgba(4, 8, 16, 0.72);
+  pointer-events: none;
+}
+
+.cmd-btn.spell .sp-left {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+}
+
+.cmd-btn.spell.cooling svg {
+  opacity: 0.45;
+  filter: none;
+}
+
+.cmd-btn.spell.active {
+  border-color: var(--spell);
+  box-shadow: 0 0 18px var(--spell);
+}
+
 .cmd-btn.special {
   display: grid;
   place-items: center;
@@ -2736,7 +2789,8 @@ kbd {
     display: none;
   }
   .build-panel,
-  .select-panel {
+  .select-panel,
+  .spell-panel {
     padding: 6px;
   }
   .panel-title {

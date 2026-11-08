@@ -9,6 +9,7 @@ import { type ChatLine, DIFFICULTIES, type EndStats, type FullState, type GameCo
 import type { TargetMode, TowerDef } from '../../shared/types';
 import { type Link, SPEEDS } from '../local';
 import { upgradeCost } from '../../shared/sim/mods';
+import { SPELL_BY_ID, SPELLS, type SpellDef, type SpellId } from '../../shared/sim/spells';
 import { toast } from '../ui/dom';
 import { openHelp } from '../ui/help';
 import { anyModalOpen, confirmDialog } from '../ui/modal';
@@ -48,6 +49,8 @@ export class GameView {
   selected = new Set<number>();
   hover = -1;
   buildDef: TowerDef | null = null;
+  /** The spell being aimed, if any. */
+  spell: SpellDef | null = null;
   prefs = loadPrefs();
   private tips = new TipDeck();
   /** Cells to highlight (set by the tutorial coach). */
@@ -167,6 +170,7 @@ export class GameView {
       return;
     }
     this.buildDef = this.buildDef?.id === defId ? null : def;
+    this.spell = null;
     this.selected.clear();
     this.ghostKey = '';
     audio.play('click', 0.4);
@@ -178,6 +182,39 @@ export class GameView {
     this.ghost = null;
     this.ghostKey = '';
     this.hud.refreshBuildPanel(true);
+  }
+
+  /** Picks a spell to aim (or puts it away when it was already picked). */
+  startSpell(id: SpellId): void {
+    const s = this.state;
+    if (s.settings.spells === false || s.you < 0) return;
+    const def = SPELL_BY_ID[id];
+    const ready = s.me?.spells?.[id] ?? 0;
+    if (ready > s.renderTime + 0.05) {
+      toast(`${def.name} is ready in ${Math.ceil(ready - s.renderTime)}s`, 'error', 1400);
+      audio.play('error', 0.4);
+      return;
+    }
+    if (this.buildDef) this.cancelBuild();
+    this.spell = this.spell?.id === id ? null : def;
+    this.selected.clear();
+    audio.play('click', 0.4);
+    this.hud.refreshSpells(true);
+  }
+
+  cancelSpell(): void {
+    this.spell = null;
+    this.hud.refreshSpells(true);
+  }
+
+  /** Casts the spell being aimed where the pointer is. */
+  private castHere(): void {
+    const def = this.spell;
+    if (!def || !this.mouse.in) return;
+    const w = this.mouseWorld();
+    const lane = nearestLane(w.y, this.state.laneOwners.length);
+    this.send({ c: 'cast', spell: def.id, lane, x: +(w.x - LANE_MARGIN_X).toFixed(2), y: +(w.y - laneOriginY(lane)).toFixed(2) });
+    this.cancelSpell();
   }
 
   upgrade(ids: number[], to: string): void {
@@ -399,6 +436,7 @@ export class GameView {
       marks: this.marks,
       showPath: this.prefs.showPath,
       showGrid: this.prefs.showGrid && !!this.buildDef,
+      aim: this.spell && this.mouse.in ? { ...this.mouseWorld(), r: this.spell.radius, color: this.spell.color } : null,
     };
     this.renderer.render(now, dt, view);
     for (const hook of this.frameHooks) hook(now);
@@ -559,6 +597,7 @@ export class GameView {
       const cam = this.renderer.cam;
       this.drag = { button: e.button, x: e.clientX, y: e.clientY, camX: cam.x, camY: cam.y, moved: false };
       if (e.button === 2 && this.buildDef) this.cancelBuild();
+      if (e.button === 2 && this.spell) this.cancelSpell();
     });
     on(window, 'mouseup', (e) => {
       const d = this.drag;
@@ -590,11 +629,12 @@ export class GameView {
     }, { passive: false });
     new TouchControls(c, {
       camera: () => this.renderer.cam,
-      building: () => !!this.buildDef,
+      building: () => !!this.buildDef || !!this.spell,
       aim: (p) => this.pointAt(p),
       release: (p) => {
         this.pointAt(p);
-        this.placeGhost(true);
+        if (this.spell) this.castHere();
+        else this.placeGhost(true);
         this.pointAway();
       },
       stopAim: () => this.pointAway(),
@@ -623,7 +663,8 @@ export class GameView {
       this.link.send({ type: 'ping', lane, x: w.x - LANE_MARGIN_X, y: w.y - laneOriginY(lane) });
       return;
     }
-    if (this.buildDef) this.placeGhost(e.shiftKey);
+    if (this.spell) this.castHere();
+    else if (this.buildDef) this.placeGhost(e.shiftKey);
     else this.selectAt(e.shiftKey);
   }
 
@@ -712,8 +753,14 @@ export class GameView {
     if (anyModalOpen()) return;
     this.keys.add(k);
     if (k === 'escape') {
-      if (this.buildDef) this.cancelBuild();
+      if (this.spell) this.cancelSpell();
+      else if (this.buildDef) this.cancelBuild();
       else this.selected.clear();
+      return;
+    }
+    const spellKey = ['1', '2', '3'].indexOf(k);
+    if (spellKey >= 0 && SPELLS[spellKey]) {
+      this.startSpell(SPELLS[spellKey].id);
       return;
     }
     if (k === ' ') {

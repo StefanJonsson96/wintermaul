@@ -39,6 +39,7 @@ export interface PlayerInit {
 export interface Player extends NetPlayer {
   goldMul: number;
   mods: PlayerMods;
+  spells: Partial<Record<import('./spells').SpellId, number>>;
 }
 
 export interface Dot {
@@ -134,6 +135,8 @@ export interface Tower {
   pulseCd: number;
   /** Frozen solid by a hexer (no attacks or pulses) until this time. */
   frozenUntil: number;
+  /** Attacking faster under a War Cry until this time. */
+  rallyUntil: number;
 }
 
 export interface Lane {

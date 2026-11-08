@@ -107,11 +107,14 @@ export function openSetupDialog(view: GameView, onClose: () => void): { modal: M
     const finalBoss = CREEPS[wavesOf(setId)[FINAL_WAVE - 1].creep].name;
     const endRow = h('div', { class: 'setup-grid', style: { gridTemplateColumns: 'repeat(2, 1fr)' } });
     endRow.append(choice(!st.endless, 'Forty waves', `Ending with ${finalBoss}`, { endless: false }), choice(st.endless, 'Endless', 'Keep going after wave 40 — how far can you get?', { endless: true }));
+    const spellRow = h('div', { class: 'setup-grid', style: { gridTemplateColumns: 'repeat(2, 1fr)' } });
+    spellRow.append(choice(st.spells !== false, 'Spells · new', 'Frost Nova, Meteor and War Cry for every player', { spells: true }), choice(st.spells === false, 'No spells', 'Towers only, as in the original', { spells: false }));
     body.append(
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Difficulty'), diffRow),
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Race mode'), modeRow),
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Waves'), wavesRow),
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Length'), endRow),
+      h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Commander spells'), spellRow),
     );
   };
   refresh();

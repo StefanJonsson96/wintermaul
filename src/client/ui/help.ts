@@ -32,6 +32,7 @@ export function openHelp(): void {
                 ...key('Double-tap', 'Select every tower of that kind on screen (then upgrade them all at once)'),
                 ...key('Drag', 'Move the camera'),
                 ...key('Pinch', 'Zoom (two fingers also move the camera)'),
+                ...key('Spells', 'Tap Frost Nova, Meteor or War Cry, then the map (each has a cooldown)'),
               )
             : h(
                 'div',
@@ -39,6 +40,7 @@ export function openHelp(): void {
                 ...key('LMB', 'Select / place tower (hold Shift to keep placing)'),
                 ...key('RMB Esc', 'Cancel placement / deselect'),
                 ...key('Q W E R', 'Build buttons, or upgrades when a tower is selected'),
+                ...key('1 2 3', 'Spells: Frost Nova, Meteor, War Cry (then click the map)'),
                 ...key('X', 'Sell selected towers'),
                 ...key('Drag', 'Box-select towers (then upgrade them all at once)'),
                 ...key('Wheel', 'Zoom'),

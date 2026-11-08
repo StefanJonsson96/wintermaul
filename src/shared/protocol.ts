@@ -1,5 +1,6 @@
 // Messages between browser and server. Everything is JSON over one WebSocket.
 import type { WaveSetId } from './data/waves';
+import type { SpellId } from './sim/spells';
 import type { TargetMode } from './types';
 
 export type Difficulty = 'casual' | 'normal' | 'hard' | 'brutal' | 'perfection';
@@ -13,6 +14,8 @@ export interface GameSettings {
   talents?: boolean;
   /** Which creeps come: the classic waves (default) or The Thaw. */
   waves?: WaveSetId;
+  /** Commander spells (on unless turned off). */
+  spells?: boolean;
 }
 
 export const DIFFICULTIES: Record<Difficulty, { label: string; lives: number; perPlayer: number; hp: number; blurb: string }> = {
@@ -46,6 +49,7 @@ export type GameCommand =
   | { c: 'race'; race: string } // race id or 'random'
   | { c: 'ready'; value: boolean }
   | { c: 'gift'; to: number; amount: number }
+  | { c: 'cast'; spell: SpellId; lane: number; x: number; y: number }
   | { c: 'setup'; settings: Partial<GameSettings> } // the rule chooser only, during setup
   | { c: 'setupDone' };
 
@@ -67,6 +71,8 @@ export interface NetPlayer {
   damage: number;
   goldEarned: number;
   ready: boolean;
+  /** When each spell is ready again (game time). */
+  spells?: Partial<Record<SpellId, number>>;
 }
 
 export interface NetTower {
@@ -158,6 +164,7 @@ export type GameEvent =
   | { e: 'ward'; t: number; id: number }
   | { e: 'brood'; t: number; id: number }
   | { e: 'freeze'; t: number; id: number; tw: number; until: number }
+  | { e: 'cast'; t: number; p: number; spell: SpellId; lane: number; x: number; y: number; ready: number }
   | { e: 'setup'; t: number; settings: GameSettings; done: boolean; lives: number; finalWave: number };
 
 /** Compact per-tick state. Creeps: flat array of [id, lane, x*100, y*100, hp, flags] per creep. */

@@ -6,10 +6,10 @@ export interface ModalHandle {
 }
 
 /** Opens a modal dialog. Esc and clicking the backdrop close it when `dismissable`. */
-export function openModal(content: HTMLElement, opts: { narrow?: boolean; wide?: boolean; dismissable?: boolean; soft?: boolean; onClose?: () => void } = {}): ModalHandle {
+export function openModal(content: HTMLElement, opts: { narrow?: boolean; wide?: boolean; full?: boolean; dismissable?: boolean; soft?: boolean; onClose?: () => void } = {}): ModalHandle {
   const root = document.getElementById('modal-root')!;
-  const box = h('div', { class: `panel modal${opts.narrow ? ' narrow' : ''}${opts.wide ? ' wide' : ''}` }, content);
-  const back = h('div', { class: `modal-back${opts.soft ? ' soft' : ''}` }, box);
+  const box = h('div', { class: `panel modal${opts.narrow ? ' narrow' : ''}${opts.wide ? ' wide' : ''}${opts.full ? ' full' : ''}` }, content);
+  const back = h('div', { class: `modal-back${opts.soft ? ' soft' : ''}${opts.full ? ' full' : ''}` }, box);
   let closed = false;
   const close = () => {
     if (closed) return;

@@ -18,7 +18,9 @@ const cases = [
 for (const [i, c] of cases.entries()) {
   const seed = 1000 + i;
   const init = Array.from({ length: c.players }, (_, k) => ({ id: k, name: `B${k}`, color: k, isBot: true }));
-  const mods = c.talents ? { 0: modsFromLoadout({ honed: 5, hearts: 5, virulence: 3, chill: 3, concussion: 1, warchest: 5, kin_gold: 3, secondwind: 0 }) } : undefined;
+  // the paths to Honed Steel, Stout Hearts and Virulence, and Glass Cannon (whatever is cut off does not count)
+  const web = ['arsenal_in', 'arsenal_sp1', 'arsenal_sp2', 'arsenal_w0', 'arsenal_hub', 'arsenal_w3', 'arsenal_k0a', 'arsenal_k0b', 'arsenal_k0', 'bulwark_in', 'bulwark_sp1', 'bulwark_sp2', 'bulwark_w0', 'bulwark_hub', 'alchemy_in', 'alchemy_sp1', 'alchemy_sp2', 'alchemy_w0', 'alchemy_hub'];
+  const mods = c.talents ? { 0: modsFromLoadout(Object.fromEntries(web.map((id) => [id, 1]))) } : undefined;
   const rules = c.stage ? { firstWave: 11, finalWave: 22, startGold: 1100, startLumber: 2, regen: 0.006, armor: 2, countMul: 1.3 } : {};
   const game = new Game({ difficulty: c.difficulty, raceMode: 'pick', endless: false, waves: 'waves' in c ? c.waves : undefined }, init, seed, { skipSetup: true, rules: { ...rules, mods } });
   const bots = init.map((p, k) => new Bot(p.id, seed + k, [c.races[k % c.races.length], c.races[(k + 1) % c.races.length]]));

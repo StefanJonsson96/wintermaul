@@ -8,6 +8,7 @@ import { CELL_TOWER, LaneGrid } from '../../shared/grid';
 import { type ChatLine, DIFFICULTIES, type EndStats, type FullState, type GameCommand, type GameEvent, type GameSettings, RACE_MODES, type Snapshot } from '../../shared/protocol';
 import type { TargetMode, TowerDef } from '../../shared/types';
 import { type Link, SPEEDS } from '../local';
+import { upgradeCost } from '../../shared/sim/mods';
 import { toast } from '../ui/dom';
 import { openHelp } from '../ui/help';
 import { anyModalOpen, confirmDialog } from '../ui/modal';
@@ -183,9 +184,10 @@ export class GameView {
     const def = TOWERS[to];
     const me = this.state.me;
     if (!me) return;
-    const n = Math.max(1, Math.min(ids.length, Math.floor(me.gold / def.cost)));
-    if (me.gold < def.cost) {
-      toast(`Not enough gold (${def.cost} needed)`, 'error', 1500);
+    const cost = upgradeCost(def, this.state.modsOf(this.state.you));
+    const n = Math.max(1, Math.min(ids.length, Math.floor(me.gold / cost)));
+    if (me.gold < cost) {
+      toast(`Not enough gold (${cost} needed)`, 'error', 1500);
       audio.play('error', 0.5);
       return;
     }

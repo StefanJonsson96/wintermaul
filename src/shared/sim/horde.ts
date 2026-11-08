@@ -379,7 +379,8 @@ export class Horde {
   private leak(c: Creep): void {
     const from = c.lane;
     const owner = this.g.player(this.g.lanes[from].owner);
-    const cost = c.def.boss ? Math.max(1, c.def.leak - (owner?.mods.bossLeak ?? 0)) : c.def.leak;
+    const base = c.def.boss ? Math.max(1, c.def.leak - (owner?.mods.bossLeak ?? 0)) : c.def.leak;
+    const cost = Math.round(base * (owner?.mods.leakMul ?? 1));
     this.g.lives -= cost;
     if (owner) owner.leaks++;
     // A leaked creep gets exactly one more run: through the next player's maze (or yours again, solo).

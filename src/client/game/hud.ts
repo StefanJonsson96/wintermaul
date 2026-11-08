@@ -7,7 +7,7 @@ import { RACE_BY_ID, TOWERS } from '../../shared/data/races';
 import { CREEPS, FINAL_WAVE, waveDef } from '../../shared/data/waves';
 import { abilityWords } from './describe';
 import { type EndStats } from '../../shared/protocol';
-import { attackRange, sellRefund } from '../../shared/sim/mods';
+import { attackRange, sellRefund, upgradeCost } from '../../shared/sim/mods';
 import { TARGET_MODES, type CreepDef, type TargetMode, type TowerDef } from '../../shared/types';
 import { ChatBox } from '../ui/chat';
 import { clear, fmt, h, hideTooltip, tooltip } from '../ui/dom';
@@ -437,18 +437,19 @@ export class Hud {
     let k = 0;
     for (const [to, tids] of options) {
       const up = TOWERS[to];
-      const cost = up.cost * tids.length;
+      const unit = upgradeCost(up, s.modsOf(s.you));
+      const cost = unit * tids.length;
       const hk = touchDevice ? undefined : BUILD_KEYS[k++];
       const icon = h('canvas', { width: 36, height: 36 }) as HTMLCanvasElement;
       icon.getContext('2d')!.drawImage(towerIcon(up, 64), 0, 0, 36, 36);
       const act = () => this.view.upgrade(tids, to);
       const btn = h(
         'button',
-        { class: 'upg-btn', onclick: act, disabled: (me?.gold ?? 0) < up.cost },
+        { class: 'upg-btn', onclick: act, disabled: (me?.gold ?? 0) < unit },
         icon,
         h('div', { style: { minWidth: '0' } }, h('div', { class: 't' }, `${hk ? `[${hk.toUpperCase()}] ` : ''}${up.name}${tids.length > 1 ? ` ×${tids.length}` : ''}`), h('div', { class: 'c' }, `${cost} gold`)),
       ) as HTMLButtonElement;
-      tooltip(btn, () => towerTooltip(up, { mods: s.modsOf(s.you), note: tids.length > 1 ? `Upgrades ${tids.length} towers (as many as you can afford)` : undefined }));
+      tooltip(btn, () => towerTooltip(up, { cost: unit, mods: s.modsOf(s.you), note: tids.length > 1 ? `Upgrades ${tids.length} towers (as many as you can afford)` : undefined }));
       actions.append(btn);
       if (hk) this.selectionKeys.push({ key: hk, action: act });
     }

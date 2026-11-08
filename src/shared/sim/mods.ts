@@ -1,5 +1,5 @@
 import { SELL_REFUND } from '../constants';
-import type { DamageType, TowerDef } from '../types';
+import type { ArmorType, DamageType, TowerDef } from '../types';
 
 /**
  * Per-player bonuses, from campaign talents. Every field is optional and a missing field changes
@@ -48,11 +48,37 @@ export interface PlayerMods {
   creepSlow?: number;
   /** Extra seconds before the first wave. */
   prep?: number;
+  /** Multipliers on critical hits and on every other hit. */
+  critMult?: number;
+  nonCrit?: number;
+  /** Damage multipliers against bosses, air and armor classes. */
+  vsBoss?: number;
+  vsAir?: number;
+  vsArmor?: Partial<Record<ArmorType, number>>;
+  /** Multiplier on splash radius. */
+  splash?: number;
+  /** Extra stacks poison can reach. */
+  poisonStacks?: number;
+  /** Multiplier on how long slows last. */
+  slowDur?: number;
+  /** Hits kill non-boss creeps below this fraction of their health. */
+  execute?: number;
+  /** Multiplier on the lives a creep costs when it leaks from your lane. */
+  leakMul?: number;
+  /** Multiplier on upgrade prices. */
+  upgradeCost?: number;
+  /** Tier-1 towers build instantly. */
+  quickWalls?: boolean;
 }
 
 /** Gold price of a tower for a player with these bonuses. */
 export function towerCost(def: TowerDef, m?: PlayerMods): number {
   return def.tier === 1 && m?.wallDiscount ? Math.max(1, def.cost - m.wallDiscount) : def.cost;
+}
+
+/** Gold price of upgrading to this tower for a player with these bonuses. */
+export function upgradeCost(def: TowerDef, m?: PlayerMods): number {
+  return m?.upgradeCost ? Math.round(def.cost * m.upgradeCost) : def.cost;
 }
 
 /** Attack range after bonuses (pulse and aura radii are not affected). */

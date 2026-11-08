@@ -33,7 +33,7 @@ import { Rng } from '../rng';
 import { Combat } from './combat';
 import type { CommandResult, Creep, GameRules, Lane, Player, PlayerInit, Tower } from './entities';
 import { Horde } from './horde';
-import { sellRefund, towerCost } from './mods';
+import { sellRefund, towerCost, upgradeCost } from './mods';
 import type { CreepDef, WaveDef } from '../types';
 
 export type { CommandResult, Creep, GameRules, Lane, Player, PlayerInit, Tower } from './entities';
@@ -312,7 +312,7 @@ export class Game {
       cx: x + 1,
       cy: y + 1,
       buildStart: this.time,
-      buildUntil: this.time + def.buildTime,
+      buildUntil: this.time + (def.tier === 1 && p.mods.quickWalls ? 0 : def.buildTime),
       cd: 0,
       mode: def.tier === 5 && def.id === 'sun_L' ? 'strong' : 'first',
       kills: 0,
@@ -356,13 +356,14 @@ export class Game {
         err = `Limit of ${def.limit} reached`;
         continue;
       }
-      if (p.gold < def.cost) {
+      const cost = upgradeCost(def, p.mods);
+      if (p.gold < cost) {
         err = 'Not enough gold';
         break;
       }
-      p.gold -= def.cost;
+      p.gold -= cost;
       t.def = def;
-      t.invested += def.cost;
+      t.invested += cost;
       t.buildStart = this.time;
       t.buildUntil = this.time + def.buildTime;
       t.cd = 0;

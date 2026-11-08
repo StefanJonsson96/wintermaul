@@ -63,3 +63,8 @@ export function icon(name: string, size = 18, extra = ''): SVGSVGElement {
   svg.appendChild(p);
   return svg;
 }
+
+/** An icon as a canvas path, in its 24x24 box (for icons drawn on canvases). */
+export function iconPath(name: string): Path2D {
+  return new Path2D(PATHS[name] ?? PATHS.star);
+}

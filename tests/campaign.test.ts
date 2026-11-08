@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { CAMPAIGN_STONES, ENDLESS, endlessReward, STAGES, starReward, starsFor } from '../src/shared/campaign';
 import { RACE_BY_ID } from '../src/shared/data/races';
 import { WAVES } from '../src/shared/data/waves';
-import { modsFromLoadout, rankUpBlocker, sanitizeLoadout, TALENT_BY_ID, TALENTS, totalSpent, TREE_COST } from '../src/shared/talents';
+import { canRefund, modsFromLoadout, NODE_BY_ID, NODES, pathTo, REGIONS, sanitizeLoadout, START, summarize, totalSpent, TREE_COST } from '../src/shared/talents';
+import { RACES } from '../src/shared/data/races';
 import { emptySave, isUnlocked, parseSave, recordResult, unspent } from '../src/client/campaign/save';
 
 const first = STAGES[0];
@@ -20,8 +21,9 @@ describe('campaign stages', () => {
     }
   });
 
-  it('give enough runestones to fill most of the tree', () => {
-    expect(CAMPAIGN_STONES).toBeGreaterThan(TREE_COST * 0.8);
+  it('give runestones for a good part of the web, but not all of it', () => {
+    expect(CAMPAIGN_STONES).toBeGreaterThan(TREE_COST * 0.5);
+    expect(CAMPAIGN_STONES).toBeLessThan(TREE_COST);
   });
 
   it('award stars for reaching, winning and winning cleanly', () => {
@@ -47,47 +49,92 @@ describe('campaign stages', () => {
   });
 });
 
-describe('talents', () => {
-  it('have unique ids and reachable gates', () => {
-    expect(new Set(TALENTS.map((t) => t.id)).size).toBe(TALENTS.length);
-    for (const t of TALENTS) {
-      const below = TALENTS.filter((o) => o.branch === t.branch && o.gate < t.gate).reduce((n, o) => n + o.max * o.cost, 0);
-      expect(below).toBeGreaterThanOrEqual(t.gate);
+/** Takes a node and the path to it. */
+const take = (l: Record<string, number>, id: string) => ({ ...l, ...Object.fromEntries(pathTo(id, l).map((n) => [n, 1])) });
+const R = { start: 0.55, small: 0.24, notable: 0.42, keystone: 0.62 };
+
+describe('the rune web', () => {
+  it('is one connected web with two keystones per region and a mastery per race', () => {
+    expect(new Set(NODES.map((n) => n.id)).size).toBe(NODES.length);
+    for (const n of NODES) for (const l of n.links) expect(NODE_BY_ID[l].links, `${n.id} - ${l}`).toContain(n.id);
+    // everything can be reached from the Hearth
+    const seen = new Set([START]);
+    const queue = [START];
+    for (let i = 0; i < queue.length; i++) for (const l of NODE_BY_ID[queue[i]].links) if (!seen.has(l)) (seen.add(l), queue.push(l));
+    expect(seen.size).toBe(NODES.length);
+    for (const r of REGIONS) expect(NODES.filter((n) => n.region === r.id && n.kind === 'keystone')).toHaveLength(2);
+    for (const race of RACES) expect(NODES.filter((n) => n.race === race.id && n.kind === 'notable')).toHaveLength(1);
+    expect(NODES.length).toBeGreaterThan(180);
+  });
+
+  it('has no nodes on top of each other', () => {
+    for (let i = 0; i < NODES.length; i++) {
+      for (let j = i + 1; j < NODES.length; j++) {
+        const a = NODES[i];
+        const b = NODES[j];
+        expect(Math.hypot(a.x - b.x, a.y - b.y), `${a.id} / ${b.id}`).toBeGreaterThan(R[a.kind] + R[b.kind] + 0.1);
+      }
     }
   });
 
-  it('turn ranks into simulation bonuses', () => {
-    const m = modsFromLoadout({ honed: 5, hearts: 2, kin_fire: 3, pierce: 1 });
-    expect(m.dmg).toBeCloseTo(1.1);
-    expect(m.lives).toBe(4);
-    expect(m.dmgRace?.fire).toBeCloseTo(1.12);
-    expect(m.dmgType?.pierce).toBeCloseTo(1.05);
+  it('takes the cheapest path to a node', () => {
+    const path = pathTo('arsenal_hub', {});
+    expect(path).toEqual(['arsenal_in', 'arsenal_sp1', 'arsenal_sp2', 'arsenal_w0', 'arsenal_hub']);
+    for (let i = 1; i < path.length; i++) expect(NODE_BY_ID[path[i]].links).toContain(path[i - 1]);
+    const l = take({}, 'arsenal_hub');
+    // from there, the keystone is four more steps
+    expect(pathTo('arsenal_k0', l)).toHaveLength(4);
+    expect(pathTo('arsenal_hub', l)).toEqual([]);
   });
 
-  it('respect gates and budgets', () => {
-    expect(rankUpBlocker(TALENT_BY_ID.deadeye, {}, 50)).toMatch(/Spend/);
-    expect(rankUpBlocker(TALENT_BY_ID.honed, {}, 0)).toMatch(/Needs/);
-    expect(rankUpBlocker(TALENT_BY_ID.honed, { honed: 5 }, 9)).toBe('Fully learned');
-    expect(rankUpBlocker(TALENT_BY_ID.honed, {}, 1)).toBeNull();
+  it('gives back only nodes that nothing else hangs on', () => {
+    const l = take({}, 'arsenal_hub');
+    expect(canRefund('arsenal_hub', l)).toBe(true);
+    expect(canRefund('arsenal_sp1', l)).toBe(false);
+    expect(canRefund(START, l)).toBe(false);
+    expect(canRefund('precision_hub', l)).toBe(false);
   });
 
-  it('sanitize loadouts from saves and the network', () => {
-    expect(sanitizeLoadout({ honed: 99, bogus: 3, eagle: -2, quick: 'x' })).toEqual({ honed: 5 });
-    // a capstone without the ranks that open it is dropped
-    expect(sanitizeLoadout({ deadeye: 1 })).toEqual({});
-    // over budget: keeps what fits, in gate order
-    const l = sanitizeLoadout({ honed: 5, eagle: 3, hearts: 5 }, 7);
-    expect(totalSpent(l)).toBe(7);
+  it('cleans loadouts from saves and the network', () => {
+    const l = take({}, 'arsenal_hub');
+    expect(sanitizeLoadout({ ...l, bogus: 1, honed: 5 })).toEqual(l);
+    // a node cut off from the Hearth is dropped
+    expect(sanitizeLoadout({ arsenal_hub: 1 })).toEqual({});
+    // over budget: what is nearest the Hearth stays, still connected
+    const cut = sanitizeLoadout(l, 3);
+    expect(totalSpent(cut)).toBe(3);
+    expect(cut).toEqual({ arsenal_in: 1, arsenal_sp1: 1, arsenal_sp2: 1 });
     expect(sanitizeLoadout(null)).toEqual({});
+  });
+
+  it('turns nodes into simulation bonuses', () => {
+    const m = modsFromLoadout(take({}, 'arsenal_hub'));
+    // three small +2% damage nodes and Honed Steel's +6%, plus a node of damage against bosses
+    expect(m.dmg).toBeCloseTo(1.02 ** 3 * 1.06);
+    expect(m.vsBoss).toBeCloseTo(1.03);
+    const glass = modsFromLoadout(take({}, 'arsenal_k0'));
+    expect(NODE_BY_ID.arsenal_k0.name).toBe('Glass Cannon');
+    expect(glass.leakMul).toBe(2);
+    expect(summarize(glass).some((line) => line.includes('damage'))).toBe(true);
+    const race = NODES.find((n) => n.race === 'fire' && n.kind === 'notable')!;
+    expect(modsFromLoadout(take({}, race.id)).dmgRace?.fire).toBeCloseTo(1.03 * 1.03 * 1.1);
   });
 });
 
 describe('campaign save', () => {
   it('survives junk and trims talents to what was earned', () => {
     expect(parseSave('not json')).toEqual(emptySave());
-    const s = parseSave(JSON.stringify({ stars: { hollowmere: 3, x: 'y' }, stones: 3, talents: { honed: 5 } }));
+    const s = parseSave(JSON.stringify({ stars: { hollowmere: 3, x: 'y' }, stones: 3, talents: take({}, 'arsenal_hub') }));
     expect(s.stars).toEqual({ hollowmere: 3 });
     expect(totalSpent(s.talents)).toBe(3);
+    expect(s.refunded).toBeUndefined();
+  });
+
+  it('refunds talents from the old tree, once', () => {
+    const s = parseSave(JSON.stringify({ stones: 9, talents: { honed: 5, hearts: 2 } }));
+    expect(s.talents).toEqual({});
+    expect(unspent(s)).toBe(9);
+    expect(s.refunded).toBe(true);
   });
 
   it('records stars once and unlocks the next stage', () => {

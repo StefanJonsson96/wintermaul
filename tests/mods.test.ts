@@ -127,3 +127,99 @@ describe('stage rules', () => {
     expect(count({ countMul: 2 })).toBe(count({}) * 2);
   });
 });
+
+describe('rune web bonuses', () => {
+  /** Damage a fire tower deals to a creep held in place next to it. */
+  function damageTo(mods: PlayerMods, creep: string, ticks = 120): number {
+    const g = game(mods);
+    g.command(0, { c: 'build', tower: 'fire_1', x: 3, y: 10 });
+    run(g, 2);
+    g.horde.spawnQueue.unshift({ at: g.time, lane: 0, def: creep, wave: 1 });
+    g.step();
+    const c = [...g.creeps.values()].find((c) => c.def.id === creep)!;
+    c.x = 2.5;
+    c.y = 11.5;
+    c.rootUntil = Infinity;
+    c.hp = c.maxHp = 1e7;
+    c.shield = 0;
+    for (let i = 0; i < ticks; i++) g.step();
+    return 1e7 - c.hp;
+  }
+  const air = WAVES.find((w) => CREEPS[w.creep].air)!.creep;
+  const boss = WAVES.find((w) => CREEPS[w.creep].boss)!.creep;
+  const heavy = WAVES.find((w) => CREEPS[w.creep].armorType === 'heavy' && !CREEPS[w.creep].boss && !CREEPS[w.creep].air)!.creep;
+  const light = WAVES.find((w) => CREEPS[w.creep].armorType === 'light' && !CREEPS[w.creep].air)!.creep;
+
+  it('hit harder against air, bosses and armor classes', () => {
+    expect(damageTo({ vsAir: 1.5 }, air) / damageTo({}, air)).toBeCloseTo(1.5, 1);
+    expect(damageTo({ vsBoss: 1.5 }, boss) / damageTo({}, boss)).toBeCloseTo(1.5, 1);
+    expect(damageTo({ vsArmor: { heavy: 1.5 } }, heavy) / damageTo({}, heavy)).toBeCloseTo(1.5, 1);
+    expect(damageTo({ vsArmor: { heavy: 1.5 } }, light) / damageTo({}, light)).toBeCloseTo(1, 2);
+  });
+
+  it('change critical hits and every other hit', () => {
+    const crit = damageTo({ crit: 1 }, light);
+    expect(damageTo({ crit: 1, critMult: 1.5 }, light) / crit).toBeCloseTo(1.5, 1);
+    expect(damageTo({ nonCrit: 0.5 }, light) / damageTo({}, light)).toBeCloseTo(0.5, 1);
+  });
+
+  it('finish off nearly dead creeps, but not bosses', () => {
+    const g = game({ execute: 0.5 });
+    g.command(0, { c: 'build', tower: 'fire_1', x: 3, y: 10 });
+    run(g, 2);
+    g.horde.spawnQueue.unshift({ at: g.time, lane: 0, def: light, wave: 1 });
+    g.step();
+    const c = [...g.creeps.values()].find((c) => c.def.id === light)!;
+    c.x = 2.5;
+    c.y = 11.5;
+    c.rootUntil = Infinity;
+    c.hp = c.maxHp = 1000;
+    c.hp = 480;
+    for (let i = 0; i < 60 && c.alive; i++) g.step();
+    expect(c.alive).toBe(false);
+  });
+
+  it('make leaks from your lane cost more', () => {
+    const lost = (mods: PlayerMods) => {
+      const g = game(mods);
+      g.horde.spawnQueue.unshift({ at: g.time, lane: 0, def: light, wave: 1 });
+      g.step();
+      const c = [...g.creeps.values()][0];
+      const before = g.lives;
+      for (let i = 0; i < 20 * 60 && c.visits < 2; i++) g.step();
+      return before - g.lives;
+    };
+    expect(lost({ leakMul: 2 })).toBe(lost({}) * 2);
+  });
+
+  it('price upgrades and build walls instantly', () => {
+    const g = game({ upgradeCost: 1.1, quickWalls: true });
+    g.devGold(0, 1000);
+    g.command(0, { c: 'build', tower: 'fire_1', x: 20, y: 10 });
+    const t = [...g.towers.values()][0];
+    expect(t.buildUntil).toBe(g.time);
+    const to = TOWERS[t.def.upgrades[0]];
+    const gold = g.player(0)!.gold;
+    expect(g.command(0, { c: 'upgrade', ids: [t.id], to: to.id }).ok).toBe(true);
+    expect(gold - g.player(0)!.gold).toBe(Math.round(to.cost * 1.1));
+  });
+
+  it('let poison stack higher', () => {
+    const stacks = (mods: PlayerMods) => {
+      const g = new Game(settings, solo, 3, { skipSetup: true, rules: { mods: { 0: mods } } });
+      g.command(0, { c: 'race', race: 'venom' });
+      g.command(0, { c: 'build', tower: 'venom_1', x: 3, y: 10 });
+      run(g, 2);
+      g.horde.spawnQueue.unshift({ at: g.time, lane: 0, def: light, wave: 1 });
+      g.step();
+      const c = [...g.creeps.values()][0];
+      c.x = 2.5;
+      c.y = 11.5;
+      c.rootUntil = Infinity;
+      c.hp = c.maxHp = 1e7;
+      for (let i = 0; i < 20 * 30; i++) g.step();
+      return Math.max(0, ...c.dots.map((d) => d.stacks));
+    };
+    expect(stacks({ poisonStacks: 2 })).toBe(stacks({}) + 2);
+  });
+});

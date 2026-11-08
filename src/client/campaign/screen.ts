@@ -9,9 +9,10 @@ import { DIFFICULTIES } from '../../shared/protocol';
 import { raceEmblem } from '../art/emblems';
 import { canResume, type SavedGame } from '../saved';
 import { clear, h, tooltip } from '../ui/dom';
+import { openModal } from '../ui/modal';
 import { icon } from '../ui/icons';
 import { CampaignMap, type MapNode } from './map';
-import { type CampaignSave, currentStage, isUnlocked, loadSave, unspent } from './save';
+import { type CampaignSave, currentStage, isUnlocked, loadSave, storeSave, unspent } from './save';
 import { openTalents } from './tree';
 
 export interface CampaignActions {
@@ -73,7 +74,7 @@ export class CampaignScreen {
       this.refresh();
       this.actions.talentsChanged?.();
     };
-    this.talentBtn = h('button', { class: 'btn primary', onclick: () => openTalents(this.save, changed) }, icon('star', 16), 'Talents') as HTMLButtonElement;
+    this.talentBtn = h('button', { class: 'btn primary', onclick: () => openTalents(this.save, changed) }, icon('star', 16), 'Rune Web') as HTMLButtonElement;
     root.append(
       h(
         'div',
@@ -98,6 +99,23 @@ export class CampaignScreen {
     this.selected = last && (this.save.stars[last.id] ?? 0) < 2 && isUnlocked(last, this.save) ? last : currentStage(this.save);
     this.refresh();
     this.map.start();
+    if (this.save.refunded) this.announceWeb();
+  }
+
+  /** Once, for players who had talents in the old tree. */
+  private announceWeb(): void {
+    this.save.refunded = undefined;
+    storeSave(this.save);
+    const modal = openModal(
+      h(
+        'div',
+        null,
+        h('h2', null, 'The Rune Web'),
+        h('div', { class: 'sub' }, 'The talent tree has grown into a web of passives, in the spirit of Path of Exile: small nodes, named notables and keystones that change how you play. Your runestones were all refunded, so you can build again.'),
+        h('div', { class: 'field-row', style: { justifyContent: 'flex-end' } }, h('button', { class: 'btn', onclick: () => modal.close() }, 'Later'), h('button', { class: 'btn primary', onclick: () => (modal.close(), openTalents(this.save, () => (this.refresh(), this.actions.talentsChanged?.()))) }, 'Open the Rune Web')),
+      ),
+      { narrow: true },
+    );
   }
 
   hide(): void {

@@ -1,6 +1,6 @@
 // Campaign progress lives in localStorage: stars per stage, runestones and the talent loadout.
 import { ENDLESS, ENDLESS_AFTER, STAGES, endlessReward, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
-import { type Loadout, sanitizeLoadout, totalSpent } from '../../shared/talents';
+import { type Loadout, NODE_BY_ID, sanitizeLoadout, totalSpent } from '../../shared/talents';
 import { CloudSave } from './cloud';
 
 const KEY = 'winterward.campaign.v1';
@@ -15,6 +15,8 @@ export interface CampaignSave {
   endlessBest: number;
   /** The stage the map should open on. */
   last?: string;
+  /** Set when the save held talents from the old tree, which were refunded (shown once). */
+  refunded?: boolean;
 }
 
 export function emptySave(): CampaignSave {
@@ -33,6 +35,8 @@ export function parseSave(json: string | null): CampaignSave {
   try {
     const raw = JSON.parse(json) as Partial<CampaignSave>;
     const stones = typeof raw.stones === 'number' && raw.stones >= 0 ? Math.floor(raw.stones) : 0;
+    // talents from before the Rune Web (ranks of named talents) are refunded
+    const old = raw.talents && typeof raw.talents === 'object' && Object.keys(raw.talents).some((id) => !NODE_BY_ID[id]);
     return {
       stars: numbers(raw.stars),
       best: numbers(raw.best),
@@ -40,6 +44,7 @@ export function parseSave(json: string | null): CampaignSave {
       talents: sanitizeLoadout(raw.talents, stones),
       endlessBest: typeof raw.endlessBest === 'number' ? raw.endlessBest : 0,
       last: typeof raw.last === 'string' ? raw.last : undefined,
+      refunded: old || raw.refunded === true || undefined,
     };
   } catch {
     return emptySave();

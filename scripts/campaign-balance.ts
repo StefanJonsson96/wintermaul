@@ -5,7 +5,7 @@ import { STAGES, starsFor, type Stage } from '../src/shared/campaign';
 import { RACES } from '../src/shared/data/races';
 import { Bot } from '../src/shared/sim/bot';
 import { Game } from '../src/shared/sim/game';
-import { type Loadout, modsFromLoadout, rankUpBlocker, TALENT_BY_ID, totalSpent } from '../src/shared/talents';
+import { type Loadout, modsFromLoadout, NODES, pathTo, totalSpent } from '../src/shared/talents';
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: string) => {
@@ -16,18 +16,25 @@ const games = Number(opt('games', '6'));
 const only = opt('stage', '');
 const forcedStones = opt('stones', '');
 
-/** A sensible spread of talents: a bit of everything, then damage for the races in play. */
+/** A sensible build: the big notables first, then the masteries of the races in play, then whatever is nearest (no keystones). */
 function loadoutFor(stones: number, races: string[]): Loadout {
-  const order = ['honed', 'hearts', 'warchest', 'eagle', 'bounty', ...races.map((r) => `kin_${r}`), 'honed', 'pierce', 'impact', 'magic', 'elemental', 'quick', 'tithe', 'snow', 'gate', 'virulence', 'kindling', 'chill', 'concussion', 'deadeye', 'laststand', 'secondwind', 'salvage', 'mason', 'timber'];
-  const l: Loadout = {};
+  const mastery = (race: string) => NODES.find((n) => n.race === race && n.kind === 'notable')!.id;
+  const goals = ['arsenal_hub', 'bulwark_hub', 'fortune_hub', ...races.map(mastery), 'precision_hub', 'arsenal_w2', 'arsenal_w4', 'precision_w2', 'bulwark_w2', 'fortune_w2', 'rime_hub', 'alchemy_hub', 'bulwark_deep', 'precision_w4', 'arsenal_spur', 'rime_w4', 'alchemy_w2'];
+  let l: Loadout = {};
   let left = stones;
-  for (let pass = 0; pass < 6 && left > 0; pass++) {
-    for (const id of order) {
-      const t = TALENT_BY_ID[id];
-      if (!t || rankUpBlocker(t, l, left)) continue;
-      l[id] = (l[id] ?? 0) + 1;
-      left -= t.cost;
-    }
+  for (const goal of goals) {
+    const path = pathTo(goal, l);
+    if (!path.length || path.length > left) continue;
+    l = { ...l, ...Object.fromEntries(path.map((id) => [id, 1])) };
+    left -= path.length;
+  }
+  // the rest on the nearest nodes that are not keystones
+  while (left > 0) {
+    const options = NODES.filter((n) => n.kind !== 'keystone' && !l[n.id] && n.id !== 'hearth').map((n) => ({ n, path: pathTo(n.id, l) })).filter((o) => o.path.length === 1);
+    if (!options.length) break;
+    const pick = options.find((o) => o.n.kind === 'notable') ?? options[0];
+    l = { ...l, [pick.n.id]: 1 };
+    left--;
   }
   return l;
 }

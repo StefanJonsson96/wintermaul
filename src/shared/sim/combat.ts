@@ -90,8 +90,15 @@ export class Combat {
   private damage(c: Creep, amount: number, type: DamageType, owner: number, towerId: number, onHit?: OnHit): number {
     if (!c.alive) return 0;
     let mult = DAMAGE_TABLE[type][c.def.armorType] * armorMultiplier(this.armorOf(c)) * this.amplifyOf(c);
-    const frostbite = this.g.player(owner)?.mods.frostbite;
+    const m = this.g.player(owner)?.mods;
+    const frostbite = m?.frostbite;
     if (frostbite && ((this.g.time < c.slowUntil && c.slowPct > 0) || c.auraSlow > 0)) mult *= 1 + frostbite;
+    if (m) {
+      if (m.vsBoss && c.def.boss) mult *= m.vsBoss;
+      if (m.vsAir && c.air) mult *= m.vsAir;
+      const vs = m.vsArmor?.[c.def.armorType];
+      if (vs) mult *= vs;
+    }
     if (onHit) {
       if (onHit.bonusVsAir && c.air) mult *= onHit.bonusVsAir;
       const vs = onHit.bonusVsArmor?.[c.def.armorType];
@@ -127,7 +134,7 @@ export class Combat {
       const pct = oh.slow.pct * (m?.slow ?? 1);
       if (now >= c.slowUntil || pct >= c.slowPct) {
         c.slowPct = Math.max(now < c.slowUntil ? c.slowPct : 0, pct);
-        c.slowUntil = Math.max(c.slowUntil, now + oh.slow.dur);
+        c.slowUntil = Math.max(c.slowUntil, now + oh.slow.dur * (m?.slowDur ?? 1));
       }
     }
     const stunDur = (d: number) => d * (m?.stun ?? 1);
@@ -140,7 +147,8 @@ export class Combat {
     if (oh.root && cc && !boss && this.g.rng.chance(oh.root.chance)) c.rootUntil = Math.max(c.rootUntil, now + stunDur(oh.root.dur));
     if (oh.dot) {
       const kindMul = (oh.dot.kind === 'poison' ? m?.poison : m?.burn) ?? 1;
-      this.addDot(c, { key: t.def.id, kind: oh.dot.kind, dps: oh.dot.dps * t.dmgMul * kindMul * this.growthMul(t), stacks: 1, until: now + oh.dot.dur, owner, tower: t.id }, oh.dot.maxStacks);
+      const stacks = oh.dot.maxStacks + (oh.dot.kind === 'poison' ? (m?.poisonStacks ?? 0) : 0);
+      this.addDot(c, { key: t.def.id, kind: oh.dot.kind, dps: oh.dot.dps * t.dmgMul * kindMul * this.growthMul(t), stacks: 1, until: now + oh.dot.dur, owner, tower: t.id }, stacks);
     }
     if (oh.sunder) {
       const ex = c.sunders.find((s) => s.key === t.def.id);
@@ -294,6 +302,8 @@ export class Combat {
       dmg *= 2;
       crit = true;
     }
+    if (crit && p?.mods.critMult) dmg *= p.mods.critMult;
+    else if (!crit && p?.mods.nonCrit) dmg *= p.mods.nonCrit;
     return { dmg, crit };
   }
 
@@ -433,7 +443,7 @@ export class Combat {
   }
 
   private splash(t: Tower, a: AttackDef, lane: number, x: number, y: number, dmg: number, crit: boolean, air: boolean, primary?: Creep): void {
-    const r = a.splash!;
+    const r = a.splash! * (this.g.player(t.owner)?.mods.splash ?? 1);
     const edge = a.splashFalloff ?? 0.4;
     this.g.emit({ e: 'impact', t: this.g.time, tw: t.id, x, y, r, lane });
     for (const c of [...this.g.lanes[lane].creeps]) {
@@ -456,6 +466,13 @@ export class Combat {
     const dealt = this.damage(c, dmg, a.type, t.owner, t.id, a.onHit);
     if (crit && dealt > 0) this.g.emit({ e: 'crit', t: this.g.time, id: c.id, amount: Math.round(dealt) });
     if (a.onHit && c.alive) this.applyOnHit(c, a.onHit, t.owner, t);
+    this.reap(c, t);
+  }
+
+  /** The Reaper's Mark keystone: a hit finishes off a creep that is nearly dead. */
+  private reap(c: Creep, t: Tower): void {
+    const ex = this.g.player(t.owner)?.mods.execute;
+    if (ex && c.alive && !c.def.boss && c.hp < c.maxHp * ex) this.applyRawDamage(c, c.hp + c.shield + 1, t.owner, t.id);
   }
 
   private updateBeam(t: Tower, a: AttackDef): void {
@@ -480,6 +497,7 @@ export class Combat {
     }
     const dps = a.dmg[0] * t.dmgMul * t.spdMul * this.growthMul(t) * t.beamRamp * typeDamageMul(a.type, this.g.player(t.owner)?.mods);
     this.damage(target, dps * DT, a.type, t.owner, t.id, a.onHit);
+    this.reap(target, t);
     t.beamRamp = Math.min(beam.maxMult, t.beamRamp + beam.ramp * DT);
   }
 
@@ -505,6 +523,7 @@ export class Combat {
       if (pu.dmg) this.damage(c, pu.dmg * t.dmgMul * this.growthMul(t) * typeDamageMul(pu.type ?? 'magic', this.g.player(t.owner)?.mods), pu.type ?? 'magic', t.owner, t.id, pu.onHit);
       if (pu.onHit && c.alive) this.applyOnHit(c, pu.onHit, t.owner, t);
       if (pu.pull && c.alive && !c.def.immune && !c.def.boss) this.g.horde.pushBack(c, pu.pull);
+      this.reap(c, t);
     }
     t.pulseCd = pu.every;
   }

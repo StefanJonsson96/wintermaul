@@ -1,10 +1,11 @@
 // Two real browser sessions playing together: npx tsx scripts/mp-test.ts <outdir>
-import { chromium, type Page } from 'playwright-core';
+import { type Page } from 'playwright-core';
+import { launchChromium } from './browser.mjs';
 import { mkdirSync } from 'node:fs';
 
 const out = process.argv[2] ?? 'screenshots';
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await launchChromium();
 const errors: string[] = [];
 async function newPlayer(name: string): Promise<Page> {
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 820 } });

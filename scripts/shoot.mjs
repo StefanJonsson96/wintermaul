@@ -1,12 +1,11 @@
 // Browser smoke test + screenshots: node scripts/shoot.mjs [url] [outdir]
-import { chromium } from 'playwright-core';
+import { launchChromium } from './browser.mjs';
 import { mkdirSync } from 'node:fs';
 
 const url = process.argv[2] ?? 'http://localhost:8787';
 const out = process.argv[3] ?? 'screenshots';
 mkdirSync(out, { recursive: true });
-const exe = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-const browser = await chromium.launch({ executablePath: exe, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+const browser = await launchChromium(['--autoplay-policy=no-user-gesture-required']);
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const logs = [];
 page.on('console', (m) => logs.push(`[${m.type()}] ${m.text()}`));

@@ -85,9 +85,9 @@ network protocol break, the minor number for new features, the patch number for 
 - Procedural art and sound: no image or audio files.
 - Docs (design notes, hosting guide), Dockerfile and unit tests.
 
-[1.1.0]: https://github.com/StefanJonsson96/wintermaul/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/StefanJonsson96/wintermaul/compare/v0.4.0...v1.0.0
-[0.4.0]: https://github.com/StefanJonsson96/wintermaul/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/StefanJonsson96/wintermaul/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/StefanJonsson96/wintermaul/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/StefanJonsson96/wintermaul/releases/tag/v0.1.0
+[1.1.0]: https://github.com/StefanJonsson96/wintermaul/compare/cbb5a72...6a6b98d
+[1.0.0]: https://github.com/StefanJonsson96/wintermaul/compare/5a54d04...cbb5a72
+[0.4.0]: https://github.com/StefanJonsson96/wintermaul/compare/1b1cb01...5a54d04
+[0.3.0]: https://github.com/StefanJonsson96/wintermaul/compare/e7d46a2...1b1cb01
+[0.2.0]: https://github.com/StefanJonsson96/wintermaul/compare/efff109...e7d46a2
+[0.1.0]: https://github.com/StefanJonsson96/wintermaul/tree/efff109

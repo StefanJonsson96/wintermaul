@@ -2,13 +2,13 @@
 //   npm run build && WINTERWARD_DEV=1 npm start      (in another terminal)
 //   node scripts/readme-shots.mjs [url] [only]       e.g. only = gameplay
 import { mkdirSync } from 'node:fs';
-import { chromium } from 'playwright-core';
+import { launchChromium } from './browser.mjs';
 
 const url = process.argv[2] ?? 'http://localhost:8787';
 const only = process.argv[3];
 const out = 'docs/images';
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await launchChromium();
 const logs = [];
 const wait = (page, ms) => page.waitForTimeout(ms);
 // halfway through the campaign: six stages won, some talents learned

@@ -1,14 +1,13 @@
 // Full-flow browser test against a dev server (WINTERWARD_DEV=1): setup, race, building, mass
 // upgrade, a second race, a Legend, and the final wave through to the end screen.
 //   node scripts/flow-test.mjs [url] [outDir]
-import { chromium } from 'playwright-core';
+import { launchChromium } from './browser.mjs';
 import { mkdirSync } from 'node:fs';
 
 const url = process.argv[2] ?? 'http://localhost:8787';
 const out = process.argv[3] ?? 'screenshots';
 mkdirSync(out, { recursive: true });
-const exe = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-const browser = await chromium.launch({ executablePath: exe, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await launchChromium();
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const logs = [];
 page.on('console', (m) => { if (m.type() === 'error') logs.push(`[console] ${m.text()}`); });

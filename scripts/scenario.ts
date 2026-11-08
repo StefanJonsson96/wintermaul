@@ -1,6 +1,6 @@
 // Dev scenario for visual testing (server must run with WINTERWARD_DEV=1):
 //   npx tsx scripts/scenario.ts <outdir> <race> <wave> [upgradeTo...]
-import { chromium } from 'playwright-core';
+import { launchChromium } from './browser.mjs';
 import { mkdirSync } from 'node:fs';
 import { Bot } from '../src/shared/sim/bot';
 
@@ -9,7 +9,7 @@ const race = process.argv[3] ?? 'fire';
 const wave = Number(process.argv[4] ?? 12);
 const upgrades = process.argv.slice(5);
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await launchChromium();
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const errors: string[] = [];
 page.on('pageerror', (e) => errors.push(e.message));

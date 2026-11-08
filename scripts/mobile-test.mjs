@@ -1,12 +1,12 @@
 // Plays the start of the tutorial on an emulated phone with touch input and screenshots it.
 //   node scripts/mobile-test.mjs [url] [outDir]
 import { mkdirSync } from 'node:fs';
-import { chromium } from 'playwright-core';
+import { launchChromium } from './browser.mjs';
 
 const url = process.argv[2] ?? 'http://localhost:8787';
 const out = process.argv[3] ?? 'screenshots';
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await launchChromium();
 const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const page = await context.newPage();
 const logs = [];

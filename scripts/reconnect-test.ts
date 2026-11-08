@@ -1,5 +1,5 @@
-import { chromium } from 'playwright-core';
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+import { launchChromium } from './browser.mjs';
+const browser = await launchChromium();
 const ctx = await browser.newContext({ viewport: { width: 1400, height: 820 } });
 const page = await ctx.newPage();
 const errors: string[] = [];

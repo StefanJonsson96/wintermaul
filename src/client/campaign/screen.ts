@@ -7,6 +7,7 @@ import { ARMOR_LABEL } from '../../shared/combat';
 import { creepPortrait } from '../art/creeps';
 import { DIFFICULTIES } from '../../shared/protocol';
 import { raceEmblem } from '../art/emblems';
+import { canResume, type SavedGame } from '../saved';
 import { clear, h, tooltip } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { CampaignMap, type MapNode } from './map';
@@ -18,6 +19,9 @@ export interface CampaignActions {
   back(): void;
   /** The talent loadout changed (multiplayer rooms want to know). */
   talentsChanged?(): void;
+  /** The game in progress, and continuing it. */
+  saved?(): SavedGame | null;
+  resume?(): void;
 }
 
 /** Plain-language lines for a stage's rules, beyond its named mutators. */
@@ -135,6 +139,20 @@ export class CampaignScreen {
     );
   }
 
+  /** Begin, play again, or continue the game in progress on this stage. */
+  private playButtons(s: Stage): HTMLElement[] {
+    const saved = this.actions.saved?.();
+    const play = () => this.actions.play(s, this.save);
+    if (saved && canResume(saved) && saved.kind.mode === 'campaign' && saved.kind.stage === s.id) {
+      return [
+        h('button', { class: 'btn primary big', onclick: () => this.actions.resume?.() }, icon('play', 16), `Continue · wave ${saved.wave}`),
+        h('button', { class: 'btn big', onclick: play }, 'Restart'),
+      ];
+    }
+    const played = (this.save.stars[s.id] ?? 0) > 0 || !!this.save.best[s.id];
+    return [h('button', { class: 'btn primary big', onclick: play }, icon('play', 16), played ? 'Play again' : 'Begin')];
+  }
+
   private renderBrief(): void {
     const s = this.selected;
     const save = this.save;
@@ -167,13 +185,7 @@ export class CampaignScreen {
         ? h('div', { class: 'cb-goals' }, h('div', { class: 'cb-goal' }, h('span', { class: 'cb-star' }, icon('infinity', 16)), h('span', { class: 'cb-goal-text' }, save.endlessBest ? `Best: wave ${save.endlessBest}. Next runestone at wave ${nextMark}.` : 'A runestone at wave 25, 30, 35 and every 5 waves after.'), h('span', { class: 'cb-reward' }, '+1', icon('rune', 13))))
         : h('div', { class: 'cb-goals' }, goal(1, `Reach wave ${s.reach}`, s.rewards[0]), goal(2, 'Win the stage', s.rewards[1]), goal(3, `Win losing at most ${s.flawless} ${s.flawless === 1 ? 'life' : 'lives'}`, s.rewards[2])),
       !s.endless && save.best[s.id] ? h('div', { class: 'cb-best muted' }, stars >= 2 ? `Won${stars >= 3 ? ' flawlessly' : ''}. Replay it any time.` : `Best so far: wave ${save.best[s.id]}.`) : null,
-      h(
-        'div',
-        { class: 'cb-actions' },
-        unlocked
-          ? h('button', { class: 'btn primary big', onclick: () => this.actions.play(s, this.save) }, icon('play', 16), stars > 0 || save.best[s.id] ? 'Play again' : 'Begin')
-          : h('div', { class: 'cb-locked' }, icon('lock', 16), lockNote),
-      ),
+      h('div', { class: 'cb-actions' }, unlocked ? this.playButtons(s) : h('div', { class: 'cb-locked' }, icon('lock', 16), lockNote)),
     ];
     this.brief.append(...parts.filter((p): p is HTMLElement => !!p));
   }

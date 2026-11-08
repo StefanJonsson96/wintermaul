@@ -82,7 +82,8 @@ export class Bot {
     this.nextThink = game.time + 0.4 + this.rng.next() * 0.3;
     const p = game.player(this.playerId);
     if (!p) return;
-    p.ready = true;
+    // through the command, like a player, so a recorded game replays the same
+    if (!p.ready) game.command(p.id, { c: 'ready', value: true });
 
     // races
     if (p.lumber > 0 && p.races.length < 2) {

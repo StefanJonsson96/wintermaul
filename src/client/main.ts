@@ -5,7 +5,7 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import '@fontsource/inter/800.css';
 import './styles.css';
-import type { Stage } from '../shared/campaign';
+import { STAGE_BY_ID, type Stage } from '../shared/campaign';
 import type { RoomState, ServerMsg } from '../shared/protocol';
 import { stageOptions } from './campaign/play';
 import { loadSave, progressLine, syncCloud } from './campaign/save';
@@ -21,7 +21,9 @@ import { markDevice } from './ui/device';
 import { $, toast } from './ui/dom';
 import { LobbyScreen } from './ui/lobby';
 import { MenuScreen } from './ui/menu';
+import { confirmDialog, progressOverlay } from './ui/modal';
 import { OFFLINE } from './mode';
+import { canResume, clearGame, loadGame, type SavedKind } from './saved';
 
 const qs = new URLSearchParams(location.search);
 // the art gallery is a development page, left out of the stand-alone build
@@ -56,11 +58,21 @@ function boot(): void {
     campaign: () => show('campaign'),
     skirmish: () => startLocal(skirmishOptions()),
     campaignProgress: () => progressLine(loadSave()),
+    saved: loadGame,
+    resume: () => void continueGame(),
+    abandon: clearGame,
   });
   const lobby = new LobbyScreen($('#screen-lobby'), net, () => sendTalents());
-  const playStage = (stage: Stage) => startLocal(stageOptions(stage, loadSave(), { play: playStage, map: leaveTo('campaign') }));
+  const stageActions = { play: (stage: Stage) => playStage(stage), map: leaveTo('campaign') };
+  const playStage = (stage: Stage) => startLocal(stageOptions(stage, loadSave(), stageActions));
   const sendTalents = () => net.send({ type: 'talents', loadout: loadSave().talents });
-  const campaign = new CampaignScreen($('#screen-campaign'), { play: playStage, back: () => show('menu'), talentsChanged: sendTalents });
+  const campaign = new CampaignScreen($('#screen-campaign'), {
+    play: playStage,
+    back: () => show('menu'),
+    talentsChanged: sendTalents,
+    saved: loadGame,
+    resume: () => void continueGame(),
+  });
 
   let current: Screen = 'menu';
   function show(screen: Screen): void {
@@ -76,12 +88,60 @@ function boot(): void {
     else campaign.hide();
   }
 
-  /** Starts a single-player game that runs in this browser tab. */
+  /** Starts a single-player game that runs in this browser tab. A game that saves replaces the game in progress, so that asks first. */
   function startLocal(opts: Omit<LocalOptions, 'name'>): void {
+    const saved = loadGame();
+    if (opts.save && saved && canResume(saved)) {
+      confirmDialog(`Start a new game? Your game in progress (${saved.title}, wave ${saved.wave}) will be lost.`, { ok: 'Start new game', danger: true }, () => newLocal(opts).start());
+      return;
+    }
+    newLocal(opts).start();
+  }
+
+  function newLocal(opts: Omit<LocalOptions, 'name'>): LocalGame {
     local?.stop();
     const link = new LocalGame((msg) => route(msg, link), { ...opts, name: net.name || 'You' });
     local = link;
-    link.start();
+    return link;
+  }
+
+  /** How a saved game was set up, or null when that can no longer be done. */
+  function optionsFor(kind: SavedKind): Omit<LocalOptions, 'name'> | null {
+    switch (kind.mode) {
+      case 'skirmish':
+        return skirmishOptions();
+      case 'campaign': {
+        const stage = STAGE_BY_ID[kind.stage];
+        return stage ? stageOptions(stage, loadSave(), stageActions, kind.talents) : null;
+      }
+      default:
+        return null;
+    }
+  }
+
+  /** Picks the saved game up where it was left: replays it, then shows it paused. */
+  async function continueGame(): Promise<void> {
+    const saved = loadGame();
+    const opts = saved && canResume(saved) ? optionsFor(saved.kind) : null;
+    if (!saved || !opts) {
+      clearGame();
+      toast("That game can't be continued.", 'warn', 3000);
+      if (current === 'menu') menu.refresh();
+      return;
+    }
+    const link = newLocal(opts);
+    const loading = progressOverlay('Restoring your game…');
+    try {
+      await link.resume(saved, loading.set);
+    } catch (e) {
+      console.error(e);
+      clearGame();
+      toast('The saved game could not be restored.', 'error', 3500);
+      local = null;
+      show('menu');
+    } finally {
+      loading.close();
+    }
   }
 
   /** Handles a message from the server or from a local game. */

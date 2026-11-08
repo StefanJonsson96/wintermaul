@@ -53,6 +53,13 @@ export function confirmDialog(question: string, opts: { ok: string; cancel?: str
   );
 }
 
+/** A progress bar over everything, for slow work such as restoring a saved game. */
+export function progressOverlay(title: string): { set: (done: number) => void; close: () => void } {
+  const fill = h('div', { class: 'progress-fill' });
+  const modal = openModal(h('div', { class: 'progress-box' }, h('div', { class: 'confirm-q' }, title), h('div', { class: 'progress-bar' }, fill)), { narrow: true, dismissable: false });
+  return { set: (done) => (fill.style.width = `${Math.round(Math.max(0, Math.min(1, done)) * 100)}%`), close: () => modal.close() };
+}
+
 export function anyModalOpen(): boolean {
   return (document.getElementById('modal-root')?.children.length ?? 0) > 0;
 }

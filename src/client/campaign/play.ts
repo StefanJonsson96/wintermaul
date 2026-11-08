@@ -73,13 +73,16 @@ function rewardPanel(stage: Stage, o: Outcome): HTMLElement {
   return h('div', { class: 'reward-panel' }, stars, ...lines);
 }
 
-export function stageOptions(stage: Stage, save: CampaignSave, actions: StageActions): Omit<LocalOptions, 'name'> {
+/** A campaign stage as a local game. `talents` are the save's, or those a continued game started with. */
+export function stageOptions(stage: Stage, save: CampaignSave, actions: StageActions, talents = save.talents): Omit<LocalOptions, 'name'> {
   let outcome: Outcome | null = null;
+  const index = STAGES.indexOf(stage);
   return {
     mode: 'campaign',
     settings: { difficulty: stage.difficulty, raceMode: 'pick', endless: !!stage.endless },
     skipSetup: true,
-    rules: { ...stage.rules, mods: { 0: modsFromLoadout(save.talents) } },
+    rules: { ...stage.rules, mods: { 0: modsFromLoadout(talents) } },
+    save: { kind: { mode: 'campaign', stage: stage.id, talents: { ...talents } }, title: index >= 0 ? `${stage.name} (stage ${index + 1})` : stage.name },
     attach: (view, local) => {
       new GoalTracker(view, local, stage);
       local.system(`${stage.name}: ${stage.story}`);

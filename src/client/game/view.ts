@@ -90,6 +90,8 @@ export class GameView {
     this.bindInput();
     if (this.state.wave.phase === 'setup') this.hud.openSetup();
     else if (this.state.me && this.state.me.races.length === 0 && this.state.me.lumber > 0 && full.settings.raceMode !== 'random') this.hud.openRacePicker();
+    // a continued game starts paused
+    this.hud.refreshLocalControls();
     this.raf = requestAnimationFrame((t) => this.frame(t));
   }
 
@@ -238,7 +240,8 @@ export class GameView {
   confirmLeave(): void {
     const over = this.state.wave.phase === 'victory' || this.state.wave.phase === 'defeat';
     if (over) return this.leave();
-    const question = this.link.local ? 'Leave the game? This game will end.' : 'Leave the game? Your towers keep fighting without you.';
+    const local = this.link.local;
+    const question = local ? (local.saves ? 'Leave the game? It is saved: Continue picks it up where you left off.' : 'Leave the game? This game will end.') : 'Leave the game? Your towers keep fighting without you.';
     confirmDialog(question, { ok: 'Leave', cancel: 'Keep playing', danger: true }, () => this.leave());
   }
 

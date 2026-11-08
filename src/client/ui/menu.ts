@@ -3,9 +3,11 @@ import { VERSION } from '../../shared/version';
 import { OFFLINE } from '../mode';
 import { DIFFICULTIES } from '../../shared/protocol';
 import type { Net } from '../net';
+import { canResume, type SavedGame, savedAgo } from '../saved';
 import { openHelp } from './help';
 import { clear, h, toast } from './dom';
 import { icon } from './icons';
+import { confirmDialog } from './modal';
 
 /** Single-player entry points, provided by the app. */
 export interface SoloActions {
@@ -14,6 +16,10 @@ export interface SoloActions {
   skirmish(): void;
   /** Short progress line for the campaign tile, e.g. "Stage 3 · 7 stars". */
   campaignProgress(): string;
+  /** The game in progress, if there is one. */
+  saved(): SavedGame | null;
+  resume(): void;
+  abandon(): void;
 }
 
 /** Stand-alone, there is no server to meet friends on. */
@@ -33,6 +39,7 @@ export class MenuScreen {
   private nameInput!: HTMLInputElement;
   private codeInput!: HTMLInputElement;
   private campaignSub!: HTMLElement;
+  private continueRow!: HTMLElement;
 
   constructor(
     private root: HTMLElement,
@@ -45,6 +52,26 @@ export class MenuScreen {
   /** Called whenever the menu is shown again. */
   refresh(): void {
     this.campaignSub.textContent = this.solo.campaignProgress();
+    this.renderContinue();
+  }
+
+  /** The game in progress, if any, above the single-player tiles. */
+  private renderContinue(): void {
+    const g = this.solo.saved();
+    clear(this.continueRow);
+    this.continueRow.classList.toggle('hidden', !g);
+    if (!g) return;
+    const ok = canResume(g);
+    const facts = ok ? `${g.title} · wave ${g.wave} · ${g.lives} ${g.lives === 1 ? 'life' : 'lives'} · ${savedAgo(g)}` : `${g.title}, saved by an older version of Winterward: it can't be continued.`;
+    const abandon = () =>
+      confirmDialog(`Abandon ${g.title} at wave ${g.wave}?`, { ok: 'Abandon', cancel: 'Keep it', danger: true }, () => {
+        this.solo.abandon();
+        this.refresh();
+      });
+    this.continueRow.append(
+      h('button', { class: 'solo-tile continue', disabled: !ok, onclick: () => (this.commitName(), this.solo.resume()) }, h('span', { class: 'solo-icon' }, icon('play', 22)), h('div', { class: 'continue-text' }, h('b', null, 'Continue'), h('span', null, facts))),
+      h('button', { class: 'btn small ghost continue-x', title: 'Abandon this game', onclick: ok ? abandon : () => (this.solo.abandon(), this.refresh()) }, ok ? 'Abandon' : 'Dismiss'),
+    );
   }
 
   private render(): void {
@@ -68,10 +95,12 @@ export class MenuScreen {
     const tile = (ic: string, title: string, sub: HTMLElement | string, onclick: () => void, extra = '') =>
       h('button', { class: `solo-tile ${extra}`, onclick: () => (this.commitName(), onclick()) }, h('span', { class: 'solo-icon' }, icon(ic, 22)), h('b', null, title), typeof sub === 'string' ? h('span', null, sub) : sub);
     this.campaignSub = h('span', null, '');
+    this.continueRow = h('div', { class: 'continue-row hidden' });
     const soloCard = h(
       'div',
       { class: 'panel menu-card' },
       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, h('h3', null, 'Single player'), h('span', { class: 'muted', style: { fontSize: '12px' } }, 'Runs in your browser · pause anytime')),
+      this.continueRow,
       h(
         'div',
         { class: 'solo-grid' },

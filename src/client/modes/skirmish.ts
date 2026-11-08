@@ -5,5 +5,6 @@ export function skirmishOptions(): Omit<LocalOptions, 'name'> {
   return {
     mode: 'solo',
     settings: { difficulty: 'normal', raceMode: 'pick', endless: false },
+    save: { kind: { mode: 'skirmish' }, title: 'Skirmish' },
   };
 }

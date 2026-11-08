@@ -105,7 +105,7 @@ export class Hud {
     if (local) {
       this.pauseBtn = h('button', { class: 'btn icon-btn', title: 'Pause (P)', onclick: () => v.togglePause() }, icon('pause', 17)) as HTMLButtonElement;
       this.speedBtn = h('button', { class: 'btn icon-btn speed-btn', title: 'Game speed (F)', onclick: () => v.cycleSpeed() }, '1×') as HTMLButtonElement;
-      this.pausedBanner = h('div', { class: 'paused-banner hidden' }, h('b', null, 'Paused'), h('span', null, 'Press P to resume'));
+      this.pausedBanner = h('div', { class: 'paused-banner hidden', onclick: () => v.togglePause() }, h('b', null, 'Paused'), h('span', null, touchDevice ? 'Tap here to resume' : 'Press P or click here to resume'));
     }
     const topRight = h(
       'div',

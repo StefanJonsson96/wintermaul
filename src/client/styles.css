@@ -335,6 +335,58 @@ input:focus {
   border-color: rgba(255, 211, 90, 0.45);
 }
 
+/* the game in progress, above the single-player tiles */
+.continue-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 2px 0 10px;
+}
+
+.solo-tile.continue {
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  border-color: rgba(98, 227, 160, 0.5);
+  background: linear-gradient(180deg, rgba(30, 80, 70, 0.7), rgba(18, 44, 44, 0.85));
+}
+
+.solo-tile.continue .solo-icon {
+  margin: 0;
+  flex: 0 0 auto;
+  background: rgba(98, 227, 160, 0.16);
+  color: #7ef0b8;
+}
+
+.solo-tile.continue:disabled {
+  cursor: default;
+  opacity: 0.6;
+  transform: none;
+}
+
+.continue-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.progress-bar {
+  height: 10px;
+  border-radius: 6px;
+  background: rgba(124, 200, 255, 0.12);
+  border: 1px solid rgba(124, 200, 255, 0.25);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #4fb6ff, #7ef0e0);
+  transition: width 0.15s;
+}
+
 .solo-tile.accent .solo-icon {
   background: rgba(255, 211, 90, 0.16);
   color: #ffd35a;
@@ -1829,7 +1881,7 @@ input:focus {
   border-radius: 16px;
   background: rgba(8, 14, 26, 0.72);
   border: 1px solid rgba(143, 211, 255, 0.35);
-  pointer-events: none;
+  cursor: pointer;
   z-index: 5;
 }
 
@@ -3150,10 +3202,20 @@ kbd {
     display: none;
   }
   .brand h1 {
-    font-size: 44px;
+    font-size: clamp(28px, 9.5vw, 44px);
   }
   .menu-wrap {
     gap: 18px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .menu-card .field-row {
+    flex-wrap: wrap;
+  }
+  .solo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .solo-tile.continue {
+    min-width: 0;
   }
 }
 

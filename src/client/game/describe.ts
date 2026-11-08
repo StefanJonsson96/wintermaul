@@ -1,7 +1,7 @@
 import { ARMOR_LABEL, DAMAGE_LABEL, DAMAGE_TABLE } from '../../shared/combat';
 import { RACE_BY_ID, TOWERS, totalCost } from '../../shared/data/races';
 import { attackRange, baseDamageMul, type PlayerMods, typeDamageMul } from '../../shared/sim/mods';
-import type { ArmorType, TowerDef } from '../../shared/types';
+import type { ArmorType, CreepDef, TowerDef } from '../../shared/types';
 import { h } from '../ui/dom';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -139,4 +139,30 @@ export function towerTooltip(def: TowerDef, opts: { cost?: number; note?: string
 
 export function upgradesOf(defId: string): TowerDef[] {
   return TOWERS[defId]?.upgrades.map((u) => TOWERS[u]) ?? [];
+}
+
+/** Short names for what a creep can do, for wave banners and previews. */
+export function abilityWords(c: CreepDef): string[] {
+  const out: string[] = [];
+  if (c.burrow) out.push(['wraith', 'banshee', 'skull', 'lich', 'elemental'].includes(c.shape) ? 'Fades' : 'Burrows');
+  if (c.blink) out.push('Blinks');
+  if (c.brood) out.push('Brood');
+  if (c.ward) out.push('Wards');
+  if (c.frenzy) out.push('Frenzy');
+  if (c.freeze) out.push('Freezes towers');
+  if (c.haste) out.push('War drums');
+  return out;
+}
+
+/** One line per ability, for tooltips. */
+export function abilityLines(c: CreepDef): string[] {
+  const out: string[] = [];
+  if (c.burrow) out.push(`${['wraith', 'banshee', 'skull', 'lich', 'elemental'].includes(c.shape) ? 'Fades into the mist' : 'Digs under the snow'} for ${c.burrow.dur}s every ${c.burrow.every}s: out of reach.`);
+  if (c.blink) out.push(`Blinks ${c.blink.cells} cells ahead every ${c.blink.every}s.`);
+  if (c.brood) out.push(`Drops ${c.brood.count} young every ${c.brood.every}s (${c.brood.max} times).`);
+  if (c.ward) out.push(`Shields nearby creeps for ${Math.round(c.ward.pct * 100)}% of their health.`);
+  if (c.frenzy) out.push(`Runs ${Math.round(c.frenzy.speed * 100)}% faster below ${Math.round(c.frenzy.below * 100)}% health.`);
+  if (c.freeze) out.push(`Freezes a tower within ${c.freeze.radius} cells for ${c.freeze.dur}s.`);
+  if (c.haste) out.push(`Creeps around it run ${Math.round(c.haste.pct * 100)}% faster.`);
+  return out;
 }

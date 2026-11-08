@@ -147,6 +147,51 @@ export class Effects {
       }
       case 'split':
         return true;
+      case 'blink': {
+        const c = s.creeps.get(ev.id);
+        if (!c) return true;
+        const from = toWorld(c.rlane, ev.x, ev.y - c.def.size);
+        fx.burst(from.x, from.y, '#bff4ff', 10, { speed: 1.6, life: 0.45, size: 0.06 });
+        fx.ring(from.x, from.y + c.def.size, 0.8, '#8fe8ff', now, 0.35, 0.05, false);
+        // and where it lands, once the picture catches up
+        setTimeout(() => {
+          if (!this.alive() || !s.creeps.has(c.id)) return;
+          const to = this.worldOfCreep(c);
+          fx.burst(to.x, to.y, '#bff4ff', 8, { speed: 1.4, life: 0.4, size: 0.06 });
+        }, 170);
+        audio.play('shot:arcane', this.gainAt(from) * 0.25);
+        return true;
+      }
+      case 'ward': {
+        const c = s.creeps.get(ev.id);
+        if (!c) return true;
+        const p = this.worldOfCreep(c);
+        fx.ring(p.x, p.y + c.def.size * 1.1, c.def.ward?.radius ?? 2.5, '#8fd8ff', now, 0.6, 0.06, true);
+        fx.burst(p.x, p.y, '#cfefff', 8, { speed: 1.2, life: 0.6, size: 0.06, up: 1.2, grav: 0 });
+        audio.play('shot:holy', this.gainAt(p) * 0.3);
+        return true;
+      }
+      case 'brood': {
+        const c = s.creeps.get(ev.id);
+        if (!c) return true;
+        const p = this.worldOfCreep(c);
+        fx.burst(p.x, p.y + c.def.size, '#d8e85a', 12, { speed: 1.4, life: 0.5, size: 0.07, kind: 'shard', add: false, up: 1.5 });
+        fx.burst(p.x, p.y + c.def.size, '#6a7a44', 3, { speed: 0.5, life: 0.6, size: 0.13, kind: 'smoke', add: false, grav: 0, up: 0.3 });
+        audio.play('shot:poison', this.gainAt(p) * 0.3);
+        return true;
+      }
+      case 'freeze': {
+        const t = s.towers.get(ev.tw);
+        if (!t) return true;
+        const p = toWorld(t.lane, t.x + 1, t.y + 1);
+        const c = s.creeps.get(ev.id);
+        if (c) fx.lightning([this.worldOfCreep(c), { x: p.x, y: p.y - 0.6 }], '#9fe8ff', now, 0.06);
+        fx.burst(p.x, p.y - 0.5, '#e6f8ff', 16, { speed: 2, life: 0.6, size: 0.08, kind: 'shard', add: false, up: 2 });
+        fx.ring(p.x, p.y, 1.4, '#9fe8ff', now, 0.5, 0.08, true);
+        if (t.owner === s.you) fx.text(p.x, p.y - 1.6, 'Frozen!', '#bff4ff', now, 13, 1.2);
+        audio.play('freeze', this.gainAt(p) * 0.6);
+        return true;
+      }
       case 'level': {
         const t = s.towers.get(ev.tw);
         if (!t) return true;

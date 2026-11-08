@@ -48,6 +48,11 @@ export class Combat {
     return a;
   }
 
+  /** Underground or in the mist: towers can't see it, and nothing reaches it but its own poison. */
+  private hidden(c: Creep): boolean {
+    return this.g.time < c.burrowUntil;
+  }
+
   private amplifyOf(c: Creep): number {
     return 1 + Math.max(this.g.time < c.amplifyUntil ? c.amplifyPct : 0, c.auraAmplify);
   }
@@ -193,10 +198,10 @@ export class Combat {
     for (const t of this.g.towers.values()) {
       const a = t.def.aura;
       if (!a || (!a.enemySlowPct && !a.enemyDps && !a.enemyAmplify)) continue;
-      if (this.g.time < t.buildUntil) continue;
+      if (this.g.time < t.buildUntil || this.g.time < t.frozenUntil) continue;
       const r2 = a.radius * a.radius;
       for (const c of this.g.lanes[t.lane].creeps) {
-        if (!c.alive || c.lane !== t.lane) continue;
+        if (!c.alive || c.lane !== t.lane || this.hidden(c)) continue;
         const dx = c.x - t.cx;
         const dy = c.y - t.cy;
         if (dx * dx + dy * dy > r2) continue;
@@ -216,7 +221,7 @@ export class Combat {
       }
       const r2 = f.r * f.r;
       for (const c of this.g.lanes[f.lane].creeps) {
-        if (!c.alive || c.air || c.lane !== f.lane) continue;
+        if (!c.alive || c.air || c.lane !== f.lane || this.hidden(c)) continue;
         const dx = c.x - f.x;
         const dy = c.y - f.y;
         if (dx * dx + dy * dy <= r2) this.trueDamage(c, f.dps * DT, f.owner, f.tower);
@@ -251,7 +256,7 @@ export class Combat {
     let doomed: Creep | null = null;
     let doomedScore = Infinity;
     for (const c of this.g.lanes[t.lane].creeps) {
-      if (!c.alive || c.lane !== t.lane || !this.canTarget(kind, c)) continue;
+      if (!c.alive || c.lane !== t.lane || !this.canTarget(kind, c) || this.hidden(c)) continue;
       const dx = c.x - t.cx;
       const dy = c.y - t.cy;
       if (dx * dx + dy * dy > r2) continue;
@@ -298,7 +303,7 @@ export class Combat {
 
   updateTowers(): void {
     for (const t of this.g.towers.values()) {
-      if (this.g.time < t.buildUntil) continue;
+      if (this.g.time < t.buildUntil || this.g.time < t.frozenUntil) continue;
       const a = t.def.attack;
       if (a) {
         if (a.beam) this.updateBeam(t, a);
@@ -334,7 +339,7 @@ export class Combat {
       const ey = t.cy + uy * range;
       this.g.emit({ e: 'line', t: this.g.time, tw: t.id, x: ex, y: ey });
       for (const c of [...this.g.lanes[t.lane].creeps]) {
-        if (!c.alive || c.lane !== t.lane || !this.canTarget(a.targets, c)) continue;
+        if (!c.alive || c.lane !== t.lane || !this.canTarget(a.targets, c) || this.hidden(c)) continue;
         const px = c.x - t.cx;
         const py = c.y - t.cy;
         const along = px * ux + py * uy;
@@ -353,7 +358,7 @@ export class Combat {
         let next: Creep | null = null;
         let bd = a.chain.range * a.chain.range;
         for (const c of this.g.lanes[t.lane].creeps) {
-          if (!c.alive || c.lane !== t.lane || hit.has(c.id) || !this.canTarget(a.targets, c)) continue;
+          if (!c.alive || c.lane !== t.lane || hit.has(c.id) || !this.canTarget(a.targets, c) || this.hidden(c)) continue;
           const d = (c.x - cur.x) ** 2 + (c.y - cur.y) ** 2;
           if (d <= bd) {
             bd = d;
@@ -405,8 +410,10 @@ export class Combat {
       const t = this.g.towers.get(h.tower);
       const def = t?.def;
       const a = def?.attack;
-      const target = this.g.creeps.get(h.target);
+      let target = this.g.creeps.get(h.target);
       if (target) target.incoming = Math.max(0, target.incoming - h.est);
+      // a creep that dug in meanwhile is missed: the shot lands where it was
+      if (target && this.hidden(target)) target = undefined;
       if (target && target.alive && target.lane === h.lane) {
         h.x = target.x;
         h.y = target.y;
@@ -430,7 +437,7 @@ export class Combat {
     const edge = a.splashFalloff ?? 0.4;
     this.g.emit({ e: 'impact', t: this.g.time, tw: t.id, x, y, r, lane });
     for (const c of [...this.g.lanes[lane].creeps]) {
-      if (!c.alive || c.lane !== lane || c.air !== air) continue;
+      if (!c.alive || c.lane !== lane || c.air !== air || this.hidden(c)) continue;
       const d = Math.hypot(c.x - x, c.y - y);
       if (d > r) continue;
       const f = c === primary ? 1 : 1 - (1 - edge) * (d / r);
@@ -456,7 +463,7 @@ export class Combat {
     let target = t.beamTarget >= 0 ? this.g.creeps.get(t.beamTarget) : undefined;
     const range = this.rangeOf(t, a);
     const r2 = range * range;
-    if (target && (!target.alive || target.lane !== t.lane || (target.x - t.cx) ** 2 + (target.y - t.cy) ** 2 > r2)) {
+    if (target && (!target.alive || target.lane !== t.lane || this.hidden(target) || (target.x - t.cx) ** 2 + (target.y - t.cy) ** 2 > r2)) {
       const died = !target.alive;
       target = undefined;
       t.beamTarget = -1;
@@ -481,7 +488,7 @@ export class Combat {
     t.pulseCd -= DT * t.spdMul;
     if (t.pulseCd > 0) return;
     const r2 = pu.radius * pu.radius;
-    let hits = this.g.lanes[t.lane].creeps.filter((c) => c.alive && c.lane === t.lane && this.canTarget(pu.targets, c) && (c.x - t.cx) ** 2 + (c.y - t.cy) ** 2 <= r2);
+    let hits = this.g.lanes[t.lane].creeps.filter((c) => c.alive && c.lane === t.lane && !this.hidden(c) && this.canTarget(pu.targets, c) && (c.x - t.cx) ** 2 + (c.y - t.cy) ** 2 <= r2);
     if (hits.length === 0) {
       t.pulseCd = 0;
       return;

@@ -840,6 +840,11 @@ input:focus {
   color: #d8c0ff;
 }
 
+.trait.ability {
+  background: rgba(255, 176, 64, 0.16);
+  color: #ffcf80;
+}
+
 .timer-bar {
   height: 4px;
   border-radius: 3px;

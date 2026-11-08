@@ -1,6 +1,7 @@
 // The in-game dialogs: race picker, rule setup, gifts, settings and the end screen.
 import { PLAYER_COLORS } from '../../shared/constants';
 import { RACE_BY_ID, RACES, TOWERS, towersOfRace } from '../../shared/data/races';
+import { CREEPS, FINAL_WAVE, WAVE_SETS, wavesOf } from '../../shared/data/waves';
 import { DIFFICULTIES, type Difficulty, type EndStats, type GameSettings, RACE_MODES, startingLives } from '../../shared/protocol';
 import { raceEmblem } from '../art/emblems';
 import { towerIcon } from '../art/towers';
@@ -100,11 +101,16 @@ export function openSetupDialog(view: GameView, onClose: () => void): { modal: M
     }
     const modeRow = h('div', { class: 'setup-grid', style: { gridTemplateColumns: 'repeat(4, 1fr)' } });
     for (const [id, m] of Object.entries(RACE_MODES)) modeRow.append(choice(st.raceMode === id, m.label, m.blurb, { raceMode: id as GameSettings['raceMode'] }));
+    const setId = st.waves ?? 'classic';
+    const wavesRow = h('div', { class: 'setup-grid', style: { gridTemplateColumns: 'repeat(2, 1fr)' } });
+    for (const set of Object.values(WAVE_SETS)) wavesRow.append(choice(setId === set.id, set.id === 'classic' ? 'Classic' : `${set.name} · new`, set.blurb, { waves: set.id }));
+    const finalBoss = CREEPS[wavesOf(setId)[FINAL_WAVE - 1].creep].name;
     const endRow = h('div', { class: 'setup-grid', style: { gridTemplateColumns: 'repeat(2, 1fr)' } });
-    endRow.append(choice(!st.endless, 'Classic', '40 waves, ending with the Winter Tyrant', { endless: false }), choice(st.endless, 'Endless', 'Keep going after wave 40 — how far can you get?', { endless: true }));
+    endRow.append(choice(!st.endless, 'Forty waves', `Ending with ${finalBoss}`, { endless: false }), choice(st.endless, 'Endless', 'Keep going after wave 40 — how far can you get?', { endless: true }));
     body.append(
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Difficulty'), diffRow),
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Race mode'), modeRow),
+      h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Waves'), wavesRow),
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Length'), endRow),
     );
   };

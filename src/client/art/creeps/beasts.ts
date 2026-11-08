@@ -541,3 +541,75 @@ export function hydra(ctx: Ctx, R: number, ph: number, k: Look): void {
     evilEye(ctx, hx + hr * 0.35, hy - hr * 0.2, hr * 0.2, k.eye);
   }
 }
+
+/** A great ice worm: a ringed body arching out of the snow and a round maw full of teeth. */
+export function worm(ctx: Ctx, R: number, ph: number, k: Look): void {
+  const wave = Math.sin(ph);
+  const n = 6;
+  // segments from the tail (left, low) to the head (right, raised), arching as it crawls
+  const seg: { x: number; y: number; r: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const x = -R * 1.05 + t * R * 1.75;
+    const arch = Math.sin(t * Math.PI * 0.9) * R * (0.55 + wave * 0.12);
+    const y = -R * 0.32 - arch - t * R * 0.35 + Math.sin(ph + i * 0.9) * R * 0.04;
+    seg.push({ x, y, r: R * (0.3 + t * 0.2) });
+  }
+  // a furrow of churned snow under the body
+  ctx.fillStyle = alpha('#ffffff', 0.55);
+  ellipse(ctx, -R * 0.1, -R * 0.06, R * 1.2, R * 0.16);
+  ctx.fill();
+  for (let i = 0; i < n - 1; i++) {
+    const s = seg[i];
+    ctx.fillStyle = fill(ctx, s.x, s.y, s.r, i % 2 ? k.body : shade(k.body, -0.08));
+    ellipse(ctx, s.x, s.y, s.r * 1.05, s.r);
+    ctx.fill();
+    outline(ctx, 2);
+    // the ring between segments
+    ctx.strokeStyle = shade(k.dark, -0.1);
+    ctx.lineWidth = Math.max(1.5, R * 0.05);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r * 0.8, -Math.PI * 0.85, -Math.PI * 0.15);
+    ctx.stroke();
+  }
+  // icy spines along the back
+  spikes(
+    ctx,
+    seg.slice(0, n - 1).map((s) => [s.x, s.y - s.r * 0.9] as [number, number]),
+    R * 0.2,
+    shade(k.body, 0.35),
+    0.5,
+  );
+  // the head: a round maw ringed with teeth, facing forward
+  const h = seg[n - 1];
+  const hr = h.r * 1.1;
+  ctx.fillStyle = fill(ctx, h.x, h.y, hr, shade(k.body, 0.08));
+  ellipse(ctx, h.x, h.y, hr, hr * 1.05);
+  ctx.fill();
+  outline(ctx, 2.2);
+  const mx = h.x + hr * 0.55;
+  const my = h.y + hr * 0.08;
+  const open = 0.75 + Math.max(0, wave) * 0.25;
+  ctx.fillStyle = MAW;
+  ellipse(ctx, mx, my, hr * 0.42, hr * 0.62 * open);
+  ctx.fill();
+  ctx.fillStyle = BONE;
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const tx = mx + Math.cos(a) * hr * 0.4;
+    const ty = my + Math.sin(a) * hr * 0.58 * open;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx + (mx - tx) * 0.45 + Math.sin(a) * hr * 0.06, ty + (my - ty) * 0.45 - Math.cos(a) * hr * 0.06);
+    ctx.lineTo(tx + (mx - tx) * 0.12 - Math.sin(a) * hr * 0.1, ty + (my - ty) * 0.12 + Math.cos(a) * hr * 0.1);
+    ctx.closePath();
+    ctx.fill();
+  }
+  evilEye(ctx, h.x - hr * 0.1, h.y - hr * 0.55, hr * 0.17, k.eye);
+  if (k.boss) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, mx, my, hr * 0.9, k.eye, 0.35);
+    ctx.restore();
+  }
+}

@@ -22,6 +22,9 @@ export interface CTower extends NetTower {
   firedAt: number; // local time of last shot (for recoil/flash)
   pulsedAt: number;
   builtAt: number; // local time the build/upgrade visual started
+  /** Frozen solid by a hexer between these game times. */
+  frozenFrom: number;
+  frozenUntil: number;
 }
 
 interface Sample {
@@ -52,11 +55,13 @@ export interface CCreep {
   lastX: number;
   hitAt: number;
   seed: number;
+  /** Flags as last drawn, to notice a creep digging in or coming up. */
+  drawnFlags: number;
 }
 
 const INTERP_DELAY = 0.16;
 
-const TIMELINE_EVENTS = new Set(['spawn', 'die', 'leak', 'shot', 'chain', 'line', 'impact', 'pulse', 'crit', 'fire', 'heal', 'split', 'level']);
+const TIMELINE_EVENTS = new Set(['spawn', 'die', 'leak', 'shot', 'chain', 'line', 'impact', 'pulse', 'crit', 'fire', 'heal', 'split', 'level', 'blink', 'ward', 'brood', 'freeze']);
 
 export class ClientState {
   you: number;
@@ -159,12 +164,13 @@ export class ClientState {
       lastX: x,
       hitAt: -10,
       seed: (id * 2654435761) % 1000,
+      drawnFlags: 0,
     };
   }
 
   private addTower(t: NetTower, builtAt: number): void {
     const tdef = TOWERS[t.def];
-    this.towers.set(t.id, { ...t, tdef, angle: -Math.PI / 2 + (t.id % 7) * 0.3, targetAngle: 0, firedAt: -10, pulsedAt: -10, builtAt });
+    this.towers.set(t.id, { ...t, tdef, angle: -Math.PI / 2 + (t.id % 7) * 0.3, targetAngle: 0, firedAt: -10, pulsedAt: -10, builtAt, frozenFrom: 0, frozenUntil: t.frozen ?? 0 });
     this.grids[t.lane]?.setFootprint(t.x, t.y, CELL_TOWER);
   }
 
@@ -307,6 +313,14 @@ export class ClientState {
       case 'level': {
         const t = this.towers.get(ev.tw);
         if (t) t.level = ev.level;
+        break;
+      }
+      case 'freeze': {
+        const t = this.towers.get(ev.tw);
+        if (t) {
+          t.frozenFrom = ev.t;
+          t.frozenUntil = ev.until;
+        }
         break;
       }
     }

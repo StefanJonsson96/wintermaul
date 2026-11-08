@@ -109,8 +109,8 @@ export function showTowers(race: string | null): void {
   }
 }
 
-/** /?gallery=creeps: every wave's creature, large and labelled. */
-export function showCreeps(): void {
+/** /?gallery=creeps: every wave's creature, large and labelled (&set=t: only ids starting with t). */
+export function showCreeps(prefix: string | null = null): void {
   document.documentElement.style.cssText = 'overflow:auto;height:auto';
   document.body.style.cssText = 'overflow:auto;height:auto;margin:0';
   document.body.innerHTML = '';
@@ -118,7 +118,7 @@ export function showCreeps(): void {
   root.style.cssText = 'display:grid;grid-template-columns:repeat(8, 1fr);gap:6px;padding:10px;background:#b9c9dc;font:12px sans-serif;color:#0b1424';
   document.body.appendChild(root);
   for (const def of Object.values(CREEPS)) {
-    if (def.id.endsWith('s')) continue;
+    if (def.id.endsWith('s') || (prefix && !def.id.startsWith(prefix))) continue;
     const spr = creepSprite(def);
     const cell = document.createElement('div');
     cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;background:#d3dfec;border-radius:8px;padding:4px';
@@ -136,7 +136,7 @@ export function showCreeps(): void {
     ctx.fill();
     ctx.drawImage(spr.frames[1], 0, -spr.lift * SP);
     const label = document.createElement('div');
-    label.textContent = `${def.id.slice(1)} ${def.name}`;
+    label.textContent = `${def.id} ${def.name}`;
     cell.append(c, label);
     root.appendChild(cell);
   }

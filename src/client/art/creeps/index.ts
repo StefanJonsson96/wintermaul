@@ -1,7 +1,7 @@
 import type { CreepDef } from '../../../shared/types';
 import { ellipse, makeCanvas, SP, type Ctx } from '../util';
 import { type Look, bossAura } from './parts';
-import { beetle, boar, crab, hydra, rat, spider, wolf } from './beasts';
+import { beetle, boar, crab, hydra, rat, spider, wolf, worm } from './beasts';
 import { bat, bird, dragon } from './flyers';
 import { ghoul, giant, imp, knight, kobold, troll, tyrant } from './humanoids';
 import { banshee, elemental, golem, lich, skull, wraith } from './spirits';
@@ -46,6 +46,7 @@ const TOP: Record<string, number> = {
   lich: 2.45,
   elemental: 1.95,
   golem: 2.5,
+  worm: 1.9,
 };
 
 /** How far above its shadow a creep is drawn, in cells. */
@@ -133,6 +134,8 @@ function drawCreature(ctx: Ctx, def: CreepDef, R: number, ph: number): void {
       return elemental(ctx, R, ph, k);
     case 'golem':
       return golem(ctx, R, ph, k);
+    case 'worm':
+      return worm(ctx, R, ph, k);
   }
 }
 

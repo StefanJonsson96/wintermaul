@@ -5,6 +5,7 @@ import { PLAYER_COLORS } from '../../shared/constants';
 import { ARMOR_LABEL } from '../../shared/combat';
 import { RACE_BY_ID, TOWERS } from '../../shared/data/races';
 import { CREEPS, FINAL_WAVE, waveDef } from '../../shared/data/waves';
+import { abilityWords } from './describe';
 import { type EndStats } from '../../shared/protocol';
 import { attackRange, sellRefund } from '../../shared/sim/mods';
 import { TARGET_MODES, type CreepDef, type TargetMode, type TowerDef } from '../../shared/types';
@@ -165,7 +166,7 @@ export class Hud {
     } else if (w.phase === 'build') {
       title = `Wave ${nextN}`;
       name = next ? next.creep.name : '';
-      sub = [`in ${Math.ceil(w.countdown)}s`, ...(next ? this.traits(next.creep, next.title) : [])];
+      sub = [`in ${Math.ceil(w.countdown)}s`, ...(next ? this.traits(next.creep, next.title, next.mix) : [])];
       // the bar starts full whatever the delay (the first wave and some stages wait longer)
       const key = `${w.n}|${w.phase}`;
       if (this.countdownKey !== key) {
@@ -178,7 +179,7 @@ export class Hud {
       name = next ? next.creep.name : '';
       let alive = 0;
       for (const c of s.creeps.values()) if (c.wave === w.n && s.isVisible(c)) alive++;
-      sub = [`${alive} left`, ...(next ? this.traits(next.creep, next.title) : [])];
+      sub = [`${alive} left`, ...(next ? this.traits(next.creep, next.title, next.mix) : [])];
       fill = 1;
     } else {
       title = w.phase === 'victory' ? 'Victory!' : 'Defeat';
@@ -217,7 +218,7 @@ export class Hud {
         const info = this.waveInfo(n);
         if (!info) break;
         const tags = this.traitWords(info.creep, info.title);
-        this.preview.append(h('div', { class: 'wp-item' }, `W${n} `, h('b', null, info.creep.name), tags ? ` · ${tags}` : ''));
+        this.preview.append(h('div', { class: 'wp-item' }, `W${n} `, h('b', null, info.creep.name), info.mix ? ` + ${info.mix.name}s` : '', tags ? ` · ${tags}` : ''));
       }
     }
 
@@ -231,18 +232,19 @@ export class Hud {
     if (el.textContent !== text) el.textContent = text;
   }
 
-  waveInfo(n: number): { creep: CreepDef; title: string; hint: string } | null {
+  waveInfo(n: number): { creep: CreepDef; title: string; hint: string; mix?: CreepDef } | null {
     if (n < 1) return null;
     const last = this.state.wave.finalWave;
     if (last && n > last) return null;
+    const set = this.state.settings.waves;
     if (n > FINAL_WAVE) {
       if (!this.state.settings.endless) return null;
-      const d = this.state.creepDef(`e${n}`);
+      const d = this.state.creepDef(set && set !== 'classic' ? `${set}-e${n}` : `e${n}`);
       return d ? { creep: d, title: 'ENDLESS', hint: '' } : null;
     }
-    const w = waveDef(n);
+    const w = waveDef(n, set);
     if (!w) return null;
-    return { creep: CREEPS[w.creep], title: w.title, hint: w.hint };
+    return { creep: CREEPS[w.creep], title: w.title, hint: w.hint, mix: w.mix ? CREEPS[w.mix.creep] : undefined };
   }
 
   private traitWords(c: CreepDef, title: string): string {
@@ -251,11 +253,12 @@ export class Hud {
     if (c.air) t.push('Air');
     if (title === 'SWARM') t.push('Swarm');
     if (c.immune) t.push('Immune');
+    t.push(...abilityWords(c));
     t.push(ARMOR_LABEL[c.armorType]);
     return t.join(' · ');
   }
 
-  private traits(c: CreepDef, title: string): HTMLElement[] {
+  private traits(c: CreepDef, title: string, mix?: CreepDef): HTMLElement[] {
     const out: HTMLElement[] = [];
     if (c.boss) out.push(h('span', { class: 'trait boss' }, title === 'FINAL BOSS' ? 'Final boss' : 'Boss'));
     if (c.air) out.push(h('span', { class: 'trait air' }, 'Air'));
@@ -265,6 +268,8 @@ export class Hud {
     if (c.heal) out.push(h('span', { class: 'trait' }, 'Healer'));
     if (c.split) out.push(h('span', { class: 'trait' }, 'Splits'));
     if (c.shield) out.push(h('span', { class: 'trait' }, 'Shield'));
+    for (const word of abilityWords(c)) out.push(h('span', { class: 'trait ability' }, word));
+    if (mix) out.push(h('span', { class: 'trait ability' }, `+ ${mix.name}s`));
     out.push(h('span', { class: 'trait' }, ARMOR_LABEL[c.armorType]));
     return out;
   }

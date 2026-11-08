@@ -3,6 +3,7 @@ import { towerMeta } from '../art/towers';
 import { audio } from '../audio';
 import { LANE_H, LANE_MARGIN_X, LANE_W, laneOriginY, PLAYER_COLORS } from '../../shared/constants';
 import { RACE_BY_ID, TOWERS } from '../../shared/data/races';
+import { WAVE_SETS } from '../../shared/data/waves';
 import { CELL_TOWER, LaneGrid } from '../../shared/grid';
 import { type ChatLine, DIFFICULTIES, type EndStats, type FullState, type GameCommand, type GameEvent, type GameSettings, RACE_MODES, type Snapshot } from '../../shared/protocol';
 import type { TargetMode, TowerDef } from '../../shared/types';
@@ -348,7 +349,8 @@ export class GameView {
         }
         this.hud.closeSetup();
         const st = ev.settings;
-        const rules = `${DIFFICULTIES[st.difficulty].label} · ${RACE_MODES[st.raceMode].label}${st.endless ? ' · Endless' : ''} · ${ev.lives} ${ev.lives === 1 ? 'life' : 'lives'}`;
+        const waves = st.waves && st.waves !== 'classic' ? ` · ${WAVE_SETS[st.waves].name}` : '';
+        const rules = `${DIFFICULTIES[st.difficulty].label} · ${RACE_MODES[st.raceMode].label}${waves}${st.endless ? ' · Endless' : ''} · ${ev.lives} ${ev.lives === 1 ? 'life' : 'lives'}`;
         this.hud.banner('The march begins', rules);
         this.hud.chat.system(`Rules: ${rules}.`);
         audio.play('wave', 0.6);

@@ -2,7 +2,7 @@ import { DT, GATE_MAX_Y, GATE_MIN_Y, LANE_H, LANE_W } from '../constants';
 import { FINAL_WAVE } from '../data/waves';
 import { CELL_FREE, type LaneGrid } from '../grid';
 import type { CreepDef } from '../types';
-import type { Creep } from './entities';
+import type { Creep, Lane, Tower } from './entities';
 import type { Game } from './game';
 
 export interface SpawnEntry {
@@ -86,7 +86,22 @@ export class Horde {
       nextHeal: this.g.time + (def.heal?.every ?? 0),
       healedUntil: 0,
       incoming: 0,
+      burrowUntil: 0,
+      nextBurrow: 0,
+      nextBlink: 0,
+      nextBrood: 0,
+      nextWard: 0,
+      nextFreeze: 0,
+      broods: 0,
+      haste: 0,
     };
+    // abilities start at staggered times, so a wave doesn't act in lockstep
+    const first = (every: number) => this.g.time + every * (0.4 + 0.6 * this.g.rng.next());
+    if (def.burrow) c.nextBurrow = first(def.burrow.every);
+    if (def.blink) c.nextBlink = first(def.blink.every);
+    if (def.brood) c.nextBrood = first(def.brood.every);
+    if (def.ward) c.nextWard = first(def.ward.every);
+    if (def.freeze) c.nextFreeze = first(def.freeze.every);
     if (!air) {
       const step = grid.next(cell, 0);
       c.next = step.cell;
@@ -117,19 +132,156 @@ export class Horde {
     let slow = Math.max(this.g.time < c.slowUntil ? c.slowPct : 0, c.auraSlow);
     slow = Math.min(slow, c.def.boss ? 0.5 : 0.75);
     const owner = this.g.player(this.g.lanes[c.lane].owner);
-    return c.def.speed * (1 - slow) * (this.g.rules.speedMul ?? 1) * (1 - (owner?.mods.creepSlow ?? 0));
+    // war drums, digging and frenzy
+    let boost = 1 + c.haste;
+    if (this.g.time < c.burrowUntil) boost *= 1.25;
+    const fr = c.def.frenzy;
+    if (fr && c.hp < c.maxHp * fr.below) boost *= 1 + fr.speed;
+    return c.def.speed * (1 - slow) * boost * (this.g.rules.speedMul ?? 1) * (1 - (owner?.mods.creepSlow ?? 0));
   }
 
-  /** One tick for every creep: regeneration and healers, poison and burns, then a step along the maze. */
+  /** One tick for every creep: regeneration and healers, poison and burns, abilities, then a step along the maze. */
   updateCreeps(): void {
     for (const lane of this.g.lanes) {
+      this.drums(lane.creeps);
       for (const c of lane.creeps) {
         if (!c.alive) continue;
         this.regenerate(c, lane.creeps);
         if (c.dots.length && !this.tickDots(c)) continue;
+        this.useAbilities(c, lane);
         this.move(c, lane.grid);
       }
     }
+  }
+
+  /** War drums: creeps near a drummer move faster this tick. */
+  private drums(creeps: Creep[]): void {
+    let drummers = false;
+    for (const c of creeps) {
+      c.haste = 0;
+      if (c.def.haste) drummers = true;
+    }
+    if (!drummers) return;
+    for (const d of creeps) {
+      const h = d.def.haste;
+      if (!h || !d.alive || this.g.time < d.burrowUntil) continue;
+      const r2 = h.radius * h.radius;
+      for (const o of creeps) {
+        if (!o.alive || o.air !== d.air || o.lane !== d.lane) continue;
+        const dx = o.x - d.x;
+        const dy = o.y - d.y;
+        if (dx * dx + dy * dy <= r2) o.haste = Math.max(o.haste, h.pct);
+      }
+    }
+  }
+
+  /** Burrowing, blinking, breeding, warding and freezing towers, each on its own timer. A stunned creep waits. */
+  private useAbilities(c: Creep, lane: Lane): void {
+    const d = c.def;
+    if (!d.burrow && !d.blink && !d.brood && !d.ward && !d.freeze) return;
+    const now = this.g.time;
+    if (now < c.stunUntil) return;
+    if (d.burrow && now >= c.nextBurrow) {
+      c.burrowUntil = now + d.burrow.dur;
+      c.nextBurrow = now + d.burrow.dur + d.burrow.every;
+    }
+    // underground it only digs
+    if (now < c.burrowUntil) return;
+    // nothing in reach: try again shortly instead of wasting the ability
+    const retry = 0.5;
+    if (d.blink && now >= c.nextBlink && now >= c.rootUntil) c.nextBlink = now + (this.blink(c, lane.grid, d.blink.cells) ? d.blink.every : retry);
+    if (d.brood && now >= c.nextBrood && c.broods < d.brood.max) {
+      c.nextBrood = now + d.brood.every;
+      c.broods++;
+      this.breed(c, d.brood);
+    }
+    if (d.ward && now >= c.nextWard) c.nextWard = now + (this.ward(c, lane.creeps, d.ward) ? d.ward.every : retry);
+    if (d.freeze && now >= c.nextFreeze) c.nextFreeze = now + (this.freezeTower(c, d.freeze) ? d.freeze.every : retry);
+  }
+
+  /** Jumps ahead along the path, stopping short of the exit. True if it moved. */
+  private blink(c: Creep, grid: LaneGrid, cells: number): boolean {
+    const x = c.x;
+    const y = c.y;
+    if (c.air) {
+      const end = LANE_W - 1.5;
+      if (c.x >= end) return false;
+      c.x = Math.min(end, c.x + cells);
+    } else {
+      let cell = c.cell;
+      let dir = c.dir;
+      let steps = 0;
+      while (steps < cells) {
+        // the cell it is already stepping into comes first
+        const s = steps === 0 && c.next >= 0 ? { cell: c.next, dir: c.dir } : grid.next(cell, dir);
+        if (s.cell < 0 || grid.isExit(s.cell)) break;
+        c.history.push(cell);
+        if (c.history.length > HISTORY_LEN) c.history.shift();
+        cell = s.cell;
+        dir = s.dir;
+        steps++;
+      }
+      if (steps === 0) return false;
+      c.cell = cell;
+      c.x = (cell % grid.w) + 0.5;
+      c.y = Math.floor(cell / grid.w) + 0.5;
+      const s = grid.next(cell, dir);
+      c.next = s.cell;
+      c.dir = s.dir;
+    }
+    this.g.emit({ e: 'blink', t: this.g.time, id: c.id, x: +x.toFixed(2), y: +y.toFixed(2) });
+    return true;
+  }
+
+  /** A broodmother drops her young where she stands. */
+  private breed(c: Creep, b: NonNullable<CreepDef['brood']>): void {
+    const child = this.g.creepDef(b.into);
+    for (let i = 0; i < b.count; i++) {
+      const n = this.spawnCreep(child, c.lane, c.wave, { x: c.x + (i - (b.count - 1) / 2) * 0.3, y: c.y, cell: c.cell, history: c.history, visits: c.visits, leakedFrom: c.leakedFrom });
+      n.next = c.next;
+      n.dir = c.dir;
+    }
+    this.g.emit({ e: 'brood', t: this.g.time, id: c.id });
+  }
+
+  /** Shields the creeps around a warden. False when nobody needed it. */
+  private ward(c: Creep, creeps: Creep[], w: NonNullable<CreepDef['ward']>): boolean {
+    const r2 = w.radius * w.radius;
+    let any = false;
+    for (const o of creeps) {
+      if (o === c || !o.alive || o.lane !== c.lane || o.air !== c.air) continue;
+      if (o.def.boss && !c.def.boss) continue;
+      const dx = o.x - c.x;
+      const dy = o.y - c.y;
+      if (dx * dx + dy * dy > r2) continue;
+      const amount = Math.round(o.maxHp * w.pct);
+      if (o.shield >= amount) continue;
+      o.shield = amount;
+      any = true;
+    }
+    if (any) this.g.emit({ e: 'ward', t: this.g.time, id: c.id });
+    return any;
+  }
+
+  /** A hexer freezes the nearest working tower in reach. False when there was none. */
+  private freezeTower(c: Creep, f: NonNullable<CreepDef['freeze']>): boolean {
+    let best: Tower | null = null;
+    let bestD = f.radius * f.radius;
+    for (const t of this.g.towers.values()) {
+      if (t.lane !== c.lane || this.g.time < t.buildUntil || this.g.time < t.frozenUntil) continue;
+      if (!t.def.attack && !t.def.pulse && !t.def.aura?.enemyDps && !t.def.aura?.enemySlowPct) continue;
+      const d = (t.cx - c.x) ** 2 + (t.cy - c.y) ** 2;
+      if (d <= bestD) {
+        bestD = d;
+        best = t;
+      }
+    }
+    if (!best) return false;
+    best.frozenUntil = this.g.time + f.dur;
+    best.beamTarget = -1;
+    best.beamRamp = 1;
+    this.g.emit({ e: 'freeze', t: this.g.time, id: c.id, tw: best.id, until: +best.frozenUntil.toFixed(2) });
+    return true;
   }
 
   private regenerate(c: Creep, laneCreeps: Creep[]): void {
@@ -253,6 +405,7 @@ export class Horde {
     c.slowUntil = c.stunUntil = c.rootUntil = 0;
     c.sunders = [];
     c.amplifyUntil = 0;
+    c.burrowUntil = 0;
     if (c.air) {
       c.x = 0.5;
       c.y = LANE_H / 2 + this.g.rng.range(-2.5, 2.5);

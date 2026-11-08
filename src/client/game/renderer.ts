@@ -17,6 +17,9 @@ import {
 } from '../../shared/constants';
 import { CELL_RUBBLE } from '../../shared/grid';
 import { CREEP_FLAG } from '../../shared/protocol';
+
+/** Shapes that fade into the mist instead of digging in. */
+const MISTY = new Set(['wraith', 'banshee', 'skull', 'lich', 'elemental']);
 import type { TowerDef } from '../../shared/types';
 import { Fx, type Point } from './fx';
 import { toWorld } from './layout';
@@ -415,6 +418,8 @@ export class Renderer {
     }
     if (!building) drawTowerAnim(ctx, def, x, y - lift, now, fireAge, t.id);
     ctx.globalAlpha = 1;
+    const rt = state.renderTime;
+    if (rt >= t.frozenFrom && rt < t.frozenUntil) this.drawIce(x, y, y - Math.max(1.3, m.muzzle + 0.35), t.frozenFrom > 0 ? (t.frozenUntil - rt) / (t.frozenUntil - t.frozenFrom) : 1);
     if (building) {
       const k = Math.min(1, Math.max(0, (state.renderTime - t.buildStart) / Math.max(0.01, t.buildUntil - t.buildStart)));
       ctx.fillStyle = 'rgba(8,14,28,0.75)';
@@ -461,7 +466,22 @@ export class Renderer {
     const s = spr.size / SP;
     const flags = c.flags;
     const stunned = (flags & CREEP_FLAG.stunned) !== 0;
+    const burrowed = (flags & CREEP_FLAG.burrowed) !== 0;
+    const misty = MISTY.has(c.def.shape);
+    if ((flags ^ c.drawnFlags) & CREEP_FLAG.burrowed) this.diveBurst(c, x, y, misty);
+    c.drawnFlags = flags;
+    this.drawAuras(c, x, y, now, burrowed);
+    if (burrowed && !misty) {
+      this.drawMound(c, x, y);
+      return;
+    }
     if (!c.def.air) this.drawShadow(x, y, c.def.size * 0.95);
+    if (flags & CREEP_FLAG.frenzied) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      glow(ctx, x, y - c.def.size * 0.7, c.def.size * 1.8, '#ff3b2f', 0.4 + 0.15 * Math.sin(now * 12 + c.seed));
+      ctx.restore();
+    }
     // leaked from another lane: warning halo
     if (c.leakedFrom >= 0) {
       ctx.save();
@@ -478,7 +498,10 @@ export class Renderer {
       ctx.scale(-1, 1);
       ctx.translate(-x, 0);
     }
+    // a spirit faded into the mist is barely there
+    if (burrowed) ctx.globalAlpha = 0.22 + 0.06 * Math.sin(now * 5 + c.seed);
     ctx.drawImage(f, dx, dy, s, s);
+    ctx.globalAlpha = 1;
     if (this.state.renderTime - c.hitAt < 0.08) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.45;
@@ -536,6 +559,119 @@ export class Renderer {
       ctx.fill();
       ctx.stroke();
     }
+    if (flags & CREEP_FLAG.hasted) {
+      // speed lines behind it
+      ctx.strokeStyle = 'rgba(255,190,80,0.6)';
+      ctx.lineWidth = 0.035;
+      for (let i = 0; i < 3; i++) {
+        const yy = y - r * (0.35 + i * 0.5) - lift;
+        const len = r * (0.7 + 0.35 * Math.sin(now * 9 + i * 2 + c.seed));
+        ctx.beginPath();
+        ctx.moveTo(x - c.facing * r * 0.95, yy);
+        ctx.lineTo(x - c.facing * (r * 0.95 + len), yy);
+        ctx.stroke();
+      }
+    }
+  }
+
+  /** What support creeps reach: a drummer's beat, a hexer's frost, a warden's runes. */
+  private drawAuras(c: CCreep, x: number, y: number, now: number, burrowed: boolean): void {
+    const { ctx } = this;
+    const d = c.def;
+    if (burrowed || (!d.haste && !d.freeze && !d.ward)) return;
+    ctx.save();
+    if (d.haste) {
+      // drumbeats rolling outwards
+      for (let i = 0; i < 2; i++) {
+        const k = (now * 1.3 + c.seed * 0.01 + i * 0.5) % 1;
+        ctx.strokeStyle = `rgba(255,176,64,${0.4 * (1 - k)})`;
+        ctx.lineWidth = 0.06;
+        ctx.beginPath();
+        ctx.arc(x, y, d.haste.radius * k, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    if (d.freeze) {
+      ctx.strokeStyle = `rgba(160,232,255,${0.3 + 0.12 * Math.sin(now * 3 + c.seed)})`;
+      ctx.fillStyle = 'rgba(160,232,255,0.05)';
+      ctx.lineWidth = 0.045;
+      ctx.setLineDash([0.18, 0.16]);
+      ctx.beginPath();
+      ctx.arc(x, y, d.freeze.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (d.ward) {
+      ctx.strokeStyle = 'rgba(143,216,255,0.22)';
+      ctx.lineWidth = 0.04;
+      ctx.beginPath();
+      ctx.arc(x, y, d.ward.radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** A creep under the snow: a moving mound with a crack, throwing up snow. */
+  private drawMound(c: CCreep, x: number, y: number): void {
+    const { ctx } = this;
+    const r = c.def.size * 1.15;
+    ctx.fillStyle = 'rgba(30,48,78,0.22)';
+    ellipse(ctx, x, y + 0.06, r * 1.15, r * 0.42);
+    ctx.fill();
+    const g = ctx.createLinearGradient(x, y - r * 0.6, x, y);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(1, '#b4c6da');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.6, 0, Math.PI, Math.PI * 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(80,100,135,0.7)';
+    ctx.lineWidth = 0.035;
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.55, y - r * 0.12);
+    ctx.lineTo(x - r * 0.12, y - r * 0.34);
+    ctx.lineTo(x + r * 0.12, y - r * 0.2);
+    ctx.lineTo(x + r * 0.5, y - r * 0.36);
+    ctx.stroke();
+    if (Math.random() < 0.35 * this.fx.quality) this.fx.burst(x - c.facing * r * 0.7, y - 0.05, '#f2f8ff', 1, { speed: 0.7, up: 1.4, size: 0.05, life: 0.4 });
+  }
+
+  /** Snow thrown up as a creep digs in or comes up; mist as a spirit fades or returns. */
+  private diveBurst(c: CCreep, x: number, y: number, misty: boolean): void {
+    const r = c.def.size;
+    if (misty) this.fx.burst(x, y - r, '#dfeef8', 7, { speed: 0.9, life: 0.7, size: 0.13, kind: 'smoke', add: false, up: 0.5, grav: 0 });
+    else this.fx.burst(x, y, '#eef6ff', 12, { speed: 1.8, life: 0.5, size: 0.07, kind: 'shard', add: false, up: 2.2 });
+  }
+
+  /** A tower frozen solid by a hexer, with a bar for how long until it thaws. */
+  private drawIce(x: number, y: number, top: number, left: number): void {
+    const { ctx } = this;
+    const w = 1.9;
+    const h = y + 0.55 - top;
+    ctx.save();
+    ctx.fillStyle = 'rgba(170,225,255,0.42)';
+    ctx.strokeStyle = 'rgba(235,250,255,0.9)';
+    ctx.lineWidth = 0.05;
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, top, w, h, 0.18);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 0.03;
+    ctx.beginPath();
+    ctx.moveTo(x - w / 2 + 0.2, top + 0.25);
+    ctx.lineTo(x - 0.1, top + h * 0.45);
+    ctx.lineTo(x + 0.35, top + 0.2);
+    ctx.moveTo(x + w / 2 - 0.25, top + h * 0.55);
+    ctx.lineTo(x + 0.2, top + h - 0.2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(8,14,28,0.6)';
+    ctx.fillRect(x - 0.6, y + 0.66, 1.2, 0.1);
+    ctx.fillStyle = '#9fe8ff';
+    ctx.fillRect(x - 0.6, y + 0.66, 1.2 * Math.max(0, Math.min(1, left)), 0.1);
+    ctx.restore();
   }
 
   private drawBeam(x0: number, y0: number, x1: number, y1: number, color: string, ramp: number, now: number): void {

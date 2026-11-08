@@ -1,6 +1,6 @@
 import { BUILD_MAX_X, BUILD_MIN_X, LANE_H, PILLAR_LINES } from '../constants';
 import { RACES, TOWERS } from '../data/races';
-import { CREEPS, WAVES } from '../data/waves';
+import { CREEPS, wavesOf } from '../data/waves';
 import { Rng } from '../rng';
 import type { TowerDef } from '../types';
 import type { Game, Tower } from './game';
@@ -169,7 +169,7 @@ export class Bot {
     const lane = game.laneOf(this.playerId)!;
     // flyers cross the middle rows: before an air wave, towers there matter a lot more
     const airSoon = [0, 1, 2].some((k) => {
-      const w = WAVES[game.wave - 1 + k];
+      const w = wavesOf(game.settings.waves)[game.wave - 1 + k];
       return !!w && !!CREEPS[w.creep].air && (k > 0 || game.phase === 'wave');
     });
     const version = lane.grid.version * 2 + (airSoon ? 1 : 0);

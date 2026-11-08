@@ -1,10 +1,10 @@
 // Headless balance runner: plays full games with bots and prints how far they get.
-//   npm run balance -- --players 2 --games 6 --difficulty normal --races fire,frost
+//   npm run balance -- --players 2 --games 6 --difficulty normal --races fire,frost --waves thaw
 import { Bot } from '../src/shared/sim/bot';
 import { Game } from '../src/shared/sim/game';
 import type { Difficulty } from '../src/shared/protocol';
 import { RACES, TOWERS } from '../src/shared/data/races';
-import { CREEPS } from '../src/shared/data/waves';
+import { CREEPS, type WaveSetId } from '../src/shared/data/waves';
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: string) => {
@@ -16,6 +16,7 @@ const games = Number(opt('games', '4'));
 const difficulty = opt('difficulty', 'normal') as Difficulty;
 const races = opt('races', '').split(',').filter(Boolean);
 const seed0 = Number(opt('seed', '1'));
+const waveSet = opt('waves', 'classic') as WaveSetId;
 const verbose = args.includes('--verbose');
 const quiet = args.includes('--quiet');
 
@@ -41,7 +42,7 @@ interface Result {
 
 function play(seed: number): Result {
   const init = Array.from({ length: players }, (_, i) => ({ id: i, name: `Bot${i}`, color: i, isBot: true }));
-  const game = new Game({ difficulty, raceMode: 'pick', endless: false }, init, seed, { skipSetup: true });
+  const game = new Game({ difficulty, raceMode: 'pick', endless: false, waves: waveSet }, init, seed, { skipSetup: true });
   const bots = init.map((p, i) => new Bot(p.id, seed + i, races.length ? [races[(i + seed) % races.length], races[(i + seed + 1) % races.length]] : undefined));
   const leaksByWave: number[] = [];
   let lastLives = game.lives;
@@ -72,7 +73,7 @@ function play(seed: number): Result {
   };
 }
 
-console.log(`players=${players} difficulty=${difficulty} races=${races.join(',') || 'random'} games=${games}`);
+console.log(`players=${players} difficulty=${difficulty} waves=${waveSet} races=${races.join(',') || 'random'} games=${games}`);
 const results: Result[] = [];
 for (let g = 0; g < games; g++) {
   const r = play(seed0 + g * 101);

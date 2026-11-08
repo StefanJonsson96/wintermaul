@@ -93,6 +93,18 @@ export interface Creep {
   healedUntil: number;
   /** Damage already in flight towards this creep (so towers don't all overkill the same target). */
   incoming: number;
+  /** Out of reach (underground, or in the mist) until this time. */
+  burrowUntil: number;
+  /** When the creep next burrows, blinks, breeds, wards or freezes a tower. */
+  nextBurrow: number;
+  nextBlink: number;
+  nextBrood: number;
+  nextWard: number;
+  nextFreeze: number;
+  /** Broods it has dropped so far. */
+  broods: number;
+  /** Extra speed from war drums this tick. */
+  haste: number;
 }
 
 export interface Tower {
@@ -120,6 +132,8 @@ export interface Tower {
   beamTarget: number;
   beamRamp: number;
   pulseCd: number;
+  /** Frozen solid by a hexer (no attacks or pulses) until this time. */
+  frozenUntil: number;
 }
 
 export interface Lane {

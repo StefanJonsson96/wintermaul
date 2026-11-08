@@ -12,7 +12,7 @@ import {
   waveBonus,
 } from '../constants';
 import { RACES, RACE_BY_ID, TOWERS } from '../data/races';
-import { CREEPS, endlessWave, FINAL_WAVE, WAVES } from '../data/waves';
+import { CREEPS, endlessWave, FINAL_WAVE, WAVE_SETS, wavesOf } from '../data/waves';
 import { CELL_FREE, CELL_RUBBLE, CELL_TOWER, LaneGrid } from '../grid';
 import {
   CREEP_FLAG,
@@ -201,6 +201,7 @@ export class Game {
         if (st.difficulty && st.difficulty in DIFFICULTIES) this.settings.difficulty = st.difficulty;
         if (st.raceMode && ['pick', 'double', 'random', 'same'].includes(st.raceMode)) this.settings.raceMode = st.raceMode;
         if (typeof st.endless === 'boolean') this.settings.endless = st.endless;
+        if (st.waves && st.waves in WAVE_SETS) this.settings.waves = st.waves;
         this.lives = this.maxLives = this.startLives();
         this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: this.lives, finalWave: this.settings.endless ? 0 : this.finalWave });
         return { ok: true };
@@ -326,6 +327,7 @@ export class Game {
       beamTarget: -1,
       beamRamp: 1,
       pulseCd: 0,
+      frozenUntil: 0,
     };
     this.towers.set(t.id, t);
     this.combat.refreshAuras(lane.index);
@@ -504,10 +506,10 @@ export class Game {
 
   private waveInfo(n: number): { wave: WaveDef; creep: CreepDef } {
     if (n <= FINAL_WAVE) {
-      const wave = WAVES[n - 1];
+      const wave = wavesOf(this.settings.waves)[n - 1];
       return { wave, creep: CREEPS[wave.creep] };
     }
-    const ew = endlessWave(n);
+    const ew = endlessWave(n, this.settings.waves);
     if (!this.endlessDefs.some((d) => d.id === ew.creep.id)) {
       this.endlessDefs.push(ew.creep);
       this.emit({ e: 'endless', t: this.time, def: ew.creep });
@@ -530,7 +532,11 @@ export class Game {
       }
       const count = Math.max(1, Math.round(wave.count * (this.rules.countMul ?? 1)));
       const interval = wave.interval / Math.max(1, this.rules.countMul ?? 1);
-      for (let i = 0; i < count; i++, at += interval) this.horde.spawnQueue.push({ at, lane: lane.index, def: wave.creep, wave: n });
+      for (let i = 0; i < count; i++, at += interval) {
+        // support creeps (hexers, wardens, drummers) walk in the ranks
+        const def = wave.mix && (i + 1) % wave.mix.every === 0 ? wave.mix.creep : wave.creep;
+        this.horde.spawnQueue.push({ at, lane: lane.index, def, wave: n });
+      }
     }
     this.horde.spawnQueue.sort((a, b) => a.at - b.at);
     this.emit({ e: 'wave', t: this.time, n, phase: 'wave' });
@@ -625,6 +631,7 @@ export class Game {
       invested: t.invested,
       level: t.level,
       xp: Math.round(t.xp),
+      frozen: t.frozenUntil > this.time ? +t.frozenUntil.toFixed(2) : undefined,
     };
   }
 
@@ -685,6 +692,9 @@ export class Game {
     if (now < c.amplifyUntil) f |= CREEP_FLAG.cursed;
     if (c.sunders.length) f |= CREEP_FLAG.sundered;
     if (c.shield > 0) f |= CREEP_FLAG.shielded;
+    if (now < c.burrowUntil) f |= CREEP_FLAG.burrowed;
+    if (c.def.frenzy && c.hp < c.maxHp * c.def.frenzy.below) f |= CREEP_FLAG.frenzied;
+    if (c.haste > 0) f |= CREEP_FLAG.hasted;
     return f;
   }
 

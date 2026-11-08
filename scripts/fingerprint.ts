@@ -12,6 +12,7 @@ const cases = [
   { players: 3, races: ['shadow', 'grove', 'arcane'], difficulty: 'normal' as const },
   { players: 1, races: ['gold', 'prism'], difficulty: 'casual' as const, talents: true },
   { players: 1, races: ['stone', 'sun'], difficulty: 'normal' as const, stage: true },
+  { players: 2, races: ['fire', 'tech'], difficulty: 'normal' as const, waves: 'thaw' as const },
 ];
 
 for (const [i, c] of cases.entries()) {
@@ -19,7 +20,7 @@ for (const [i, c] of cases.entries()) {
   const init = Array.from({ length: c.players }, (_, k) => ({ id: k, name: `B${k}`, color: k, isBot: true }));
   const mods = c.talents ? { 0: modsFromLoadout({ honed: 5, hearts: 5, virulence: 3, chill: 3, concussion: 1, warchest: 5, kin_gold: 3, secondwind: 0 }) } : undefined;
   const rules = c.stage ? { firstWave: 11, finalWave: 22, startGold: 1100, startLumber: 2, regen: 0.006, armor: 2, countMul: 1.3 } : {};
-  const game = new Game({ difficulty: c.difficulty, raceMode: 'pick', endless: false }, init, seed, { skipSetup: true, rules: { ...rules, mods } });
+  const game = new Game({ difficulty: c.difficulty, raceMode: 'pick', endless: false, waves: 'waves' in c ? c.waves : undefined }, init, seed, { skipSetup: true, rules: { ...rules, mods } });
   const bots = init.map((p, k) => new Bot(p.id, seed + k, [c.races[k % c.races.length], c.races[(k + 1) % c.races.length]]));
   const hash = createHash('sha1');
   let events = 0;

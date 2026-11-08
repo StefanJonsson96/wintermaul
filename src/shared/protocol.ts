@@ -1,4 +1,5 @@
 // Messages between browser and server. Everything is JSON over one WebSocket.
+import type { WaveSetId } from './data/waves';
 import type { TargetMode } from './types';
 
 export type Difficulty = 'casual' | 'normal' | 'hard' | 'brutal' | 'perfection';
@@ -10,6 +11,8 @@ export interface GameSettings {
   endless: boolean;
   /** Players bring the talents they earned in the campaign (a lobby option, off by default). */
   talents?: boolean;
+  /** Which creeps come: the classic waves (default) or The Thaw. */
+  waves?: WaveSetId;
 }
 
 export const DIFFICULTIES: Record<Difficulty, { label: string; lives: number; perPlayer: number; hp: number; blurb: string }> = {
@@ -81,6 +84,8 @@ export interface NetTower {
   invested: number;
   level: number;
   xp: number;
+  /** Frozen solid by a hexer until this game time. */
+  frozen?: number;
 }
 
 export interface NetCreep {
@@ -149,6 +154,10 @@ export type GameEvent =
   | { e: 'heal'; t: number; id: number }
   | { e: 'endless'; t: number; def: import('./types').CreepDef }
   | { e: 'rally'; t: number; lives: number }
+  | { e: 'blink'; t: number; id: number; x: number; y: number }
+  | { e: 'ward'; t: number; id: number }
+  | { e: 'brood'; t: number; id: number }
+  | { e: 'freeze'; t: number; id: number; tw: number; until: number }
   | { e: 'setup'; t: number; settings: GameSettings; done: boolean; lives: number; finalWave: number };
 
 /** Compact per-tick state. Creeps: flat array of [id, lane, x*100, y*100, hp, flags] per creep. */
@@ -175,6 +184,11 @@ export const CREEP_FLAG = {
   rooted: 32,
   sundered: 64,
   shielded: 128,
+  /** Underground, or faded into the mist: out of reach. */
+  burrowed: 256,
+  frenzied: 512,
+  /** Driven on by war drums. */
+  hasted: 1024,
 };
 
 // ---------------------------------------------------------------------------

@@ -169,7 +169,8 @@ export type CreepShape =
   | 'banshee'
   | 'lich'
   | 'elemental'
-  | 'golem';
+  | 'golem'
+  | 'worm';
 
 export interface CreepDef {
   id: string;
@@ -187,6 +188,20 @@ export interface CreepDef {
   shield?: number; // fraction of max HP absorbed by a shield first
   split?: { into: string; count: number };
   heal?: { every: number; radius: number; pct: number };
+  /** Every `every` seconds it digs in (or fades into the mist) for `dur` seconds: out of reach, and a little faster. */
+  burrow?: { every: number; dur: number };
+  /** Every `every` seconds it jumps `cells` cells ahead along its path. */
+  blink?: { every: number; cells: number };
+  /** Every `every` seconds, `count` creeps of type `into` crawl out of it, at most `max` times. */
+  brood?: { every: number; into: string; count: number; max: number };
+  /** Every `every` seconds it shields the creeps within `radius` (not itself) for `pct` of their health. */
+  ward?: { every: number; radius: number; pct: number };
+  /** Below `below` of its health it moves `speed` faster (0.5 = 50% faster). */
+  frenzy?: { below: number; speed: number };
+  /** Every `every` seconds it freezes the nearest working tower within `radius` for `dur` seconds. */
+  freeze?: { every: number; radius: number; dur: number };
+  /** War drums: creeps within `radius`, itself included, move `pct` faster. */
+  haste?: { radius: number; pct: number };
   size: number; // visual radius in cells
   shape: CreepShape;
   colors: [string, string, string]; // body, accent, detail
@@ -198,6 +213,8 @@ export interface WaveDef {
   count: number;
   interval: number; // seconds between spawns
   escort?: { creep: string; count: number };
+  /** Every `every`-th creep of the wave is one of these instead (hexers, wardens, drummers…). */
+  mix?: { creep: string; every: number };
   title: string;
   hint: string;
 }

@@ -1,5 +1,7 @@
-// The single-player campaign: twelve stages on the road north, and an endless frontier.
-// Stages are rule sets for the ordinary game; stars earn runestones for the talent tree.
+// The single-player campaign: Act I, twelve stages on the road north and an endless frontier;
+// Act II, nine stages of The Thaw, where what slept under the glacier wakes. Stages are rule sets
+// for the ordinary game; stars earn runestones for the Rune Web.
+import type { WaveSetId } from './data/waves';
 import type { Difficulty } from './protocol';
 import type { GameRules } from './sim/game';
 
@@ -20,6 +22,8 @@ export interface Stage {
   /** Runestones for the first, second and third star. */
   rewards: [number, number, number];
   endless?: boolean;
+  /** The creeps it is fought with (default: the classic waves). */
+  waves?: WaveSetId;
 }
 
 const RACES_DEEP = ['stone', 'tech', 'gold', 'prism', 'fire', 'arcane'];
@@ -217,7 +221,166 @@ export const ENDLESS: Stage = {
   endless: true,
 };
 
-export const STAGE_BY_ID: Record<string, Stage> = Object.fromEntries([...STAGES, ENDLESS].map((s) => [s.id, s]));
+const RACES_HEX = ['arcane', 'shadow', 'sun', 'frost', 'venom', 'grove'];
+
+/** Act II: The Thaw. Every stage is fought with The Thaw's waves. */
+export const THAW_STAGES: Stage[] = [
+  {
+    id: 'meltwater',
+    name: 'Meltwater Ford',
+    x: 0.09,
+    y: 0.84,
+    story: 'With the Tyrant gone the great glacier is breaking up, and the meltwater is full of things that should have stayed asleep.',
+    difficulty: 'normal',
+    rules: { finalWave: 12, lives: 20 },
+    mutators: [],
+    reach: 6,
+    flawless: 3,
+    rewards: [1, 1, 1],
+    waves: 'thaw',
+  },
+  {
+    id: 'fjord',
+    name: 'The Drowned Fjord',
+    x: 0.23,
+    y: 0.64,
+    story: 'Spring floods carry the horde down the fjord faster than any march. Broodmothers ride the ice floes.',
+    difficulty: 'normal',
+    rules: { firstWave: 5, finalWave: 16, lives: 20, startGold: 320, firstWaveDelay: 75, speedMul: 1.1, hpMul: 1.6 },
+    mutators: [{ name: 'Spring floods', text: 'Creeps move 10% faster.' }],
+    reach: 11,
+    flawless: 3,
+    rewards: [1, 1, 2],
+    waves: 'thaw',
+  },
+  {
+    id: 'hexwood',
+    name: 'Hexwood',
+    x: 0.13,
+    y: 0.4,
+    story: 'Hexers walk among the frozen trees, and towers turn to ice wherever they pass. Only the old orders of the wood will fight here.',
+    difficulty: 'normal',
+    rules: { firstWave: 9, finalWave: 20, lives: 20, startGold: 620, startLumber: 2, firstWaveDelay: 90, races: RACES_HEX, hpMul: 1.3 },
+    mutators: [{ name: 'Witchwood', text: 'Only Arcanum, Umbral, Sunguard, Frostborn, Venomkin and Wildgrove.' }],
+    reach: 15,
+    flawless: 3,
+    rewards: [1, 1, 2],
+    waves: 'thaw',
+  },
+  {
+    id: 'causeway',
+    name: 'Shattered Causeway',
+    x: 0.31,
+    y: 0.24,
+    story: 'The old causeway across the ice has cracked into a thousand floes, and the horde comes over all of them at once.',
+    difficulty: 'normal',
+    rules: { firstWave: 12, finalWave: 24, lives: 20, startGold: 900, startLumber: 2, firstWaveDelay: 100, countMul: 1.35, hpMul: 1.2 },
+    mutators: [{ name: 'Horde', text: '35% more creeps in every wave, each with less health.' }],
+    reach: 18,
+    flawless: 4,
+    rewards: [1, 2, 2],
+    waves: 'thaw',
+  },
+  {
+    id: 'caverns',
+    name: 'Brood Caverns',
+    x: 0.45,
+    y: 0.5,
+    story: 'Warm vents keep the caverns alive, and the broods with them. Whatever you wound down here heals in the steam.',
+    difficulty: 'normal',
+    rules: { firstWave: 16, finalWave: 28, lives: 20, startGold: 1400, startLumber: 2, firstWaveDelay: 110, regen: 0.004, hpMul: 1.15 },
+    mutators: [{ name: 'Steam vents', text: 'Creeps regenerate 0.4% of their health every second.' }],
+    reach: 22,
+    flawless: 4,
+    rewards: [1, 2, 2],
+    waves: 'thaw',
+  },
+  {
+    id: 'stormwatch',
+    name: 'Stormwatch',
+    x: 0.6,
+    y: 0.72,
+    story: 'The Storm Herald blinks across the tundra with his drums behind him. The wind is at his back, and he pays well for every head.',
+    difficulty: 'normal',
+    rules: { firstWave: 20, finalWave: 30, lives: 20, startGold: 2100, startLumber: 3, firstWaveDelay: 120, speedMul: 1.08, bountyMul: 1.15, hpMul: 1.75 },
+    mutators: [
+      { name: 'Tailwind', text: 'Creeps move 8% faster.' },
+      { name: 'Plunder', text: 'Kills pay 15% more gold.' },
+    ],
+    reach: 25,
+    flawless: 4,
+    rewards: [2, 2, 2],
+    waves: 'thaw',
+  },
+  {
+    id: 'frozensea',
+    name: 'The Frozen Sea',
+    x: 0.74,
+    y: 0.46,
+    story: 'Out on the frozen sea the creeps wear plates of ice as armor. Bring your heaviest blows.',
+    difficulty: 'normal',
+    rules: { firstWave: 25, finalWave: 36, lives: 20, startGold: 3200, startLumber: 3, firstWaveDelay: 130, armor: 3, hpMul: 1.15 },
+    mutators: [{ name: 'Ice plates', text: 'Creeps have 3 extra armor.' }],
+    reach: 31,
+    flawless: 4,
+    rewards: [2, 2, 3],
+    waves: 'thaw',
+  },
+  {
+    id: 'hollowthrone',
+    name: 'The Hollow Throne',
+    x: 0.82,
+    y: 0.22,
+    story: 'Under the glacier stands a throne older than the Tyrant\'s. The Hollow King is rising from it.',
+    difficulty: 'normal',
+    rules: { firstWave: 31, finalWave: 40, lives: 25, startGold: 5600, startLumber: 3, firstWaveDelay: 140 },
+    mutators: [],
+    reach: 36,
+    flawless: 5,
+    rewards: [2, 2, 3],
+    waves: 'thaw',
+  },
+  {
+    id: 'glacierheart',
+    name: 'Heart of the Glacier',
+    x: 0.9,
+    y: 0.07,
+    story: 'The whole Thaw, from the first ghoul out of the meltwater to the Hollow King himself.',
+    difficulty: 'brutal',
+    rules: { lives: 30 },
+    mutators: [{ name: 'The whole Thaw', text: 'All 40 waves of The Thaw on Brutal: 40% more creep health.' }],
+    reach: 25,
+    flawless: 6,
+    rewards: [2, 3, 3],
+    waves: 'thaw',
+  },
+];
+
+export interface Chapter {
+  id: 'winter' | 'thaw';
+  act: string;
+  name: string;
+  blurb: string;
+  stages: Stage[];
+  /** An endless stage beside the road. */
+  endless?: Stage;
+  /** A stage elsewhere that must be won before this chapter opens. */
+  opensAfter?: string;
+}
+
+export const CHAPTERS: Chapter[] = [
+  { id: 'winter', act: 'Act I', name: 'The Long Winter', blurb: 'The road north, to the Throne of Winter.', stages: STAGES, endless: ENDLESS },
+  { id: 'thaw', act: 'Act II', name: 'The Thaw', blurb: 'What slept under the glacier is waking.', stages: THAW_STAGES, opensAfter: 'mill' },
+];
+
+/** Every stage of every chapter, the endless ones included. */
+export const ALL_STAGES: Stage[] = CHAPTERS.flatMap((c) => [...c.stages, ...(c.endless ? [c.endless] : [])]);
+
+export const STAGE_BY_ID: Record<string, Stage> = Object.fromEntries(ALL_STAGES.map((s) => [s.id, s]));
+
+export function chapterOf(stage: Stage): Chapter {
+  return CHAPTERS.find((c) => c.stages.includes(stage) || c.endless === stage) ?? CHAPTERS[0];
+}
 
 export interface StageResult {
   victory: boolean;
@@ -246,4 +409,4 @@ export function endlessReward(best: number, wave: number): number {
 }
 
 /** Runestones the campaign can give, endless records aside. */
-export const CAMPAIGN_STONES = STAGES.reduce((n, s) => n + s.rewards[0] + s.rewards[1] + s.rewards[2], 0);
+export const CAMPAIGN_STONES = CHAPTERS.flatMap((c) => c.stages).reduce((n, s) => n + s.rewards[0] + s.rewards[1] + s.rewards[2], 0);

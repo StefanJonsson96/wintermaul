@@ -1,6 +1,6 @@
 // Runs a campaign stage as a local game: stage rules plus the player's talents, a goal tracker
 // on the HUD, and the stars and runestones on the end screen.
-import { STAGES, type Stage } from '../../shared/campaign';
+import { chapterOf, type Stage } from '../../shared/campaign';
 import { modsFromLoadout } from '../../shared/talents';
 import type { GameView } from '../game/view';
 import type { LocalGame, LocalOptions } from '../local';
@@ -39,8 +39,7 @@ class GoalTracker {
     if (key === this.key || !this.el.isConnected) return;
     this.key = key;
     clear(this.el);
-    const index = STAGES.indexOf(s);
-    this.el.append(h('div', { class: 'sb-kicker' }, s.endless ? 'Endless' : `Stage ${index + 1}`, h('span', null, s.name)));
+    this.el.append(h('div', { class: 'sb-kicker' }, s.endless ? 'Endless' : stageLabel(s), h('span', null, s.name)));
     if (s.endless) {
       this.el.append(h('div', { class: 'sb-goal' }, h('span', { class: 'sb-star' }, icon('infinity', 14)), `Wave ${g.wave} · a runestone every 5 waves past 20`));
       return;
@@ -53,6 +52,13 @@ class GoalTracker {
       row(3, `Lose at most ${s.flawless} ${s.flawless === 1 ? 'life' : 'lives'} (${lost} so far)`, lost > s.flawless ? 'failed' : won ? 'done' : ''),
     );
   }
+}
+
+/** "Stage 3", or "Act II · Stage 3". */
+export function stageLabel(stage: Stage): string {
+  const chapter = chapterOf(stage);
+  const n = chapter.stages.indexOf(stage) + 1;
+  return chapter.id === 'winter' ? `Stage ${n}` : `${chapter.act} · Stage ${n}`;
 }
 
 /** The runestone summary on the end screen. */
@@ -69,20 +75,24 @@ function rewardPanel(stage: Stage, o: Outcome): HTMLElement {
   else if (stage.endless) lines.push(h('div', { class: 'muted' }, o.record ? 'A new record! Runestones come at wave 25, 30, 35…' : 'No new record this time.'));
   else if (o.stars === 0) lines.push(h('div', { class: 'muted' }, `Reach wave ${stage.reach} for your first star.`));
   else if (o.newStars === 0) lines.push(h('div', { class: 'muted' }, o.stars >= 3 ? 'Every star already earned here.' : 'No new stars this time.'));
-  for (const u of o.unlocked) lines.push(h('div', { class: 'rw-unlock' }, icon('map', 15), `${u.name} is now open!`));
+  for (const u of o.unlocked) {
+    const c = chapterOf(u);
+    const opensAct = c.opensAfter && c.stages[0] === u;
+    lines.push(h('div', { class: 'rw-unlock' }, icon('map', 15), opensAct ? `${c.act}: ${c.name} is now open!` : `${u.name} is now open!`));
+  }
   return h('div', { class: 'reward-panel' }, stars, ...lines);
 }
 
 /** A campaign stage as a local game. `talents` are the save's, or those a continued game started with. */
 export function stageOptions(stage: Stage, save: CampaignSave, actions: StageActions, talents = save.talents): Omit<LocalOptions, 'name'> {
   let outcome: Outcome | null = null;
-  const index = STAGES.indexOf(stage);
+  const chapter = chapterOf(stage);
   return {
     mode: 'campaign',
-    settings: { difficulty: stage.difficulty, raceMode: 'pick', endless: !!stage.endless },
+    settings: { difficulty: stage.difficulty, raceMode: 'pick', endless: !!stage.endless, waves: stage.waves },
     skipSetup: true,
     rules: { ...stage.rules, mods: { 0: modsFromLoadout(talents) } },
-    save: { kind: { mode: 'campaign', stage: stage.id, talents: { ...talents } }, title: index >= 0 ? `${stage.name} (stage ${index + 1})` : stage.name },
+    save: { kind: { mode: 'campaign', stage: stage.id, talents: { ...talents } }, title: stage.endless ? stage.name : `${stage.name} (${stageLabel(stage).toLowerCase().replace('act ii', 'Act II')})` },
     attach: (view, local) => {
       new GoalTracker(view, local, stage);
       local.system(`${stage.name}: ${stage.story}`);
@@ -92,7 +102,7 @@ export function stageOptions(stage: Stage, save: CampaignSave, actions: StageAct
     },
     endNote: () => (outcome ? rewardPanel(stage, outcome) : undefined),
     endActions: (victory) => {
-      const next = STAGES[STAGES.indexOf(stage) + 1];
+      const next = stage.endless ? undefined : chapter.stages[chapter.stages.indexOf(stage) + 1];
       const out: { label: string; kind?: 'primary' | 'danger'; run: () => void }[] = [];
       if (victory && next && isUnlocked(next, save)) out.push({ label: `Next: ${next.name}`, kind: 'primary', run: () => actions.play(next) });
       out.push({ label: victory ? 'Play again' : 'Try again', kind: out.length ? undefined : 'primary', run: () => actions.play(stage) });

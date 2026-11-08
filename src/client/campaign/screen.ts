@@ -1,8 +1,8 @@
-// The campaign screen: the map of the road north, a briefing for the chosen stage and the
-// runestone purse.
-import { ENDLESS, ENDLESS_AFTER, STAGES, STAGE_BY_ID, type Stage } from '../../shared/campaign';
+// The campaign screen: a map per act, a briefing for the chosen stage and the runestone purse.
+import { type Chapter, CHAPTERS, chapterOf, ENDLESS_AFTER, STAGE_BY_ID, type Stage } from '../../shared/campaign';
 import { RACE_BY_ID } from '../../shared/data/races';
-import { CREEPS, WAVES } from '../../shared/data/waves';
+import { CREEPS, wavesOf } from '../../shared/data/waves';
+import { abilityLines } from '../game/describe';
 import { ARMOR_LABEL } from '../../shared/combat';
 import { creepPortrait } from '../art/creeps';
 import { DIFFICULTIES } from '../../shared/protocol';
@@ -12,7 +12,8 @@ import { clear, h, tooltip } from '../ui/dom';
 import { openModal } from '../ui/modal';
 import { icon } from '../ui/icons';
 import { CampaignMap, type MapNode } from './map';
-import { type CampaignSave, currentStage, isUnlocked, loadSave, storeSave, unspent } from './save';
+import { stageLabel } from './play';
+import { type CampaignSave, chapterOpen, currentStage, isUnlocked, loadSave, storeSave, unspent } from './save';
 import { openTalents } from './tree';
 
 export interface CampaignActions {
@@ -42,9 +43,10 @@ export function stageFacts(stage: Stage): { label: string; value: string }[] {
 /** The creeps a stage throws at you, bosses first, at most `max` of them. */
 export function stageRoster(stage: Stage, max = 12): { wave: number; id: string }[] {
   if (stage.endless) return [];
+  const waves = wavesOf(stage.waves);
   const first = stage.rules.firstWave ?? 1;
-  const last = stage.rules.finalWave ?? WAVES.length;
-  const all = WAVES.slice(first - 1, last).map((w, i) => ({ wave: first + i, id: w.creep }));
+  const last = stage.rules.finalWave ?? waves.length;
+  const all = waves.slice(first - 1, last).map((w, i) => ({ wave: first + i, id: w.creep }));
   const bosses = all.filter((c) => CREEPS[c.id].boss);
   const rest = all.filter((c) => !CREEPS[c.id].boss);
   const step = Math.max(1, rest.length / Math.max(1, max - bosses.length));
@@ -59,6 +61,9 @@ export class CampaignScreen {
   private purse: HTMLElement;
   private talentBtn: HTMLButtonElement;
   private selected: Stage;
+  private chapter: Chapter = CHAPTERS[0];
+  private tabs: HTMLElement;
+  private title: HTMLElement;
 
   constructor(
     root: HTMLElement,
@@ -75,6 +80,8 @@ export class CampaignScreen {
       this.actions.talentsChanged?.();
     };
     this.talentBtn = h('button', { class: 'btn primary', onclick: () => openTalents(this.save, changed) }, icon('star', 16), 'Rune Web') as HTMLButtonElement;
+    this.tabs = h('div', { class: 'camp-tabs' });
+    this.title = h('h2', null, '');
     root.append(
       h(
         'div',
@@ -83,7 +90,7 @@ export class CampaignScreen {
           'header',
           { class: 'camp-head' },
           h('button', { class: 'btn ghost', onclick: () => this.actions.back() }, icon('back', 16), 'Menu'),
-          h('div', { class: 'camp-title' }, h('h2', null, 'The Long Winter'), h('span', null, 'Campaign')),
+          h('div', { class: 'camp-title' }, this.title, this.tabs),
           h('div', { class: 'camp-head-right' }, this.purse, this.talentBtn),
         ),
         h('div', { class: 'camp-body' }, h('div', { class: 'panel camp-map' }, canvas), this.brief),
@@ -95,8 +102,11 @@ export class CampaignScreen {
   show(): void {
     this.save = loadSave();
     const last = this.save.last ? STAGE_BY_ID[this.save.last] : undefined;
+    // the act of the stage played last, if it is open
+    this.chapter = last && chapterOpen(chapterOf(last), this.save) ? chapterOf(last) : CHAPTERS[0];
     // after a win, point at the next stage; otherwise stay on the stage just played
-    this.selected = last && (this.save.stars[last.id] ?? 0) < 2 && isUnlocked(last, this.save) ? last : currentStage(this.save);
+    this.selected = last && chapterOf(last) === this.chapter && (this.save.stars[last.id] ?? 0) < 2 && isUnlocked(last, this.save) ? last : currentStage(this.save, this.chapter);
+    this.map.setChapter(this.chapter);
     this.refresh();
     this.map.start();
     if (this.save.refunded) this.announceWeb();
@@ -123,8 +133,29 @@ export class CampaignScreen {
   }
 
   private nodes(): MapNode[] {
-    const cur = currentStage(this.save);
-    return [...STAGES, ENDLESS].map((stage) => ({ stage, unlocked: isUnlocked(stage, this.save), stars: this.save.stars[stage.id] ?? 0, current: stage === cur && (this.save.stars[stage.id] ?? 0) < 2 }));
+    const cur = currentStage(this.save, this.chapter);
+    const stages = [...this.chapter.stages, ...(this.chapter.endless ? [this.chapter.endless] : [])];
+    return stages.map((stage) => ({ stage, unlocked: isUnlocked(stage, this.save), stars: this.save.stars[stage.id] ?? 0, current: stage === cur && (this.save.stars[stage.id] ?? 0) < 2 }));
+  }
+
+  /** Switches to another act's map. */
+  private openChapter(chapter: Chapter): void {
+    if (chapter === this.chapter) return;
+    this.chapter = chapter;
+    this.map.setChapter(chapter);
+    this.selected = currentStage(this.save, chapter);
+    this.refresh();
+  }
+
+  private renderTabs(): void {
+    clear(this.tabs);
+    this.title.textContent = this.chapter.name;
+    for (const c of CHAPTERS) {
+      const open = chapterOpen(c, this.save);
+      const tab = h('button', { class: `camp-tab${c === this.chapter ? ' on' : ''}${open ? '' : ' locked'}`, onclick: () => this.openChapter(c) }, open ? null : icon('lock', 12), c.act, c.id !== 'winter' && open && !(this.save.stars[c.stages[0].id] ?? 0) ? h('span', { class: 'camp-new' }, 'new') : null);
+      tooltip(tab, () => (open ? `${c.act}: ${c.name}. ${c.blurb}` : `${c.act}: ${c.name}. Win ${STAGE_BY_ID[c.opensAfter!].name} in Act I to open it.`));
+      this.tabs.append(tab);
+    }
   }
 
   private select(stage: Stage): void {
@@ -138,6 +169,7 @@ export class CampaignScreen {
     clear(this.purse);
     this.purse.append(icon('rune', 18), h('b', null, String(free)), h('span', null, free === 1 ? 'runestone' : 'runestones'));
     this.talentBtn.classList.toggle('glow', free > 0);
+    this.renderTabs();
     this.renderBrief();
   }
 
@@ -151,7 +183,7 @@ export class CampaignScreen {
         const def = CREEPS[id];
         const c = creepPortrait(def, 44);
         const el = h('div', { class: `cb-enemy${def.boss ? ' boss' : ''}${def.air ? ' air' : ''}` }, c, h('span', null, String(wave)));
-        tooltip(el, () => h('div', null, h('div', { class: 'tt-title' }, def.name), h('div', { class: 'tt-meta' }, `Wave ${wave} · ${ARMOR_LABEL[def.armorType]}${def.boss ? ' · Boss' : ''}${def.air ? ' · Air' : ''}${def.immune ? ' · Immune' : ''}`)));
+        tooltip(el, () => h('div', null, h('div', { class: 'tt-title' }, def.name), h('div', { class: 'tt-meta' }, `Wave ${wave} · ${ARMOR_LABEL[def.armorType]}${def.boss ? ' · Boss' : ''}${def.air ? ' · Air' : ''}${def.immune ? ' · Immune' : ''}`), ...abilityLines(def).map((l) => h('div', null, l))));
         return el;
       }),
     );
@@ -176,7 +208,8 @@ export class CampaignScreen {
     const save = this.save;
     const unlocked = isUnlocked(s, save);
     const stars = save.stars[s.id] ?? 0;
-    const index = STAGES.indexOf(s);
+    const chapter = chapterOf(s);
+    const index = chapter.stages.indexOf(s);
     clear(this.brief);
     const facts = h('div', { class: 'cb-facts' }, ...stageFacts(s).map((f) => h('div', null, h('span', null, f.label), h('b', null, f.value))));
     const late = s.rules.firstWave && s.rules.firstWave > 1 ? [{ name: 'Late arrival', text: `The fight starts at wave ${s.rules.firstWave}, with ${s.rules.startGold ?? 120} gold and ${s.rules.startLumber ?? 1} lumber. The first wave waits ${s.rules.firstWaveDelay ?? 45}s: build fast (you can pause).` }] : [];
@@ -185,10 +218,10 @@ export class CampaignScreen {
       h('div', { class: `cb-goal${stars >= n ? ' done' : ''}` }, h('span', { class: 'cb-star' }, '★'.repeat(n)), h('span', { class: 'cb-goal-text' }, text), h('span', { class: 'cb-reward' }, stars >= n ? icon('check', 14) : null, `+${reward}`, icon('rune', 13)));
     const races = s.rules.races;
     let lockNote = '';
-    if (!unlocked) lockNote = s.endless ? `Win ${STAGE_BY_ID[ENDLESS_AFTER].name} to open the frontier.` : `Win ${STAGES[index - 1].name} to unlock.`;
+    if (!unlocked) lockNote = s.endless ? `Win ${STAGE_BY_ID[ENDLESS_AFTER].name} to open the frontier.` : index > 0 ? `Win ${chapter.stages[index - 1].name} to unlock.` : `Win ${STAGE_BY_ID[chapter.opensAfter!].name} in Act I to open ${chapter.name}.`;
     const nextMark = Math.max(25, Math.floor((save.endlessBest - 20) / 5) * 5 + 25);
     const parts: (HTMLElement | null)[] = [
-      h('div', { class: 'cb-kicker' }, s.endless ? 'Endless' : `Stage ${index + 1} of ${STAGES.length}`, h('span', null, DIFFICULTIES[s.difficulty].label)),
+      h('div', { class: 'cb-kicker' }, s.endless ? 'Endless' : `${stageLabel(s)} of ${chapter.stages.length}`, h('span', null, `${DIFFICULTIES[s.difficulty].label}${s.waves === 'thaw' ? ' · The Thaw' : ''}`)),
       h('h2', { class: 'cb-name' }, s.name),
       h('p', { class: 'cb-story' }, s.story),
       facts,

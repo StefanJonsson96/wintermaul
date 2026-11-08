@@ -2030,7 +2030,7 @@ kbd {
   color: transparent;
 }
 
-.camp-title span {
+.camp-title > span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -2042,6 +2042,49 @@ kbd {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* one tab per act */
+.camp-tabs {
+  display: flex;
+  gap: 6px;
+  align-self: center;
+}
+
+.camp-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(124, 200, 255, 0.25);
+  background: rgba(20, 32, 54, 0.7);
+  color: #cfe0f4;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.camp-tab.on {
+  background: rgba(124, 200, 255, 0.2);
+  border-color: rgba(143, 211, 255, 0.7);
+  color: #fff;
+}
+
+.camp-tab.locked {
+  opacity: 0.55;
+}
+
+.camp-new {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: #ffd35a;
+  color: #1a1206;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
 }
 
 .camp-purse {
@@ -2408,7 +2451,7 @@ kbd {
   .camp-title h2 {
     font-size: 20px;
   }
-  .camp-title span {
+  .camp-title > span {
     display: none;
   }
 }
@@ -2926,7 +2969,7 @@ kbd {
   .camp-title h2 {
     font-size: 19px;
   }
-  .camp-title span {
+  .camp-title > span {
     display: none;
   }
   .camp-body {

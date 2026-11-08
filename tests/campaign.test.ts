@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { CAMPAIGN_STONES, ENDLESS, endlessReward, STAGES, starReward, starsFor } from '../src/shared/campaign';
+import { ALL_STAGES, CAMPAIGN_STONES, CHAPTERS, ENDLESS, endlessReward, STAGE_BY_ID, STAGES, starReward, starsFor, THAW_STAGES } from '../src/shared/campaign';
 import { RACE_BY_ID } from '../src/shared/data/races';
-import { WAVES } from '../src/shared/data/waves';
+import { wavesOf } from '../src/shared/data/waves';
 import { canRefund, modsFromLoadout, NODE_BY_ID, NODES, pathTo, REGIONS, sanitizeLoadout, START, summarize, totalSpent, TREE_COST } from '../src/shared/talents';
 import { RACES } from '../src/shared/data/races';
-import { emptySave, isUnlocked, parseSave, recordResult, unspent } from '../src/client/campaign/save';
+import { chapterOpen, currentStage, emptySave, isUnlocked, parseSave, progressLine, recordResult, unspent } from '../src/client/campaign/save';
 
 const first = STAGES[0];
 
 describe('campaign stages', () => {
   it('are all well formed', () => {
-    for (const s of STAGES) {
+    expect(new Set(ALL_STAGES.map((s) => s.id)).size).toBe(ALL_STAGES.length);
+    for (const s of CHAPTERS.flatMap((c) => c.stages)) {
       const from = s.rules.firstWave ?? 1;
-      const to = s.rules.finalWave ?? WAVES.length;
+      const to = s.rules.finalWave ?? wavesOf(s.waves).length;
       expect(from).toBeLessThanOrEqual(to);
       expect(s.reach).toBeGreaterThanOrEqual(from);
       expect(s.reach).toBeLessThanOrEqual(to);
@@ -52,6 +53,30 @@ describe('campaign stages', () => {
 /** Takes a node and the path to it. */
 const take = (l: Record<string, number>, id: string) => ({ ...l, ...Object.fromEntries(pathTo(id, l).map((n) => [n, 1])) });
 const R = { start: 0.55, small: 0.24, notable: 0.42, keystone: 0.62 };
+
+describe('act II', () => {
+  it('is fought with the thaw and opens once the drowned mill is won', () => {
+    const [act1, act2] = CHAPTERS;
+    expect(THAW_STAGES.every((s) => s.waves === 'thaw')).toBe(true);
+    const s = emptySave();
+    expect(chapterOpen(act2, s)).toBe(false);
+    expect(isUnlocked(act2.stages[0], s)).toBe(false);
+    for (const st of act1.stages.slice(0, 3)) recordResult(s, st, { victory: true, wave: st.rules.finalWave ?? 40, livesLost: 99 });
+    expect(chapterOpen(act2, s)).toBe(true);
+    expect(isUnlocked(act2.stages[0], s)).toBe(true);
+    expect(isUnlocked(act2.stages[1], s)).toBe(false);
+    expect(currentStage(s, act2)).toBe(act2.stages[0]);
+    expect(currentStage(s)).toBe(act1.stages[3]);
+    expect(progressLine(s)).toMatch(/Act II 0\/9/);
+  });
+
+  it('says when a win opens it', () => {
+    const s = emptySave();
+    for (const st of STAGES.slice(0, 2)) recordResult(s, st, { victory: true, wave: 40, livesLost: 0 });
+    const o = recordResult(s, STAGE_BY_ID.mill, { victory: true, wave: 15, livesLost: 0 });
+    expect(o.unlocked).toContain(THAW_STAGES[0]);
+  });
+});
 
 describe('the rune web', () => {
   it('is one connected web with two keystones per region and a mastery per race', () => {

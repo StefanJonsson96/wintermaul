@@ -1,7 +1,7 @@
 // Plays every campaign stage with a bot that owns the talents a player would typically have by
 // then (every earlier stage won, no third stars) and prints win rates and stars.
 //   npx tsx scripts/campaign-balance.ts [--games 6] [--stage frostfen] [--stones 20]
-import { STAGES, starsFor, type Stage } from '../src/shared/campaign';
+import { CHAPTERS, starsFor, type Stage } from '../src/shared/campaign';
 import { RACES } from '../src/shared/data/races';
 import { Bot } from '../src/shared/sim/bot';
 import { Game } from '../src/shared/sim/game';
@@ -45,7 +45,7 @@ function play(stage: Stage, seed: number, stones: number) {
   const b = pool[(seed * 7 + 3) % pool.length] === a ? pool[(seed + 1) % pool.length] : pool[(seed * 7 + 3) % pool.length];
   const loadout = loadoutFor(stones, [a, b]);
   const init = [{ id: 0, name: 'Bot', color: 0, isBot: true }];
-  const game = new Game({ difficulty: stage.difficulty, raceMode: 'pick', endless: false }, init, seed, { skipSetup: true, rules: { ...stage.rules, mods: { 0: modsFromLoadout(loadout) } } });
+  const game = new Game({ difficulty: stage.difficulty, raceMode: 'pick', endless: false, waves: stage.waves }, init, seed, { skipSetup: true, rules: { ...stage.rules, mods: { 0: modsFromLoadout(loadout) } } });
   const bot = new Bot(0, seed, [a, b]);
   while (!game.over && game.time < 6000) {
     bot.update(game);
@@ -57,11 +57,10 @@ function play(stage: Stage, seed: number, stones: number) {
   return { victory, wave: game.wave, livesLost, stars: starsFor(stage, { victory, wave: game.wave, livesLost }), races: `${a}+${b}`, spent: totalSpent(loadout) };
 }
 
-let stones = 0;
-for (const stage of STAGES) {
-  const budget = forcedStones ? Number(forcedStones) : stones;
-  stones += stage.rewards[0] + stage.rewards[1];
-  if (only && stage.id !== only) continue;
+/** Runestones from two stars on every stage up to and including `count` stages of a chapter. */
+const twoStars = (stages: Stage[], count: number) => stages.slice(0, count).reduce((n, s) => n + s.rewards[0] + s.rewards[1], 0);
+
+function report(stage: Stage, budget: number): void {
   const results = Array.from({ length: games }, (_, i) => play(stage, i + 1, budget));
   const wins = results.filter((r) => r.victory).length;
   const stars = [0, 0, 0, 0];
@@ -69,5 +68,16 @@ for (const stage of STAGES) {
   const lost = results.filter((r) => r.victory).map((r) => r.livesLost);
   const avgLost = lost.length ? (lost.reduce((x, y) => x + y, 0) / lost.length).toFixed(1) : '-';
   const losses = results.filter((r) => !r.victory).map((r) => `${r.races}@${r.wave}`);
-  console.log(`${stage.name.padEnd(18)} stones ${String(budget).padStart(3)}  wins ${wins}/${games}  stars 0:${stars[0]} 1:${stars[1]} 2:${stars[2]} 3:${stars[3]}  lives lost when won ${avgLost}${losses.length ? `  lost: ${losses.join(' ')}` : ''}`);
+  console.log(`${stage.name.padEnd(22)} stones ${String(budget).padStart(3)}  wins ${wins}/${games}  stars 0:${stars[0]} 1:${stars[1]} 2:${stars[2]} 3:${stars[3]}  lives lost when won ${avgLost}${losses.length ? `  lost: ${losses.join(' ')}` : ''}`);
 }
+
+// Act I in order; Act II as played alongside it: a player starts its stage k having won Act I
+// up to the stage that opens it plus k more, and Act II up to stage k
+const [act1, act2] = CHAPTERS;
+const opens = act1.stages.findIndex((s) => s.id === act2.opensAfter) + 1;
+act1.stages.forEach((stage, i) => {
+  if (!only || stage.id === only) report(stage, forcedStones ? Number(forcedStones) : twoStars(act1.stages, i));
+});
+act2.stages.forEach((stage, k) => {
+  if (!only || stage.id === only) report(stage, forcedStones ? Number(forcedStones) : twoStars(act1.stages, Math.min(act1.stages.length, opens + k)) + twoStars(act2.stages, k));
+});

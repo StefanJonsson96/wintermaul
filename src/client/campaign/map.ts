@@ -1,6 +1,7 @@
-// The campaign map: a painted winter country with the road north, drawn procedurally. The
-// terrain is painted once per size; the road, stage medallions and snowfall every frame.
-import { ENDLESS, ENDLESS_AFTER, STAGES, type Stage } from '../../shared/campaign';
+// The campaign maps: a painted winter country with the road north (Act I) and the breaking
+// glacier beyond it (Act II), drawn procedurally. The terrain is painted once per size; the road,
+// stage medallions and snowfall every frame.
+import { type Chapter, CHAPTERS, ENDLESS_AFTER, type Stage, STAGE_BY_ID } from '../../shared/campaign';
 import { Rng } from '../../shared/rng';
 import { pine } from '../art/terrain';
 import { alpha, type Ctx, ellipse, makeCanvas } from '../art/util';
@@ -35,6 +36,7 @@ export class CampaignMap {
   hover: string | null = null;
   selected: string | null = null;
   onSelect: (stage: Stage) => void = () => {};
+  private chapter: Chapter = CHAPTERS[0];
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -56,6 +58,14 @@ export class CampaignMap {
       const node = this.nodes().find((n) => n.stage.id === id);
       if (node) this.onSelect(node.stage);
     });
+  }
+
+  /** Shows another chapter's map. */
+  setChapter(chapter: Chapter): void {
+    if (chapter === this.chapter) return;
+    this.chapter = chapter;
+    this.terrain = null;
+    this.resize();
   }
 
   start(): void {
@@ -85,7 +95,8 @@ export class CampaignMap {
     this.h = r.height;
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
-    this.terrain = paintTerrain(this.w, this.h, this.dpr, (x, y) => this.pos(x, y));
+    const paint = this.chapter.id === 'thaw' ? paintThaw : paintTerrain;
+    this.terrain = paint(this.w, this.h, this.dpr, (x, y) => this.pos(x, y));
     this.flakes = Array.from({ length: Math.round((this.w * this.h) / 7000) }, () => ({ x: Math.random() * this.w, y: Math.random() * this.h, r: Math.random() * 1.6 + 0.4, v: Math.random() * 14 + 8, p: Math.random() * 6.28 }));
   }
 
@@ -134,7 +145,8 @@ export class CampaignMap {
   /** The road north through every stage, gilded as far as the player has come. */
   private drawRoad(nodes: MapNode[], t: number): void {
     const { ctx } = this;
-    const pts = STAGES.map((s) => this.pos(s.x, s.y));
+    const stages = this.chapter.stages;
+    const pts = stages.map((s) => this.pos(s.x, s.y));
     const won = nodes.filter((n) => !n.stage.endless && n.stars >= 2).length;
     const path = (from: number, to: number) => {
       ctx.beginPath();
@@ -175,8 +187,11 @@ export class CampaignMap {
       ctx.lineDashOffset = 0;
     }
     // a faint trail off the map's edge to the endless frontier
-    const a = this.pos(STAGES.find((s) => s.id === ENDLESS_AFTER)!.x, STAGES.find((s) => s.id === ENDLESS_AFTER)!.y);
-    const b = this.pos(ENDLESS.x, ENDLESS.y);
+    const endless = this.chapter.endless;
+    const from = STAGE_BY_ID[ENDLESS_AFTER];
+    if (!endless || !stages.includes(from)) return;
+    const a = this.pos(from.x, from.y);
+    const b = this.pos(endless.x, endless.y);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.quadraticCurveTo((a.x + b.x) / 2 + 30, (a.y + b.y) / 2 + 10, b.x, b.y);
@@ -241,7 +256,7 @@ export class CampaignMap {
     } else {
       ctx.fillStyle = n.stage.endless ? '#e4d2ff' : won ? '#ffe7a1' : '#e8f1ff';
       ctx.font = `700 ${Math.round(r * (n.stage.endless ? 1.05 : 0.8))}px Cinzel, Georgia, serif`;
-      ctx.fillText(n.stage.endless ? '∞' : String(STAGES.indexOf(n.stage) + 1), p.x, p.y + 1);
+      ctx.fillText(n.stage.endless ? '∞' : String(this.chapter.stages.indexOf(n.stage) + 1), p.x, p.y + 1);
     }
     // stars
     if (!n.stage.endless) {
@@ -616,4 +631,250 @@ function compass(ctx: Ctx, x: number, y: number, r: number): void {
   ctx.textAlign = 'center';
   ctx.fillText('N', 0, -r * 1.12);
   ctx.restore();
+}
+
+// ─────────────────────────────────────────────────────────── Act II: the breaking glacier
+
+/** Paints the glacier beyond the Throne: ice plates and crevasses, meltwater, the frozen sea and Act II's landmarks. */
+function paintThaw(w: number, h: number, dpr: number, pos: Pos): HTMLCanvasElement {
+  const [c, ctx] = makeCanvas(w * dpr, h * dpr);
+  ctx.scale(dpr, dpr);
+  const rng = new Rng(2424);
+  const rnd = () => rng.next();
+  const u = Math.min(w, h) / 600;
+
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#13283a');
+  bg.addColorStop(0.5, '#183446');
+  bg.addColorStop(1, '#142a38');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  // an aurora over the north
+  for (let k = 0; k < 3; k++) {
+    ctx.beginPath();
+    for (let i = 0; i <= 40; i++) {
+      const x = (i / 40) * w;
+      const y = h * (0.06 + k * 0.035) + Math.sin(i * 0.45 + k * 1.7) * 18 * u + Math.sin(i * 0.17 + k) * 26 * u;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = k === 1 ? 'rgba(160,120,255,0.13)' : 'rgba(110,255,200,0.12)';
+    ctx.lineWidth = (36 - k * 8) * u;
+    ctx.stroke();
+  }
+
+  // ice plates, faintly lit, with cracks between them
+  for (let i = 0; i < 110; i++) {
+    const cx = rnd() * w;
+    const cy = rnd() * h;
+    const r = (26 + rnd() * 60) * u;
+    const n = 5 + Math.floor(rnd() * 3);
+    ctx.beginPath();
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + rnd() * 0.5;
+      const rr = r * (0.7 + rnd() * 0.4);
+      ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.7);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(170,225,240,${0.025 + rnd() * 0.05})`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(210,245,255,0.14)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  // crevasses
+  for (let i = 0; i < 16; i++) {
+    let x = rnd() * w;
+    let y = rnd() * h;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    for (let k = 0; k < 6; k++) {
+      x += (rnd() - 0.4) * 40 * u;
+      y += (rnd() - 0.5) * 26 * u;
+      ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = 'rgba(4,12,22,0.55)';
+    ctx.lineWidth = (2 + rnd() * 3) * u;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(120,220,255,0.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // the frozen sea, top right, with icebergs
+  const sea = pos(0.78, 0.36);
+  const sg = ctx.createRadialGradient(sea.x, sea.y, 10, sea.x, sea.y, 260 * u);
+  sg.addColorStop(0, 'rgba(120,190,230,0.32)');
+  sg.addColorStop(1, 'rgba(60,120,170,0)');
+  ctx.fillStyle = sg;
+  ctx.fillRect(sea.x - 260 * u, sea.y - 260 * u, 520 * u, 520 * u);
+  for (let i = 0; i < 18; i++) {
+    const p = pos(0.66 + rnd() * 0.3, 0.28 + rnd() * 0.3);
+    const s = (6 + rnd() * 12) * u;
+    ctx.fillStyle = 'rgba(4,10,22,0.35)';
+    ellipse(ctx, p.x + 2, p.y + s * 0.5, s * 1.2, s * 0.35);
+    ctx.fill();
+    ctx.fillStyle = '#d8eefa';
+    ctx.beginPath();
+    ctx.moveTo(p.x - s, p.y + s * 0.4);
+    ctx.lineTo(p.x - s * 0.5, p.y - s * 0.6);
+    ctx.lineTo(p.x + s * 0.2, p.y - s * 0.9);
+    ctx.lineTo(p.x + s, p.y + s * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(80,140,190,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(p.x + s * 0.2, p.y - s * 0.9);
+    ctx.lineTo(p.x + s, p.y + s * 0.4);
+    ctx.lineTo(p.x + s * 0.15, p.y + s * 0.4);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // meltwater running south from the glacier
+  const melt = [pos(0.5, -0.05), pos(0.42, 0.18), pos(0.3, 0.36), pos(0.2, 0.55), pos(0.14, 0.76), pos(0.02, 1.05)];
+  ctx.beginPath();
+  ctx.moveTo(melt[0].x, melt[0].y);
+  for (let i = 1; i < melt.length - 1; i++) ctx.quadraticCurveTo(melt[i].x, melt[i].y, (melt[i].x + melt[i + 1].x) / 2, (melt[i].y + melt[i + 1].y) / 2);
+  ctx.lineTo(melt[melt.length - 1].x, melt[melt.length - 1].y);
+  ctx.strokeStyle = 'rgba(8,20,34,0.55)';
+  ctx.lineWidth = 14 * u;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(90,220,230,0.45)';
+  ctx.lineWidth = 8 * u;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(220,255,250,0.45)';
+  ctx.lineWidth = 1.6 * u;
+  ctx.stroke();
+
+  const tint = (fx: number, fy: number, r: number, color: string) => {
+    const p = pos(fx, fy);
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * u);
+    g.addColorStop(0, color);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(p.x - r * u, p.y - r * u, r * 2 * u, r * 2 * u);
+  };
+  tint(0.13, 0.4, 110, 'rgba(150,90,255,0.2)'); // hexwood
+  tint(0.45, 0.5, 100, 'rgba(255,200,60,0.12)'); // brood caverns
+  tint(0.6, 0.72, 120, 'rgba(120,140,255,0.2)'); // stormwatch
+  tint(0.82, 0.22, 120, 'rgba(110,255,200,0.16)'); // the hollow throne
+  tint(0.9, 0.07, 150, 'rgba(160,240,255,0.28)'); // heart of the glacier
+
+  // mountains along the west and the south edge
+  const peaks: { x: number; y: number; s: number }[] = [];
+  for (let i = 0; i < 12; i++) peaks.push({ ...pos(-0.04 + rnd() * 0.06, 0.05 + i * 0.08), s: 34 + rnd() * 30 });
+  for (let i = 0; i < 14; i++) peaks.push({ ...pos(0.3 + i * 0.05 + (rnd() - 0.5) * 0.03, 0.96 + rnd() * 0.06), s: 26 + rnd() * 22 });
+  for (let i = 0; i < 6; i++) peaks.push({ ...pos(0.52 + (rnd() - 0.5) * 0.1, 0.22 + rnd() * 0.12), s: 22 + rnd() * 14 });
+  peaks.sort((a, b) => a.y - b.y);
+  for (const pk of peaks) mountain(ctx, pk.x, pk.y, pk.s * u, rnd);
+
+  // hexwood: dark pines under witch-lights
+  const trees: { x: number; y: number; s: number }[] = [];
+  for (let i = 0; i < 26; i++) trees.push({ ...pos(0.13 + (rnd() - 0.5) * 0.16, 0.4 + (rnd() - 0.5) * 0.16), s: (11 + rnd() * 8) * u });
+  for (let i = 0; i < 12; i++) trees.push({ ...pos(0.22 + (rnd() - 0.5) * 0.12, 0.86 + (rnd() - 0.5) * 0.08), s: (10 + rnd() * 6) * u });
+  trees.sort((a, b) => a.y - b.y);
+  for (const t of trees) pine(ctx, t.x, t.y, t.s * 1.6, rnd);
+  for (let i = 0; i < 12; i++) {
+    const p = pos(0.13 + (rnd() - 0.5) * 0.16, 0.4 + (rnd() - 0.5) * 0.16);
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 7 * u);
+    g.addColorStop(0, 'rgba(200,160,255,0.9)');
+    g.addColorStop(1, 'rgba(200,160,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(p.x - 7 * u, p.y - 7 * u, 14 * u, 14 * u);
+  }
+  // brood caverns: cave mouths with eyes in the dark
+  for (let i = 0; i < 6; i++) {
+    const p = pos(0.45 + (rnd() - 0.5) * 0.14, 0.5 + (rnd() - 0.5) * 0.12);
+    const s = (9 + rnd() * 7) * u;
+    ctx.fillStyle = '#2c3a48';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, s * 1.4, s, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.fillStyle = '#05080e';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, s * 0.8, s * 0.6, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,225,74,0.9)';
+    ctx.fillRect(p.x - s * 0.3, p.y - s * 0.3, 2, 2);
+    ctx.fillRect(p.x + s * 0.15, p.y - s * 0.32, 2, 2);
+  }
+  // stormwatch: lightning scars on the ice
+  ctx.strokeStyle = 'rgba(200,215,255,0.55)';
+  ctx.lineWidth = 1.4;
+  for (let i = 0; i < 8; i++) {
+    let p = pos(0.6 + (rnd() - 0.5) * 0.12, 0.72 + (rnd() - 0.5) * 0.12);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    for (let k = 0; k < 3; k++) {
+      p = { x: p.x + (rnd() - 0.5) * 18 * u, y: p.y + rnd() * 12 * u };
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+  }
+  // the hollow throne: a dark spire among broken pillars
+  const ht = pos(0.82, 0.22);
+  for (const [dx, hh] of [
+    [-30, 18],
+    [-18, 26],
+    [20, 22],
+    [32, 14],
+  ] as const) {
+    ctx.fillStyle = '#3a4a52';
+    ctx.fillRect(ht.x + dx * u - 3 * u, ht.y - hh * u, 6 * u, hh * u);
+    ctx.fillStyle = 'rgba(220,240,240,0.5)';
+    ctx.fillRect(ht.x + dx * u - 3 * u, ht.y - hh * u, 6 * u, 2 * u);
+  }
+  ctx.fillStyle = '#1c262c';
+  ctx.beginPath();
+  ctx.moveTo(ht.x - 12 * u, ht.y + 4 * u);
+  ctx.lineTo(ht.x - 3 * u, ht.y - 58 * u);
+  ctx.lineTo(ht.x, ht.y - 68 * u);
+  ctx.lineTo(ht.x + 3 * u, ht.y - 58 * u);
+  ctx.lineTo(ht.x + 12 * u, ht.y + 4 * u);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(126,255,190,0.65)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // the heart of the glacier: a cluster of glowing crystal
+  const hg = pos(0.9, 0.07);
+  for (const [dx, hh, ww] of [
+    [-20, 36, 8],
+    [18, 32, 8],
+    [-8, 52, 10],
+    [8, 46, 10],
+    [0, 70, 12],
+  ] as const) {
+    const x = hg.x + dx * u;
+    const base = hg.y + 10 * u;
+    const g = ctx.createLinearGradient(x - ww * u, 0, x + ww * u, 0);
+    g.addColorStop(0, '#effcff');
+    g.addColorStop(0.5, '#8fe8ff');
+    g.addColorStop(1, '#3a8ab8');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(x - ww * u, base);
+    ctx.lineTo(x, base - hh * u);
+    ctx.lineTo(x + ww * u, base);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(10,30,50,0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  compass(ctx, pos(0.06, 0.08).x, pos(0.06, 0.08).y, 30 * u);
+  const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(2,8,14,0.7)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(120,230,220,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(6.5, 6.5, w - 13, h - 13);
+  ctx.strokeStyle = 'rgba(120,230,220,0.1)';
+  ctx.strokeRect(11.5, 11.5, w - 23, h - 23);
+  return c;
 }

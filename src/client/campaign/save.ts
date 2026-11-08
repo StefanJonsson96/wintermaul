@@ -1,5 +1,5 @@
 // Campaign progress lives in localStorage: stars per stage, runestones and the talent loadout.
-import { ENDLESS, ENDLESS_AFTER, STAGES, endlessReward, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
+import { ALL_STAGES, type Chapter, CHAPTERS, chapterOf, ENDLESS_AFTER, endlessReward, STAGES, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
 import { type Loadout, NODE_BY_ID, sanitizeLoadout, totalSpent } from '../../shared/talents';
 import { CloudSave } from './cloud';
 
@@ -112,15 +112,23 @@ export function unspent(s: CampaignSave): number {
   return s.stones - totalSpent(s.talents);
 }
 
-export function isUnlocked(stage: Stage, s: CampaignSave): boolean {
-  if (stage.endless) return (s.stars[ENDLESS_AFTER] ?? 0) >= 2;
-  const i = STAGES.indexOf(stage);
-  return i <= 0 || (s.stars[STAGES[i - 1].id] ?? 0) >= 2;
+const won = (s: CampaignSave, id: string) => (s.stars[id] ?? 0) >= 2;
+
+/** Whether a chapter is open: Act II opens once a stage of Act I is won. */
+export function chapterOpen(chapter: Chapter, s: CampaignSave): boolean {
+  return !chapter.opensAfter || won(s, chapter.opensAfter);
 }
 
-/** The first stage not yet won, or the last one. */
-export function currentStage(s: CampaignSave): Stage {
-  return STAGES.find((st) => (s.stars[st.id] ?? 0) < 2 && isUnlocked(st, s)) ?? STAGES[STAGES.length - 1];
+export function isUnlocked(stage: Stage, s: CampaignSave): boolean {
+  if (stage.endless) return won(s, ENDLESS_AFTER);
+  const chapter = chapterOf(stage);
+  const i = chapter.stages.indexOf(stage);
+  return i <= 0 ? chapterOpen(chapter, s) : won(s, chapter.stages[i - 1].id);
+}
+
+/** The first stage of a chapter not yet won, or its last one. */
+export function currentStage(s: CampaignSave, chapter: Chapter = CHAPTERS[0]): Stage {
+  return chapter.stages.find((st) => !won(s, st.id) && isUnlocked(st, s)) ?? chapter.stages[chapter.stages.length - 1];
 }
 
 export interface Outcome {
@@ -134,7 +142,7 @@ export interface Outcome {
 
 /** Records a finished stage and returns what it earned. Mutates and stores the save. */
 export function recordResult(s: CampaignSave, stage: Stage, r: StageResult): Outcome {
-  const lockedBefore = [...STAGES, ENDLESS].filter((st) => !isUnlocked(st, s));
+  const lockedBefore = ALL_STAGES.filter((st) => !isUnlocked(st, s));
   const before = s.stars[stage.id] ?? 0;
   let stars = before;
   let stones = 0;
@@ -159,13 +167,14 @@ export function recordResult(s: CampaignSave, stage: Stage, r: StageResult): Out
 }
 
 export function totalStars(s: CampaignSave): number {
-  return STAGES.reduce((n, st) => n + (s.stars[st.id] ?? 0), 0);
+  return CHAPTERS.flatMap((c) => c.stages).reduce((n, st) => n + (s.stars[st.id] ?? 0), 0);
 }
 
 /** One line for the menu tile. */
 export function progressLine(s: CampaignSave): string {
-  const won = STAGES.filter((st) => (s.stars[st.id] ?? 0) >= 2).length;
-  if (won === 0 && s.stones === 0) return `${STAGES.length} stages · earn runestones`;
+  const count = (c: Chapter) => c.stages.filter((st) => won(s, st.id)).length;
+  if (count(CHAPTERS[0]) === 0 && s.stones === 0) return `${STAGES.length + CHAPTERS[1].stages.length} stages in two acts · earn runestones`;
   const free = unspent(s);
-  return `${won}/${STAGES.length} won · ${totalStars(s)}★${free > 0 ? ` · ${free} runestone${free > 1 ? 's' : ''} to spend` : ''}`;
+  const acts = CHAPTERS.filter((c) => chapterOpen(c, s)).map((c) => `${c.act} ${count(c)}/${c.stages.length}`).join(' · ');
+  return `${acts} · ${totalStars(s)}★${free > 0 ? ` · ${free} runestone${free > 1 ? 's' : ''} to spend` : ''}`;
 }

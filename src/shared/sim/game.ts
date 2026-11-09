@@ -33,6 +33,7 @@ import { Rng } from '../rng';
 import { Combat } from './combat';
 import type { CommandResult, Creep, GameRules, Lane, Player, PlayerInit, Tower } from './entities';
 import { Horde } from './horde';
+import { BOON_BY_ID, effectiveMods, isOmenWave, omenOffers, type Weather, WEATHERS, type WeatherId, weatherOf } from './omens';
 import { sellRefund, towerCost, upgradeCost } from './mods';
 import type { CreepDef, WaveDef } from '../types';
 
@@ -66,6 +67,10 @@ export class Game {
   lastStand = false;
   /** The Winter Tyrant got away; no Second Wind saves that. */
   tyrantEscaped = false;
+  /** The game's seed (the weather forecast and shrine offers come from it). */
+  readonly seed: number;
+  /** The weather in force (calm between waves). */
+  weather: WeatherId = 'clear';
   private nextId = 1;
   private phaseCounter = 0;
   private endlessDefs: CreepDef[] = [];
@@ -77,6 +82,7 @@ export class Game {
     this.rules = opts.rules ?? {};
     this.finalWave = this.rules.finalWave ?? FINAL_WAVE;
     this.rng = new Rng(seed);
+    this.seed = seed >>> 0;
     const diff = DIFFICULTIES[settings.difficulty];
     this.hpMul = diff.hp * (this.rules.hpMul ?? 1);
     this.wave = Math.max(1, this.rules.firstWave ?? 1) - 1;
@@ -101,6 +107,10 @@ export class Game {
         ready: false,
         goldMul: 1,
         mods,
+        baseMods: mods,
+        baseGoldMul: 1,
+        boons: [],
+        omen: null,
       });
       this.lanes.push({ index: i, owner: p.id, grid: new LaneGrid(), rubble: [], creeps: [] });
     });
@@ -128,7 +138,8 @@ export class Game {
     const mode = this.settings.raceMode;
     for (const p of this.players) {
       p.lumber = (this.rules.startLumber ?? START_LUMBER) + (mode === 'double' ? 1 : 0) + (p.mods.startLumber ?? 0);
-      p.goldMul = (mode === 'random' ? 1.15 : 1) * (this.rules.bountyMul ?? 1) * (p.mods.bounty ?? 1);
+      p.baseGoldMul = (mode === 'random' ? 1.15 : 1) * (this.rules.bountyMul ?? 1);
+      p.goldMul = p.baseGoldMul * (p.mods.bounty ?? 1);
     }
     if (mode === 'same') {
       const race = this.rng.pick(this.allowedRaces());
@@ -202,6 +213,8 @@ export class Game {
         if (st.raceMode && ['pick', 'double', 'random', 'same'].includes(st.raceMode)) this.settings.raceMode = st.raceMode;
         if (typeof st.endless === 'boolean') this.settings.endless = st.endless;
         if (st.waves && st.waves in WAVE_SETS) this.settings.waves = st.waves;
+        if (typeof st.weather === 'boolean') this.settings.weather = st.weather;
+        if (typeof st.omens === 'boolean') this.settings.omens = st.omens;
         this.lives = this.maxLives = this.startLives();
         this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: this.lives, finalWave: this.settings.endless ? 0 : this.finalWave });
         return { ok: true };
@@ -224,6 +237,8 @@ export class Game {
       }
       case 'race':
         return this.pickRace(p, cmd.race);
+      case 'omen':
+        return this.takeBoon(p, cmd.pick);
       case 'ready':
         p.ready = !!cmd.value;
         return { ok: true };
@@ -521,6 +536,7 @@ export class Game {
   private startWave(n: number): void {
     this.wave = n;
     this.phase = 'wave';
+    this.setWeather(this.settings.weather === false ? 'clear' : weatherOf(this.seed, n));
     this.phaseCounter++;
     for (const p of this.players) p.ready = false;
     const { wave } = this.waveInfo(n);
@@ -556,11 +572,62 @@ export class Game {
       this.finish(true);
       return;
     }
+    this.setWeather('clear');
+    if (this.settings.omens !== false && isOmenWave(n, this.finalWave, this.settings.endless)) this.offerOmens(n);
     this.phase = 'build';
     this.phaseCounter++;
     this.countdown = BETWEEN_WAVES;
     for (const p of this.players) p.ready = false;
     this.emit({ e: 'wave', t: this.time, n, phase: 'build' });
+  }
+
+  /** The weather of the wave in force; every player's bonuses follow it. */
+  private setWeather(w: WeatherId): void {
+    if (w === this.weather) return;
+    this.weather = w;
+    for (const p of this.players) this.refreshMods(p);
+  }
+
+  get weatherDef(): Weather {
+    return WEATHERS[this.weather];
+  }
+
+  /** Recomputes what a player's bonuses add up to, and tells the clients. */
+  private refreshMods(p: Player): void {
+    p.mods = effectiveMods(p.baseMods, p.boons, this.weather);
+    p.goldMul = p.baseGoldMul * (p.mods.bounty ?? 1);
+    this.emit({ e: 'mods', t: this.time, p: p.id, mods: p.mods });
+  }
+
+  /** The shrine after every fifth wave: three boons for each player to choose from. */
+  private offerOmens(n: number): void {
+    for (const p of this.players) {
+      // an offer left unanswered is settled with its first boon
+      if (p.omen) this.takeBoon(p, p.omen[0]);
+      p.omen = omenOffers(this.seed, p.id, n, p.boons, 3 + (p.baseMods.omenChoices ?? 0));
+      this.emit({ e: 'omen', t: this.time, p: p.id, offers: [...p.omen], wave: n });
+      if (p.isBot) this.takeBoon(p, p.omen[0]);
+    }
+  }
+
+  takeBoon(p: Player, id: string): CommandResult {
+    if (!p.omen || !p.omen.includes(id)) return { ok: false, error: 'The shrine offers no such boon' };
+    const b = BOON_BY_ID[id];
+    p.omen = null;
+    p.boons.push(id);
+    const gold = (b.goldPerWave ?? 0) * Math.max(1, this.wave) + (b.now?.gold ?? 0);
+    if (gold) {
+      p.gold += gold;
+      p.goldEarned += gold;
+    }
+    if (b.now?.lives) {
+      this.lives += b.now.lives;
+      this.maxLives += b.now.lives;
+    }
+    if (b.now?.lumber) p.lumber += b.now.lumber;
+    this.emit({ e: 'boon', t: this.time, p: p.id, id });
+    if (b.effects.length) this.refreshMods(p);
+    return { ok: true };
   }
 
   /** The classic level bonus: 10 gold + 2 per wave, to everyone. */
@@ -652,7 +719,7 @@ export class Game {
   }
 
   netPlayers(): NetPlayer[] {
-    return this.players.map(({ goldMul: _g, mods: _m, ...p }) => ({ ...p, gold: Math.floor(p.gold), damage: Math.round(p.damage) }));
+    return this.players.map(({ goldMul: _g, mods: _m, baseMods: _b, baseGoldMul: _bg, ...p }) => ({ ...p, gold: Math.floor(p.gold), damage: Math.round(p.damage) }));
   }
 
   waveState(): WaveState {
@@ -678,6 +745,7 @@ export class Game {
       rubble: this.lanes.map((l) => ({ lane: l.index, cells: [...l.rubble] })),
       wave: this.waveState(),
       endlessDefs: this.endlessDefs,
+      weatherSeed: this.settings.weather === false ? undefined : this.seed,
       races: this.rules.races?.length ? this.rules.races : undefined,
       mods: Object.fromEntries(this.players.filter((p) => Object.keys(p.mods).length).map((p) => [p.id, p.mods])),
     };

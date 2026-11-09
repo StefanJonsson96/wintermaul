@@ -326,6 +326,7 @@ export class Renderer {
       ctx.fillRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0));
       ctx.strokeRect(Math.min(x0, x1) + 0.5, Math.min(y0, y1) + 0.5, Math.abs(x1 - x0), Math.abs(y1 - y0));
     }
+    this.drawWeather(dt, now);
     this.drawSnow(dt, now);
     this.drawVignette();
   }
@@ -790,12 +791,87 @@ export class Renderer {
     ctx.restore();
   }
 
+  /** How strongly each weather shows, easing in and out as it comes and goes. */
+  private wx: Record<string, number> = {};
+
+  /** Screen-wide weather: a blizzard's driving snow, aurora light, fog, warm haze, a red moon. */
+  private drawWeather(dt: number, now: number): void {
+    const { ctx, cam } = this;
+    const target = this.state.weatherNow;
+    for (const id of ['blizzard', 'aurora', 'fog', 'warm', 'bloodmoon']) {
+      const v = this.wx[id] ?? 0;
+      this.wx[id] = Math.max(0, Math.min(1, v + (id === target ? dt / 2.5 : -dt / 2.5)));
+    }
+    const { w, h } = cam;
+    const a = this.wx.aurora;
+    if (a > 0) {
+      for (let i = 0; i < 3; i++) {
+        const y0 = h * (0.08 + i * 0.07) + Math.sin(now * 0.3 + i * 2) * h * 0.03;
+        const g = ctx.createLinearGradient(0, y0 - h * 0.12, 0, y0 + h * 0.2);
+        const c = i === 1 ? '150,120,255' : '90,255,190';
+        g.addColorStop(0, `rgba(${c},0)`);
+        g.addColorStop(0.5, `rgba(${c},${0.13 * a})`);
+        g.addColorStop(1, `rgba(${c},0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(0, y0);
+        for (let x = 0; x <= w; x += w / 16) ctx.lineTo(x, y0 + Math.sin(x / w * 7 + now * 0.5 + i) * h * 0.05);
+        ctx.lineTo(w, y0 + h * 0.25);
+        ctx.lineTo(0, y0 + h * 0.25);
+        ctx.fill();
+      }
+    }
+    const f = this.wx.fog;
+    if (f > 0) {
+      ctx.fillStyle = `rgba(215,228,240,${0.22 * f})`;
+      ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 4; i++) {
+        const x = ((now * 12 + i * w * 0.37) % (w * 1.4)) - w * 0.2;
+        const g = ctx.createRadialGradient(x, h * (0.25 + i * 0.18), 0, x, h * (0.25 + i * 0.18), w * 0.3);
+        g.addColorStop(0, `rgba(235,242,250,${0.18 * f})`);
+        g.addColorStop(1, 'rgba(235,242,250,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+      }
+    }
+    const m = this.wx.warm;
+    if (m > 0) {
+      const g = ctx.createLinearGradient(0, h, 0, 0);
+      g.addColorStop(0, `rgba(255,150,70,${0.16 * m})`);
+      g.addColorStop(1, 'rgba(255,150,70,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }
+    const r = this.wx.bloodmoon;
+    if (r > 0) {
+      ctx.fillStyle = `rgba(130,0,12,${0.24 * r})`;
+      ctx.fillRect(0, 0, w, h);
+      const mx = w * 0.86;
+      const my = h * 0.16;
+      const g = ctx.createRadialGradient(mx, my, 0, mx, my, h * 0.25);
+      g.addColorStop(0, `rgba(255,80,70,${0.8 * r})`);
+      g.addColorStop(0.15, `rgba(200,30,30,${0.35 * r})`);
+      g.addColorStop(1, 'rgba(120,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }
+    const b = this.wx.blizzard;
+    if (b > 0) {
+      ctx.fillStyle = `rgba(225,238,255,${0.12 * b})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
   private drawSnow(dt: number, now: number): void {
     const { ctx, cam } = this;
     ctx.fillStyle = 'rgba(240,248,255,0.8)';
-    for (const f of this.flakes) {
-      f.y += f.v * dt;
-      f.x += (Math.sin(now * 0.7 + f.p) * 10 + 6) * dt;
+    // a blizzard drives the snow sideways, fast; warm wind thins it
+    const storm = this.wx.blizzard ?? 0;
+    const warm = this.wx.warm ?? 0;
+    for (const [i, f] of this.flakes.entries()) {
+      if (warm > 0 && i % 3 !== 0 && warm > (i % 7) / 7) continue;
+      f.y += f.v * dt * (1 + storm * 1.6);
+      f.x += (Math.sin(now * 0.7 + f.p) * 10 + 6 + storm * 140) * dt;
       if (f.y > cam.h + 5) {
         f.y = -5;
         f.x = Math.random() * cam.w;

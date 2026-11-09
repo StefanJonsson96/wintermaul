@@ -2,6 +2,7 @@
 import { towerMeta } from '../art/towers';
 import { audio } from '../audio';
 import { music } from '../music';
+import { BOON_BY_ID, WEATHERS } from '../../shared/sim/omens';
 import { LANE_H, LANE_MARGIN_X, LANE_W, laneOriginY, PLAYER_COLORS } from '../../shared/constants';
 import { RACE_BY_ID, TOWERS } from '../../shared/data/races';
 import { WAVE_SETS } from '../../shared/data/waves';
@@ -311,15 +312,36 @@ export class GameView {
           this.startedWave = ev.n;
           const info = this.hud.waveInfo(ev.n);
           const boss = info?.creep.boss;
-          this.hud.banner(`Wave ${ev.n}`, info ? `${info.creep.name}${info.title ? ` — ${info.title}` : ''}` : '', boss ? 'boss' : '');
+          const wx = WEATHERS[s.weatherAt(ev.n)];
+          this.hud.banner(`Wave ${ev.n}`, `${info ? `${info.creep.name}${info.title ? ` — ${info.title}` : ''}` : ''}${wx.id !== 'clear' ? ` · ${wx.name}` : ''}`, boss ? 'boss' : '');
+          if (wx.id !== 'clear') this.hud.chat.system(`${wx.name}: ${wx.text}`);
           if (info?.hint) this.hud.chat.system(`Wave ${ev.n}: ${info.hint}`);
           audio.play(boss ? 'boss' : 'wave', 0.8);
           music.setMood(boss ? 'boss' : 'wave');
-        } else if (ev.phase === 'build') music.setMood('build');
+        } else if (ev.phase === 'build') {
+          music.setMood('build');
+          // a shrine offered during the wave opens once it is over
+          if (s.me?.omen?.length) this.hud.openOmen();
+        }
         if (ev.phase === 'build' && ev.n > 0 && ev.n === this.startedWave) {
           toast(`Wave ${ev.n} cleared!`, 'good', 2000);
           if (ev.n < 15 || ev.n % 2 === 0) this.showTip(4000);
         }
+        return;
+      }
+      case 'omen':
+        if (ev.p !== s.you) return;
+        audio.play('lumber', 0.7);
+        this.hud.chat.system(`After wave ${ev.wave} a shrine offers you a boon (press O, or the Shrine button).`);
+        this.hud.refreshBuildPanel(true);
+        // don't cover the map while creeps are walking: only open it in the build phase
+        if (s.wave.phase !== 'wave') this.hud.openOmen();
+        return;
+      case 'boon': {
+        if (ev.p !== s.you) return;
+        const b = BOON_BY_ID[ev.id];
+        if (b) toast(`Boon: ${b.name}`, 'good', 2200);
+        this.hud.refreshBuildPanel(true);
         return;
       }
       case 'bonus': {

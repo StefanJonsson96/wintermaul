@@ -13,6 +13,10 @@ export interface GameSettings {
   talents?: boolean;
   /** Which creeps come: the classic waves (default) or The Thaw. */
   waves?: WaveSetId;
+  /** Weather that changes from wave to wave (on unless false). */
+  weather?: boolean;
+  /** A shrine offers a boon after every fifth wave (on unless false). */
+  omens?: boolean;
 }
 
 export const DIFFICULTIES: Record<Difficulty, { label: string; lives: number; perPlayer: number; hp: number; blurb: string }> = {
@@ -47,7 +51,8 @@ export type GameCommand =
   | { c: 'ready'; value: boolean }
   | { c: 'gift'; to: number; amount: number }
   | { c: 'setup'; settings: Partial<GameSettings> } // the rule chooser only, during setup
-  | { c: 'setupDone' };
+  | { c: 'setupDone' }
+  | { c: 'omen'; pick: string };
 
 // ---------------------------------------------------------------------------
 // Replicated game state
@@ -67,6 +72,9 @@ export interface NetPlayer {
   damage: number;
   goldEarned: number;
   ready: boolean;
+  /** Boons taken from shrines, and the shrine's offer waiting to be answered. */
+  boons?: string[];
+  omen?: string[] | null;
 }
 
 export interface NetTower {
@@ -123,6 +131,8 @@ export interface FullState {
   endlessDefs: import('./types').CreepDef[];
   /** The races that can be picked, when a stage limits them. */
   races?: string[];
+  /** Seeds the weather forecast (absent when weather is off). */
+  weatherSeed?: number;
   /** Talent bonuses by player id (only players that have any). */
   mods?: Record<number, import('./sim/mods').PlayerMods>;
 }
@@ -158,6 +168,9 @@ export type GameEvent =
   | { e: 'ward'; t: number; id: number }
   | { e: 'brood'; t: number; id: number }
   | { e: 'freeze'; t: number; id: number; tw: number; until: number }
+  | { e: 'omen'; t: number; p: number; offers: string[]; wave: number }
+  | { e: 'boon'; t: number; p: number; id: string }
+  | { e: 'mods'; t: number; p: number; mods: import('./sim/mods').PlayerMods }
   | { e: 'setup'; t: number; settings: GameSettings; done: boolean; lives: number; finalWave: number };
 
 /** Compact per-tick state. Creeps: flat array of [id, lane, x*100, y*100, hp, flags] per creep. */

@@ -48,6 +48,8 @@ export const FEATS: Feat[] = [
   { id: 'full_thaw', name: 'Spring Never Came', text: 'Win all 40 waves of The Thaw.', icon: 'drop', group: 'battle' },
   { id: 'endless_50', name: 'The Long Night', text: 'Reach wave 50 in an endless game.', icon: 'infinity', group: 'battle' },
   { id: 'endless_60', name: "Beyond the Map's Edge", text: 'Reach wave 60 in an endless game.', icon: 'infinity', group: 'battle' },
+  { id: 'boons_6', name: 'Shrine Keeper', text: 'Take six boons from shrines in one game.', icon: 'banner', group: 'battle' },
+  { id: 'stormproof', name: 'Weathered', text: 'Clear a wave in a blizzard or freezing fog without a leak.', icon: 'snow', group: 'battle' },
   { id: 'coop_win', name: 'Shoulder to Shoulder', text: 'Win an online game alongside another player.', icon: 'people', group: 'battle' },
 
 

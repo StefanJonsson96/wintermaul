@@ -13,6 +13,7 @@ import {
   type WaveState,
 } from '../../shared/protocol';
 import { attackRange, type PlayerMods, towerCost } from '../../shared/sim/mods';
+import { type WeatherId, weatherOf } from '../../shared/sim/omens';
 import type { CreepDef, TowerDef } from '../../shared/types';
 
 export interface CTower extends NetTower {
@@ -77,6 +78,8 @@ export class ClientState {
   /** Races that can be picked in this game (a campaign stage may limit them). */
   races: string[] | null;
   beams: { tower: number; creep: number; ramp: number }[] = [];
+  /** Seeds the weather forecast; null when the game has no weather. */
+  weatherSeed: number | null;
   private endless = new Map<string, CreepDef>();
   private timeline: GameEvent[] = [];
   private offset: number | null = null;
@@ -99,6 +102,7 @@ export class ClientState {
     this.wave = full.wave;
     this.mods = full.mods ?? {};
     this.races = full.races ?? null;
+    this.weatherSeed = full.weatherSeed ?? null;
     this.grids = full.laneOwners.map(() => new LaneGrid());
     for (const d of full.endlessDefs) this.endless.set(d.id, d);
     for (const t of full.towers) this.addTower(t, -10);
@@ -113,6 +117,16 @@ export class ClientState {
     }
     this.lastServerTime = full.time;
     this.renderTime = full.time - INTERP_DELAY;
+  }
+
+  /** The forecast for a wave. */
+  weatherAt(n: number): WeatherId {
+    return this.weatherSeed === null || this.settings.weather === false ? 'clear' : weatherOf(this.weatherSeed, n);
+  }
+
+  /** The weather in force: the wave's while it runs, calm between waves. */
+  get weatherNow(): WeatherId {
+    return this.wave.phase === 'wave' ? this.weatherAt(this.wave.n) : 'clear';
   }
 
   get me(): NetPlayer | undefined {
@@ -297,6 +311,22 @@ export class ClientState {
           if (t) t.mode = ev.mode;
         }
         break;
+      case 'mods':
+        this.mods[ev.p] = ev.mods;
+        break;
+      case 'omen': {
+        const p = this.player(ev.p);
+        if (p) p.omen = ev.offers;
+        break;
+      }
+      case 'boon': {
+        const p = this.player(ev.p);
+        if (p) {
+          p.boons = [...(p.boons ?? []), ev.id];
+          p.omen = null;
+        }
+        break;
+      }
       case 'race': {
         const p = this.player(ev.p);
         if (p && !p.races.includes(ev.race)) p.races.push(ev.race);

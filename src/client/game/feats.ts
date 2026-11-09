@@ -35,6 +35,8 @@ export class FeatTracker {
   /** Earned in this game, for the end screen. */
   readonly fresh: Feat[] = [];
   private nextLook = 0;
+  /** A blizzard or fog wave under way, and the lives when it began. */
+  private storm: { wave: number; lives: number } | null = null;
   private over = false;
 
   constructor(
@@ -81,6 +83,16 @@ export class FeatTracker {
           if (ev.n >= 50) this.earn('endless_50');
           if (ev.n >= 60) this.earn('endless_60');
         }
+        if (ev.phase === 'wave') {
+          const wx = st.weatherAt(ev.n);
+          this.storm = wx === 'blizzard' || wx === 'fog' ? { wave: ev.n, lives: st.wave.lives } : null;
+        } else if (ev.phase === 'build' && this.storm?.wave === ev.n) {
+          if (st.wave.lives >= this.storm.lives) this.earn('stormproof');
+          this.storm = null;
+        }
+        return;
+      case 'boon':
+        if (ev.p === this.you && (st.me?.boons?.length ?? 0) + 1 >= 6) this.earn('boons_6');
         return;
     }
   }

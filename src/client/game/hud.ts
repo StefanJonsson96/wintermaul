@@ -17,7 +17,8 @@ import { icon } from '../ui/icons';
 import { type ModalHandle } from '../ui/modal';
 import { touchDevice } from '../ui/device';
 import { towerTooltip, dps } from './describe';
-import { openEndDialog, openGiftDialog, openRacePicker, openSettingsDialog, openSetupDialog } from './dialogs';
+import { openEndDialog, openGiftDialog, openOmenPicker, openRacePicker, openSettingsDialog, openSetupDialog } from './dialogs';
+import { WEATHERS } from '../../shared/sim/omens';
 import type { GameView } from './view';
 
 const MODE_LABEL: Record<TargetMode, string> = { first: 'First', last: 'Last', strong: 'Strong', weak: 'Weak', close: 'Close' };
@@ -55,6 +56,7 @@ export class Hud {
   buildButtons: { key: string; def: TowerDef | null; action: () => void }[] = [];
   selectionKeys: { key: string; action: () => void }[] = [];
   private raceModal: ModalHandle | null = null;
+  private omenModal: ModalHandle | null = null;
   private setup: { modal: ModalHandle; refresh: () => void } | null = null;
   private endModal: ModalHandle | null = null;
 
@@ -166,7 +168,7 @@ export class Hud {
     } else if (w.phase === 'build') {
       title = `Wave ${nextN}`;
       name = next ? next.creep.name : '';
-      sub = [`in ${Math.ceil(w.countdown)}s`, ...(next ? this.traits(next.creep, next.title, next.mix) : [])];
+      sub = [`in ${Math.ceil(w.countdown)}s`, ...this.weatherChip(nextN), ...(next ? this.traits(next.creep, next.title, next.mix) : [])];
       // the bar starts full whatever the delay (the first wave and some stages wait longer)
       const key = `${w.n}|${w.phase}`;
       if (this.countdownKey !== key) {
@@ -179,7 +181,7 @@ export class Hud {
       name = next ? next.creep.name : '';
       let alive = 0;
       for (const c of s.creeps.values()) if (c.wave === w.n && s.isVisible(c)) alive++;
-      sub = [`${alive} left`, ...(next ? this.traits(next.creep, next.title, next.mix) : [])];
+      sub = [`${alive} left`, ...this.weatherChip(w.n), ...(next ? this.traits(next.creep, next.title, next.mix) : [])];
       fill = 1;
     } else {
       title = w.phase === 'victory' ? 'Victory!' : 'Defeat';
@@ -218,7 +220,8 @@ export class Hud {
         const info = this.waveInfo(n);
         if (!info) break;
         const tags = this.traitWords(info.creep, info.title);
-        this.preview.append(h('div', { class: 'wp-item' }, `W${n} `, h('b', null, info.creep.name), info.mix ? ` + ${info.mix.name}s` : '', tags ? ` · ${tags}` : ''));
+        const wx = WEATHERS[this.state.weatherAt(n)];
+        this.preview.append(h('div', { class: 'wp-item' }, `W${n} `, h('b', null, info.creep.name), info.mix ? ` + ${info.mix.name}s` : '', tags ? ` · ${tags}` : '', wx.id !== 'clear' ? h('span', { class: 'wp-wx', style: { color: wx.color }, title: `${wx.name}: ${wx.text}` }, icon(wx.icon, 11), ` ${wx.name}`) : ''));
       }
     }
 
@@ -226,6 +229,15 @@ export class Hud {
     this.refreshBuildPanel();
     this.refreshSelection();
     void now;
+  }
+
+  /** The forecast of a wave, as a chip (none for still air). */
+  private weatherChip(n: number): HTMLElement[] {
+    const wx = WEATHERS[this.state.weatherAt(n)];
+    if (wx.id === 'clear') return [];
+    const chip = h('span', { class: 'tag wx', style: { color: wx.color, borderColor: wx.color } }, icon(wx.icon, 11), wx.name);
+    tooltip(chip, () => `${wx.name}: ${wx.text}`);
+    return [chip];
   }
 
   private setText(el: HTMLElement, text: string): void {
@@ -319,7 +331,7 @@ export class Hud {
       this.buildPanel.classList.add('hidden');
       return;
     }
-    const key = `${me.races.join(',')}|${me.lumber}|${me.legends.join(',')}|${Math.floor(me.gold)}|${this.view.buildDef?.id ?? ''}|${s.wave.phase}|${s.settings.raceMode}`;
+    const key = `${me.omen?.join(',') ?? ''}|${me.races.join(',')}|${me.lumber}|${me.legends.join(',')}|${Math.floor(me.gold)}|${this.view.buildDef?.id ?? ''}|${s.wave.phase}|${s.settings.raceMode}`;
     if (key === this.buildKey && !force) return;
     this.buildKey = key;
     clear(this.buildGrid);
@@ -353,6 +365,12 @@ export class Hud {
       btn.style.whiteSpace = 'pre-line';
       tooltip(btn, () => (me.races.length === 0 ? 'Spend your lumber on a race to start building.' : 'You have lumber! Spend it on a new race, or on a Legend tower of a race you own.'));
       add(btn, 'l', null, () => this.openRacePicker());
+    }
+    if (me.omen?.length) {
+      const btn = h('button', { class: 'cmd-btn special omen-btn', onclick: () => this.openOmen() }, 'Shrine\nboon');
+      btn.style.whiteSpace = 'pre-line';
+      tooltip(btn, () => 'A shrine offers you a boon: pick one of three.');
+      add(btn, 'o', null, () => this.openOmen());
     }
     if (this.buildButtons.length === 0) {
       this.buildGrid.append(h('div', { class: 'muted', style: { gridColumn: 'span 4', padding: '8px', width: '240px', alignSelf: 'center' } }, s.wave.phase === 'setup' ? 'Waiting for the rules…' : 'No races yet.'));
@@ -478,6 +496,11 @@ export class Hud {
     setTimeout(() => el.remove(), 3300);
   }
 
+  openOmen(): void {
+    if (this.omenModal) return;
+    this.omenModal = openOmenPicker(this.view, () => (this.omenModal = null));
+  }
+
   openRacePicker(): void {
     if (this.raceModal) return;
     this.raceModal = openRacePicker(this.view, () => (this.raceModal = null));
@@ -508,6 +531,7 @@ export class Hud {
     hideTooltip();
     this.endModal?.close();
     this.closeRacePicker();
+    this.omenModal?.close();
     this.endModal = openEndDialog(this.view, victory, stats, isHost, actions, extra);
   }
 

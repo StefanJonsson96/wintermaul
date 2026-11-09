@@ -38,7 +38,13 @@ export interface PlayerInit {
 
 export interface Player extends NetPlayer {
   goldMul: number;
+  /** Bonuses in force: own (talents, relics) plus boons and weather. */
   mods: PlayerMods;
+  /** Their own bonuses, and the gold multiplier before bonuses. */
+  baseMods: PlayerMods;
+  baseGoldMul: number;
+  boons: string[];
+  omen: string[] | null;
 }
 
 export interface Dot {

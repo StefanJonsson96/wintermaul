@@ -36,7 +36,7 @@ export class Horde {
     // Extra health on hard difficulties phases in over the first waves, so the opening stays
     // tight but survivable; easier settings are easier from the start.
     const mul = this.g.hpMul > 1 ? 1 + (this.g.hpMul - 1) * Math.min(1, wave / 15) : this.g.hpMul;
-    const hp = Math.round(def.hp * mul);
+    const hp = Math.round(def.hp * mul * (this.g.weatherDef.creepHp ?? 1));
     const air = !!def.air;
     const grid = this.g.lanes[lane].grid;
     let x: number, y: number, cell: number;
@@ -137,7 +137,7 @@ export class Horde {
     if (this.g.time < c.burrowUntil) boost *= 1.25;
     const fr = c.def.frenzy;
     if (fr && c.hp < c.maxHp * fr.below) boost *= 1 + fr.speed;
-    return c.def.speed * (1 - slow) * boost * (this.g.rules.speedMul ?? 1) * (1 - (owner?.mods.creepSlow ?? 0));
+    return c.def.speed * (1 - slow) * boost * (this.g.rules.speedMul ?? 1) * (this.g.weatherDef.creepSpeed ?? 1) * (1 - (owner?.mods.creepSlow ?? 0));
   }
 
   /** One tick for every creep: regeneration and healers, poison and burns, abilities, then a step along the maze. */
@@ -434,7 +434,7 @@ export class Horde {
     const p = this.g.player(owner);
     let gold = 0;
     if (p) {
-      gold = Math.round(c.def.bounty * p.goldMul);
+      gold = Math.round(c.def.bounty * p.goldMul * (this.g.weatherDef.bounty ?? 1));
       const t = this.g.towers.get(towerId);
       const e = t?.def.econ;
       if (e?.killGold && this.g.rng.chance(e.killGoldChance ?? 1)) gold += e.killGold;

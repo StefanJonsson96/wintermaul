@@ -3,11 +3,13 @@ import { PLAYER_COLORS } from '../../shared/constants';
 import { RACE_BY_ID, RACES, TOWERS, towersOfRace } from '../../shared/data/races';
 import { CREEPS, FINAL_WAVE, WAVE_SETS, wavesOf } from '../../shared/data/waves';
 import { DIFFICULTIES, type Difficulty, type EndStats, type GameSettings, RACE_MODES, startingLives } from '../../shared/protocol';
+import { BOON_BY_ID, boonText } from '../../shared/sim/omens';
 import { raceEmblem } from '../art/emblems';
 import { towerIcon } from '../art/towers';
 import { audio } from '../audio';
 import type { EndAction } from '../local';
 import { touchDevice } from '../ui/device';
+import { icon } from '../ui/icons';
 import { clear, fmt, h, toast, tooltip } from '../ui/dom';
 import { type ModalHandle, openModal } from '../ui/modal';
 import { towerTooltip } from './describe';
@@ -112,6 +114,17 @@ export function openSetupDialog(view: GameView, onClose: () => void): { modal: M
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Race mode'), modeRow),
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Waves'), wavesRow),
       h('div', { class: 'setup-section' }, h('div', { class: 'label' }, 'Length'), endRow),
+      h(
+        'div',
+        { class: 'setup-section' },
+        h('div', { class: 'label' }, 'The north'),
+        h(
+          'div',
+          { class: 'setup-grid', style: { gridTemplateColumns: 'repeat(2, 1fr)' } },
+          choice(st.weather !== false, st.weather !== false ? 'Weather: on' : 'Weather: off', 'Blizzards, auroras, fog and blood moons change the rules from wave to wave.', { weather: st.weather === false }),
+          choice(st.omens !== false, st.omens !== false ? 'Omens: on' : 'Omens: off', 'After every fifth wave a shrine offers each player a choice of three boons.', { omens: st.omens === false }),
+        ),
+      ),
     );
   };
   refresh();
@@ -242,6 +255,51 @@ export function openEndDialog(view: GameView, victory: boolean, stats: EndStats,
       h('div', { class: 'field-row', style: { justifyContent: 'flex-end' } }, h('button', { class: 'btn', onclick: () => modal.close() }, 'Look around'), ...buttons),
     ),
     { dismissable: true },
+  );
+  return modal;
+}
+
+/** The shrine's offer after every fifth wave: three boons, take one. */
+export function openOmenPicker(view: GameView, onClose: () => void): ModalHandle | null {
+  const s = view.state;
+  const me = s.me;
+  if (!me?.omen?.length) return null;
+  const offers = me.omen;
+  const wave = Math.max(1, s.wave.n);
+  const cards = h('div', { class: 'omen-cards' });
+  for (const id of offers) {
+    const b = BOON_BY_ID[id];
+    if (!b) continue;
+    cards.append(
+      h(
+        'button',
+        {
+          class: 'omen-card',
+          onclick: () => {
+            view.send({ c: 'omen', pick: id });
+            audio.play('upgrade', 0.6);
+            modal.close();
+          },
+        },
+        h('span', { class: 'omen-icon' }, icon(b.icon, 26)),
+        h('b', null, b.name),
+        h('div', { class: 'omen-fx' }, ...boonText(b, wave).map((l) => h('span', { class: l.bad ? 'bad' : '' }, l.text))),
+      ),
+    );
+  }
+  const have = (me.boons ?? []).map((id) => BOON_BY_ID[id]?.name).filter(Boolean);
+  const modal = openModal(
+    h(
+      'div',
+      { class: 'omen' },
+      h('div', { class: 'omen-kicker' }, `After wave ${wave}`),
+      h('h2', null, 'A wayside shrine'),
+      h('p', { class: 'muted' }, 'Candles still burn under the snow. The old gods of the north offer one gift: take it, and it stays with you for the rest of the war.'),
+      cards,
+      have.length ? h('div', { class: 'omen-have muted' }, `Your boons: ${have.join(', ')}`) : null,
+      h('div', { class: 'field-row', style: { justifyContent: 'flex-end', marginTop: '12px' } }, h('button', { class: 'btn ghost', onclick: () => modal.close() }, 'Decide later')),
+    ),
+    { onClose, soft: true },
   );
   return modal;
 }

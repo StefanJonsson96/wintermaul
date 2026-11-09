@@ -17,6 +17,8 @@ const difficulty = opt('difficulty', 'normal') as Difficulty;
 const races = opt('races', '').split(',').filter(Boolean);
 const seed0 = Number(opt('seed', '1'));
 const waveSet = opt('waves', 'classic') as WaveSetId;
+// weather and omens are on unless --classic-rules
+const classicRules = args.includes('--classic-rules');
 const verbose = args.includes('--verbose');
 const quiet = args.includes('--quiet');
 
@@ -42,7 +44,7 @@ interface Result {
 
 function play(seed: number): Result {
   const init = Array.from({ length: players }, (_, i) => ({ id: i, name: `Bot${i}`, color: i, isBot: true }));
-  const game = new Game({ difficulty, raceMode: 'pick', endless: false, waves: waveSet }, init, seed, { skipSetup: true });
+  const game = new Game({ difficulty, raceMode: 'pick', endless: false, waves: waveSet, weather: !classicRules, omens: !classicRules }, init, seed, { skipSetup: true });
   const bots = init.map((p, i) => new Bot(p.id, seed + i, races.length ? [races[(i + seed) % races.length], races[(i + seed + 1) % races.length]] : undefined));
   const leaksByWave: number[] = [];
   let lastLives = game.lives;

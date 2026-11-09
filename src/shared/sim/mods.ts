@@ -69,6 +69,10 @@ export interface PlayerMods {
   upgradeCost?: number;
   /** Tier-1 towers build instantly. */
   quickWalls?: boolean;
+  /** Extra boons a shrine offers. */
+  omenChoices?: number;
+  /** Weather never weakens this player's towers. */
+  weatherproof?: boolean;
 }
 
 /** Gold price of a tower for a player with these bonuses. */

@@ -44,6 +44,8 @@ export const RELICS: Relic[] = [
   { id: 'thread', name: "Weaver's Thread", feat: 'weaver', icon: 'rune', flavor: 'Spun from a hundred spent runes.', effects: [E.types(['impact', 'pierce'], 0.1)] },
   { id: 'pipe', name: "Old Soldier's Pipe", feat: 'career_games', icon: 'shield', flavor: 'Smoked through thirty sieges.', effects: [gift(60), E.lives(3)] },
   { id: 'warhorn', name: "Warden's Horn", feat: 'career_wins', icon: 'banner', flavor: 'Blown after every victory.', effects: [E.waveBonus(0.15)] },
+  { id: 'bell', name: 'Shrine Bell', feat: 'boons_6', icon: 'banner', flavor: 'Ring it, and the old gods bring out one more gift.', effects: [{ text: 'Shrines offer four boons instead of three', apply: (m) => (m.omenChoices = (m.omenChoices ?? 0) + 1) }] },
+  { id: 'cloak', name: 'Storm Cloak', feat: 'stormproof', icon: 'snow', flavor: 'Woven while the blizzard howled.', effects: [{ text: 'Weather never weakens your towers', apply: (m) => (m.weatherproof = true) }, E.range(0.03)] },
   { id: 'sickle', name: "Reaper's Sickle", feat: 'career_kills', icon: 'skull', flavor: 'It has cut twenty-five thousand threads.', effects: [E.execute(0.04)] },
 ];
 

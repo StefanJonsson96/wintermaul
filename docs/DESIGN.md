@@ -91,12 +91,29 @@ bots, a Thaw game goes about as far as a classic one (solo average wave ~32, duo
 - **Pings** (Alt+click), in-game chat with old-school `-commands`.
 - **Bots** that build real mazes, for solo play or to fill seats.
 - **Endless mode** after wave 40.
-- **Commander spells**: Frost Nova, Meteor and War Cry (`src/shared/sim/spells.ts`), each on its own
-  cooldown (45, 55 and 60 s), cast on any lane. Nova freezes creeps for 2.5 s (bosses are slowed,
-  immune creeps ignore it); Meteor lands a second later for half a typical creep's health of this wave
-  (bosses take 30%); War Cry makes your towers in a wide circle attack 40% faster for 8 s. They are a
-  way to rescue a leak, not a damage source: a tower does more over a wave. A rules option turns them
-  off; bots never cast them.
+
+## Weather and omens
+
+Two systems make one game unlike the next (`src/shared/sim/omens.ts`); both are rules options, on by
+default and off in the tutorial.
+
+- **Weather.** Every wave has a forecast: still air (most often), blizzard (−15% tower range, creeps
+  10% slower), aurora (+25% Magic, Elemental and Pure damage), freezing fog (slows last twice as long,
+  towers 10% slower), warm wind (creeps 12% faster, poison and burns +35%) or blood moon (creeps +20%
+  health, +40% kill gold). The first three waves are calm and the same storm never comes twice in a
+  row. The forecast is a pure function of the seed and the wave, so clients show the next waves'
+  weather without being told and replays agree. Weather is in force while its wave runs.
+- **Omens.** After every fifth wave (before the last) a shrine offers each player three of twenty
+  boons, drawn from the seed; lasting boons are never offered twice. A boon is talent-style bonuses,
+  something given at once (gold that scales with the wave, lives, lumber), or both, and some have a
+  price (*Blood Price*: +14% damage, leaks cost half again). An offer can wait; a new shrine settles
+  an unanswered one with its first boon. Bots take theirs at once.
+- A player's bonuses are now their own (talents and relics) plus boons plus weather, recomputed when
+  any of them changes and sent to clients as an event, so tooltips and range circles stay right.
+
+Stacked boons are strong: with a full set and campaign talents, bots won stages they used to lose.
+Each boon was cut to about two thirds; solo bots on Normal now average wave ~36 with both systems
+on against ~35 without, and a person choosing boons well does better.
 
 ## Single player
 
@@ -108,34 +125,35 @@ client clock keeps in step, and a hidden tab pauses the game.
 - **Tutorial**: a real 8-wave Emberforge game (20 lives, a long first countdown) with a coach that
   shows one idea at a time, highlights the cells or buttons involved and moves on when the player has
   done it. A player who follows along wins with a few leaks; one who stops building loses.
-- **Skirmish**: a solo game with the classic rules dialog.
+- **Skirmish**: a solo game with the rules dialog, carrying the player's relics.
 - **Saved games.** A single-player game is saved as its seed and the commands given, with the tick of
   each (`src/client/saved.ts`). Continue builds a new game on the same seed and replays the commands
   (`src/shared/sim/replay.ts`); since the simulation is deterministic it lands on the same state,
   then shows it paused. The save is written every few seconds and when the tab is hidden or closed, and
   a save from another version of the game is not offered. Developer commands make a game unsaveable.
-- **Daily challenge** (`src/shared/daily.ts`): the date, hashed, seeds a random generator that picks
-  the wave set, a first wave from a short list (1 to 24), fifteen waves from there, a war chest of
-  about nine tenths of what a player would have built up by then, 10% more creep health, sometimes
-  Hard, and one or two twists. Medals: Bronze for reaching nine waves in, Silver for winning, Gold for
-  winning losing at most three lives. `npm run balance:daily` plays bots over a run of days; over 40
-  days they earned no medal 13 times, Bronze 10, Silver 15 and Gold twice.
-- **Achievements**: 33 of them, kept with the campaign save. Some follow from the save (stars, the
-  web, medals, career totals: a hook on every save checks them); the rest are watched for during a
-  game by a tracker that reads the event stream and the player's state, in multiplayer too.
+- **Achievements and relics**: 29 achievements, kept with the campaign save. Some follow from the
+  save (stars, the web, career totals: a hook on every save checks them); the rest are watched for
+  during a game by a tracker that reads the event stream and the player's state, in multiplayer too.
+  Each wins a relic (`src/shared/relics.ts`): small bonuses, some with a price, applied like talents.
+  One slot, two at twelve achievements. Saved games remember the relics they started with; online,
+  relics come along with campaign talents when the host allows them.
+- **Moving progress**: the whole save as a code, base64 JSON with a checksum so a truncated copy is
+  refused (`src/client/campaign/transfer.ts`). Loading keeps the achievements of both devices.
 
 ## The campaign
 
-The campaign is two acts on two painted maps (`src/shared/campaign.ts`): *The Long Winter*, twelve
-stages on the road north, and *The Thaw*, nine stages on the glacier with the second wave set, which
-opens once *The Drowned Mill* is won. Each stage is a rule set for the ordinary game. The rules can
+The campaign is three acts on three painted maps (`src/shared/campaign.ts`): *The Long Winter*, twelve
+stages on the road north; *The Thaw*, nine stages on the glacier with the second wave set, which opens
+once *The Drowned Mill* is won; and *The Long Night*, eight stages under the polar night, open once
+*Hexwood* is won, built on the new rules: forced weather on every wave, shrines every second to fourth
+wave, and a tower cap. Each stage is a rule set for the ordinary game. The rules can
 change the first and last wave, lives, starting gold and lumber, creep health, speed, armor and
 regeneration, the number of creeps per wave, bounty, and the races that can be picked. Late stages
 drop the player into the war (wave 15, 20, 30…) with a war chest and a long first countdown, which
 makes them a different puzzle: build a whole maze at once.
 
 Three stars per stage: reach a wave, win, win losing at most a few lives. Stars pay **runestones**,
-174 in all; winning a stage opens the next. The Endless Frontier (open after *The Iron Pass*) pays one
+174 in the first two acts (most of the 192-node web) and 205 with Act III; winning a stage opens the next. The Endless Frontier (open after *The Iron Pass*) pays one
 runestone per 5 waves past wave 20 the first time they are reached, a long tail for players who want
 more of the web.
 
@@ -185,14 +203,16 @@ Latest results, 8 games per stage with random race pairs:
 | 11 The Rimewall | 6/8 | the Winter Tyrant; losses at wave 40 | | | |
 | 12 Throne of Winter | 6/8 | all 40 waves on Brutal | | | |
 
-Bots cast no spells and follow a fixed maze plan, so a person should do better; the last stages of
+Act III, 6 games per stage: Last Light 6/6, Whiteout Pass 6/6, Pilgrims' Road 5/6, The Last Cairns
+6/6 (bots never hit the cap's hardest choices), Aurora Vale 5/6, Night of the Red Moon 6/6, The Fog Sea
+5/6, The Long Night 5/6. Bots pick boons blindly and follow a fixed maze plan, so a person should do better; the last stages of
 each act are meant to take a few tries.
 
 ## Code architecture
 
 - `src/shared/sim/game.ts` holds the state, the commands and the wave flow; `horde.ts` moves, heals,
   leaks and kills creeps and runs their abilities; `combat.ts` does targeting, attacks, damage and
-  on-hit effects; `spells.ts` the commander spells; `entities.ts` has the plain data types. The
+  on-hit effects; `omens.ts` weather and boons; `entities.ts` has the plain data types. The
   simulation is deterministic for a given seed, which is what saved games rely on.
 - `npm run fingerprint` plays seeded bot games (with and without talents and stage rules) and hashes
   every event. A refactor that must not change behaviour has to leave its output identical; the split

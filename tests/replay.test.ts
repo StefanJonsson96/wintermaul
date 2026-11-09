@@ -44,6 +44,9 @@ function playLive(seed: number, ticks: number, opts: { setup?: GameCommand[]; al
     game.drainEvents();
     // a few things a person would do between steps
     if (game.tick % 997 === 0) game.command(0, { c: 'ready', value: true });
+    // and the shrine's last boon, a little after it is offered
+    const omen = game.player(0)!.omen;
+    if (omen && game.tick % 61 === 0) game.command(0, { c: 'omen', pick: omen[omen.length - 1] });
     if (game.tick % 1499 === 0) {
       const mine = [...game.towers.values()].filter((t) => t.owner === 0).map((t) => t.id);
       game.command(0, { c: 'target', ids: mine.slice(0, 3), mode: 'strong' });
@@ -66,6 +69,8 @@ describe('saved games', () => {
     const live = playLive(42, 20 * 60 * 8);
     expect(live.game.wave).toBeGreaterThan(4);
     expect(live.entries.length).toBeGreaterThan(20);
+    // shrines came and boons were taken, through commands the replay repeats
+    expect(live.game.player(0)!.boons.length).toBeGreaterThan(0);
     const game = replayed(live, 42);
     expect(game.tick).toBe(live.game.tick);
     expect(fingerprint(game)).toBe(fingerprint(live.game));

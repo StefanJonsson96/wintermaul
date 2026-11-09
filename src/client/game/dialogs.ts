@@ -299,7 +299,7 @@ export function openOmenPicker(view: GameView, onClose: () => void): ModalHandle
       have.length ? h('div', { class: 'omen-have muted' }, `Your boons: ${have.join(', ')}`) : null,
       h('div', { class: 'field-row', style: { justifyContent: 'flex-end', marginTop: '12px' } }, h('button', { class: 'btn ghost', onclick: () => modal.close() }, 'Decide later')),
     ),
-    { onClose, soft: true },
+    { onClose, soft: true, narrow: true },
   );
   return modal;
 }

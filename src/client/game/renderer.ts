@@ -857,7 +857,7 @@ export class Renderer {
     }
     const b = this.wx.blizzard;
     if (b > 0) {
-      ctx.fillStyle = `rgba(225,238,255,${0.12 * b})`;
+      ctx.fillStyle = `rgba(225,238,255,${0.2 * b})`;
       ctx.fillRect(0, 0, w, h);
     }
   }

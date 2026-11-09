@@ -4,6 +4,34 @@ All notable changes to Winterward. The format follows [Keep a Changelog](https:/
 and the project uses [Semantic Versioning](https://semver.org/): the major number changes when saves or the
 network protocol break, the minor number for new features, the patch number for fixes and balance.
 
+## [3.0.0] - 2026-11-09
+
+### Added
+- **Weather**: every wave has a forecast, shown in the wave bar and the preview of the next waves, that
+  bends the rules while it runs: blizzards (shorter tower range, slower creeps), auroras (+25% Magic,
+  Elemental and Pure), freezing fog (lingering slows, slower towers), a warm wind (faster creeps, stronger
+  poison and fire) and blood moons (tougher creeps that pay much more), each with its own look.
+- **Omens**: after every fifth wave a wayside shrine offers each player three of twenty boons; take one and
+  it lasts the game. Some have a price. The offer can wait (the Shrine button, or O).
+- **Campaign Act III, The Long Night**: eight stages under the polar night on a new map, open once
+  *Hexwood* is won: a pass that is one long blizzard, a road of shrines, a land with only sixty stones to
+  build with, a vale of endless aurora, a night of blood moons, a fog sea, and forty waves of every weather
+  at the end. With it the three acts pay for the whole Rune Web.
+- **Relics**: every achievement wins a relic, a keepsake with a small bonus (some with a price). Carry one
+  into your games, two once you have twelve achievements: campaign, skirmish, and online when the host
+  allows campaign talents. Three new achievements (Shrine Keeper, Weathered, Dawn) and their relics.
+- **Move progress**: your whole save as a code (or a file) to load on another device. A code cut short is
+  refused, both saves are shown before anything is replaced, and the achievements of both are kept.
+
+### Changed
+- The rules dialog has Weather and Omens switches (both on by default; off in the tutorial).
+- The achievements screen is now Relics & achievements; the campaign screen has a Relics button.
+- The lobby option is now *Campaign talents and relics*.
+
+### Removed
+- Commander spells (Frost Nova, Meteor, War Cry).
+- The daily challenge, with its medals, streak and achievements.
+
 ## [2.0.0] - 2026-11-09
 
 ### Added

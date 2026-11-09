@@ -3,8 +3,9 @@
 **A co-op maze tower defense for the browser, in the spirit of the Warcraft III map *Wintermaul*.**
 Up to 8 players, no login, 12 races and 96 towers, two sets of 40 waves and their final bosses. Build a
 maze on an open snowfield: whatever slips through your maze runs straight into your neighbour's. Alone?
-Play the tutorial, a 21-stage campaign in two acts with a passive tree in the spirit of Path of Exile, the
-daily challenge or a quick skirmish, all running right in your browser, on a computer or a phone.
+Play the tutorial, a 29-stage campaign in three acts with a passive tree in the spirit of Path of Exile, or
+a quick skirmish, all running right in your browser, on a computer or a phone. Every wave has its weather,
+every fifth a shrine offers you a boon, and every achievement wins a relic to carry into battle.
 
 Version **2.0.0** · [Changelog](CHANGELOG.md)
 
@@ -38,9 +39,8 @@ npm run dev           # then open http://localhost:5173
 | Mode | What it is |
 |---|---|
 | **Tutorial** | One click from the menu. An 8-wave game where a coach explains one idea at a time (walls, zig-zags, calling waves, upgrades, air, leaks, lumber) and waits for you to try it. |
-| **Campaign** | Two acts, *The Long Winter* and *The Thaw*: 21 stages on two painted maps, each with its own twist, three stars to earn and runestones for the Rune Web. |
-| **Daily** | One game a day, the same for everyone: the date picks the seed, the waves, a war chest and a twist or two. Bronze, Silver and Gold medals and a play streak. |
-| **Skirmish** | A solo game with your rules: difficulty, Classic waves or The Thaw, forty waves or endless. |
+| **Campaign** | Three acts, *The Long Winter*, *The Thaw* and *The Long Night*: 29 stages on three painted maps, each with its own twist, three stars to earn and runestones for the Rune Web. |
+| **Skirmish** | A solo game with your rules: difficulty, Classic waves or The Thaw, weather and omens, forty waves or endless. |
 | **Multiplayer** | 1–8 players in a room, with bots to fill seats. The first player picks the rules, like Red in the original. |
 
 Single-player games are simulated in your browser: press **P** to pause (they also pause when you switch
@@ -57,12 +57,21 @@ dig in and can't be hit, **blinkers** jump ahead along the path, **brood mothers
 faster as they bleed, and **hexers** freeze your towers solid for a few seconds. Some waves mix two kinds
 of creep. The wave preview names every trick a wave has.
 
-### Commander spells
+### Weather and omens
 
-Every player has three spells on their own cooldowns, cast on any lane with **1**, **2**, **3** (or the
-Spells panel): **Frost Nova** freezes the creeps in an area (bosses are slowed), **Meteor** lands a second
-later and hits everything around it hard, and **War Cry** makes your towers in a wide area attack 40%
-faster for eight seconds. The rules dialog can switch spells off for a purist game.
+![Weather](docs/images/weather.png)
+
+Every wave has a **forecast**, shown in the wave bar and the preview of the next waves. **Blizzards**
+shorten every tower's reach and slow the creeps, **auroras** feed Magic, Elemental and Pure damage,
+**freezing fog** makes slows linger but towers sluggish, a **warm wind** speeds the creeps and feeds poison
+and fire, and a **blood moon** brings tougher creeps that pay much more. Plan the maze and the next race
+around what is coming.
+
+After every fifth wave a **wayside shrine** offers you three of twenty **boons** (The Smith's Ember, Cold
+Iron, Raven's Tithe, Blood Price, The Long Night…), some with a price. Take one and it stays with you for
+the rest of the game, so no two games build the same way. Both can be switched off in the rules dialog.
+
+![A wayside shrine](docs/images/omens.png)
 
 ### On a phone or tablet
 
@@ -89,8 +98,12 @@ stars:
 3. win **losing at most a few lives**.
 
 Stars pay **runestones**. Win a stage to open the next; win *The Drowned Mill* to open **Act II, The
-Thaw**, nine stages on the glacier against the creeps that fight back. Win *The Iron Pass* to open **The
-Endless Frontier**, which pays a runestone every 5 waves past wave 20 the first time you get there.
+Thaw**, nine stages on the glacier against the creeps that fight back, and *Hexwood* to open **Act III,
+The Long Night**: eight stages under the polar night where the weather is the enemy (a pass that is one
+long blizzard, a vale of endless aurora, a night of blood moons, a fog sea), the shrines come more often,
+or the land gives you only sixty towers. Win *The Iron Pass* to open **The Endless Frontier**, which pays a
+runestone every 5 waves past wave 20 the first time you get there. All three acts together pay for the
+whole Rune Web.
 
 ### The Rune Web
 
@@ -115,23 +128,23 @@ up what you have taken, and giving a node back is free (right-click it, or *Give
 long as nothing else hangs on it. In multiplayer the host can switch **Campaign talents** on in the lobby (off
 by default), and everyone brings the passives they took.
 
-### The daily challenge
+### Relics and achievements
 
-![Daily challenge](docs/images/daily.png)
+![Relics](docs/images/relics.png)
 
-The **Daily** tile opens today's challenge: a stretch of fifteen waves from one of the two wave sets, a
-war chest to start with, sometimes Hard, and one or two twists (Swift, Mending, Iron hides, Horde,
-Plunder, Six races, Lean times). **Bronze** for reaching a wave, **Silver** for winning, **Gold** for
-winning while losing at most three lives. Play every day to keep your streak; the briefing shows the last
-week. It pays no runestones: it is for the medal.
+Twenty-nine achievements, from killing your first boss to a 300-cell maze, six boons in one game, every
+star of the campaign or a win on Brutal. **Every achievement wins a relic**: a keepsake with a small
+bonus, sometimes with a price (*Tyrant's Tooth*: +20% damage against bosses; *Heart of Winter*: +15%
+damage, but leaks cost double; *Shrine Bell*: shrines offer four boons). Carry one into your games, two
+once you have twelve achievements: in the campaign, in skirmish, and online when the host allows campaign
+talents. Games where developer commands were used earn nothing.
 
-### Achievements
+### Moving your progress
 
-![Achievements](docs/images/achievements.png)
-
-Thirty-three achievements, from killing your first boss to a 300-cell maze, a Gold medal, every star of the
-campaign or a win on Brutal. They are kept with your campaign progress and announced the moment you earn
-them. Games where developer commands were used earn nothing.
+**Move progress** on the menu shows your whole save (campaign, Rune Web, relics, achievements and the game
+in progress) as one code. Copy it, or save it as a file, and load it on your other device: it shows both
+saves side by side before replacing anything, and keeps the achievements of both. As a claude.ai
+artifact, progress also follows you between devices on its own.
 
 ## How to play
 
@@ -162,7 +175,7 @@ them. Games where developer commands were used earn nothing.
 | Wheel, arrows, right- or middle-drag | Zoom and move the camera |
 | Space | Jump back to your lane |
 | G | Ready / call the next wave early |
-| 1 2 3 | Aim Frost Nova, Meteor or War Cry; click to cast |
+| O | Open the shrine's offer (after every fifth wave) |
 | P / F | Pause / game speed (single player) |
 | Alt + click | Ping the map for your team |
 | Enter | Chat (`-random`, `-ready`, `-help`) |
@@ -179,7 +192,7 @@ them. Games where developer commands were used earn nothing.
 - **Authoritative multiplayer**: Node + WebSocket server simulating at 20 Hz, 10 Hz snapshots,
   client-side interpolation, reconnect-by-token, spectators, lobby with public and private rooms.
 - **All art is procedural**: canvas drawing code for the towers (a building style per race), the
-  creature shapes, the terrain, the emblems and the two campaign maps. All sound is synthesized with
+  creature shapes, the terrain, the emblems and the three campaign maps. All sound is synthesized with
   WebAudio, music included: pads, bells and wind, with drums when a wave is on and a darker turn for
   bosses. No third-party assets.
 - **Saves are replays.** A single-player game is saved as its seed and the commands you gave; Continue
@@ -191,9 +204,9 @@ src/shared/sim/      the simulation: game (state, commands, waves), horde (creep
                      talent bonuses, bots, and the real-time runner
 src/server/          HTTP + WebSocket server, rooms and lobby
 src/client/          menu and lobby, local single-player games and saves, music
-src/client/modes/    tutorial, skirmish and the daily challenge
+src/client/modes/    tutorial and skirmish
 src/client/game/     game view: renderer, HUD, dialogs, effects, input
-src/client/campaign/ campaign maps, briefings, the Rune Web, progress and achievements
+src/client/campaign/ campaign maps, briefings, the Rune Web, progress, achievements, save transfer
 src/client/art/      procedural towers (a kit per race), creatures, terrain
 scripts/             balance runners, determinism fingerprint, browser tests, README screenshots
 tests/               unit tests (vitest)
@@ -211,7 +224,6 @@ docs/                research notes, design, hosting guide
 | `node scripts/mobile-test.mjs` | Plays the tutorial on an emulated phone with touch input |
 | `npm run balance -- --players 2 --games 6` | Headless bot games for balancing |
 | `npm run balance:campaign` | Plays every campaign stage with bots holding typical talents |
-| `npm run balance:daily` | Plays bots on a run of daily challenges and prints the medals |
 | `node scripts/resume-test.mjs` | Saves a game mid-wave, reloads and checks it continues identically |
 | `npm run fingerprint` | Hashes seeded bot games: a refactor that changes nothing leaves it identical |
 | `WINTERWARD_DEV=1 npm start` | Testing chat commands: `-gold 5000`, `-wave 20`, `-speed 4`, `-lumber 1`, `-autopilot` |

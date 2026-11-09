@@ -15,12 +15,7 @@ const browser = await launchChromium();
 const logs = [];
 const wait = (page, ms) => page.waitForTimeout(ms);
 // well into the campaign: Act I nearly done, Act II begun, a good part of the Rune Web taken, a few
-// daily medals and achievements
-const day = (ago) => {
-  const d = new Date();
-  d.setDate(d.getDate() - ago);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+// relics and achievements
 const SAVE = JSON.stringify({
   stars: { hollowmere: 3, pinewatch: 3, mill: 3, crowspire: 3, frostfen: 2, ironpass: 3, glimmerdeep: 2, wolfsmoor: 2, ashengate: 2, barrow: 2, meltwater: 3, fjord: 2, hexwood: 2, causeway: 1 },
   best: { hollowmere: 10, pinewatch: 13, mill: 15, crowspire: 20, frostfen: 22, ironpass: 25, glimmerdeep: 26, wolfsmoor: 30, ashengate: 34, barrow: 36, meltwater: 12, fjord: 18, hexwood: 22, causeway: 24 },
@@ -28,8 +23,8 @@ const SAVE = JSON.stringify({
   talents: WEB,
   endlessBest: 0,
   last: 'causeway',
-  daily: { [day(1)]: { medal: 2, wave: 24, plays: 1 }, [day(2)]: { medal: 3, wave: 19, plays: 2 }, [day(3)]: { medal: 1, wave: 29, plays: 1 } },
-  feats: { first_win: 1, boss: 1, three_races: 1, legend: 1, maze_200: 1, hoard: 1, flawless: 1, warcry: 1, nova: 1, keystone: 1, daily_medal: 1, daily_gold: 1 },
+  relics: ['tooth', 'wardstone'],
+  feats: { first_win: 1, boss: 1, three_races: 1, legend: 1, maze_200: 1, hoard: 1, flawless: 1, keystone: 1, boons_6: 1, towers_100: 1, act1: 1, kills_1000: 1 },
   tally: { games: 23, wins: 14, kills: 16840 },
 });
 
@@ -126,25 +121,46 @@ const shots = {
     await page.context().close();
   },
 
-  /** Today's daily challenge. */
-  async daily() {
+  /** Relics, two carried. */
+  async relics() {
     const page = await newPage(SAVE);
-    await page.click('.solo-tile:has-text("Daily")');
+    await page.click('.menu-links button:has-text("Relics")');
     await wait(page, 700);
-    await page.screenshot({ path: `${out}/daily.png` });
+    await page.screenshot({ path: `${out}/relics.png` });
     await page.context().close();
   },
 
-  /** The achievements list. */
-  async achievements() {
-    const page = await newPage(SAVE);
-    await page.click('.menu-links button:has-text("Achievements")');
-    await wait(page, 700);
-    await page.screenshot({ path: `${out}/achievements.png` });
+  /** Weather and a shrine's offer, in a game the bot autopilot has built up. */
+  async weather() {
+    const page = await newPage();
+    await page.click('button:has-text("Private room")');
+    await wait(page, 500);
+    await page.click('button:has-text("Start game")');
+    await wait(page, 1200);
+    await page.click('button:has-text("Lock in & start")');
+    await wait(page, 900);
+    await page.click('.race-card:has-text("Frostborn")');
+    await wait(page, 400);
+    await chat(page, '-gold 2500');
+    await chat(page, '-autopilot');
+    await chat(page, '-speed 6');
+    await wait(page, 10000);
+    await chat(page, '-wave 9');
+    await page.waitForFunction(() => { const s = window.winterward.game.state; return s.wave.n === 10 && s.wave.phase === 'build'; }, null, { timeout: 120000 });
+    await chat(page, '-speed 1');
+    await wait(page, 1200);
+    // a blizzard over the field behind the shrine's offer
+    await page.evaluate(() => { const s = window.winterward.game.state; s.weatherAt = () => 'blizzard'; Object.defineProperty(s, 'weatherNow', { get: () => 'blizzard' }); });
+    await wait(page, 3000);
+    await page.evaluate(() => document.querySelectorAll('.chat-log > *, #toasts > *').forEach((el) => el.remove()));
+    await page.screenshot({ path: `${out}/omens.png` });
+    await page.click('.omen button:has-text("Decide later")');
+    await wait(page, 1500);
+    await page.screenshot({ path: `${out}/weather.png` });
     await page.context().close();
   },
 
-  /** The Thaw: a later wave of creeps that fight back, with a Frost Nova being aimed. */
+  /** The Thaw: a later wave of creeps that fight back. */
   async thaw() {
     const page = await newPage();
     await page.click('button:has-text("Private room")');
@@ -170,21 +186,6 @@ const shots = {
     await chat(page, '-wave 17');
     await wait(page, 21000);
     await page.evaluate(() => document.querySelectorAll('.chat-log > *').forEach((el) => el.remove()));
-    // aim a Frost Nova at the thick of the wave
-    const at = await page.evaluate(() => {
-      const st = window.winterward.game.state;
-      const mine = [...st.creeps.values()].filter((c) => c.lane === st.myLane && !Number.isFinite(c.deadAt));
-      let best = null;
-      let most = -1;
-      for (const c of mine) {
-        const n = mine.filter((d) => (d.x - c.x) ** 2 + (d.y - c.y) ** 2 < 6).length;
-        if (n > most) [best, most] = [c, n];
-      }
-      return best ? window.winterward.game.renderer.cam.toScreen(5 + best.x, 6 + best.y) : null;
-    });
-    await page.keyboard.press('1');
-    if (at) await page.mouse.move(at.x, at.y);
-    await wait(page, 300);
     await page.screenshot({ path: `${out}/thaw.png` });
     await page.context().close();
   },

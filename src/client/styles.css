@@ -3794,9 +3794,6 @@ kbd {
   }
 }
 
-.omen {
-  max-width: 640px;
-}
 
 .omen-kicker {
   font-size: 11px;
@@ -3812,7 +3809,7 @@ kbd {
 
 .omen-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
   gap: 10px;
   margin-top: 12px;
 }

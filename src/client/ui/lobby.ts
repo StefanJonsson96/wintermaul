@@ -137,8 +137,8 @@ export class LobbyScreen {
       h(
         'div',
         { class: 'tl-text' },
-        h('b', null, 'Campaign talents'),
-        h('span', { class: 'muted' }, talentsOn ? 'Everyone fights with the talents they earned in the campaign.' : 'Off: everyone plays on equal terms, the classic way.'),
+        h('b', null, 'Campaign talents and relics'),
+        h('span', { class: 'muted' }, talentsOn ? 'Everyone fights with the Rune Web passives and relics they earned.' : 'Off: everyone plays on equal terms, the classic way.'),
       ),
       h(
         'button',

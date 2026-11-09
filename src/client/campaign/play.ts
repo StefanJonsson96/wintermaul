@@ -1,6 +1,7 @@
 // Runs a campaign stage as a local game: stage rules plus the player's talents, a goal tracker
 // on the HUD, and the stars and runestones on the end screen.
 import { chapterOf, type Stage } from '../../shared/campaign';
+import { applyRelics } from '../../shared/relics';
 import { modsFromLoadout } from '../../shared/talents';
 import type { GameView } from '../game/view';
 import type { LocalGame, LocalOptions } from '../local';
@@ -85,16 +86,16 @@ function rewardPanel(stage: Stage, o: Outcome): HTMLElement {
   return h('div', { class: 'reward-panel' }, stars, ...lines);
 }
 
-/** A campaign stage as a local game. `talents` are the save's, or those a continued game started with. */
-export function stageOptions(stage: Stage, save: CampaignSave, actions: StageActions, talents = save.talents): Omit<LocalOptions, 'name'> {
+/** A campaign stage as a local game. `talents` and `relics` are the save's, or those a continued game started with. */
+export function stageOptions(stage: Stage, save: CampaignSave, actions: StageActions, talents = save.talents, relics = save.relics): Omit<LocalOptions, 'name'> {
   let outcome: Outcome | null = null;
   const chapter = chapterOf(stage);
   return {
     mode: 'campaign',
     settings: { difficulty: stage.difficulty, raceMode: 'pick', endless: !!stage.endless, waves: stage.waves },
     skipSetup: true,
-    rules: { ...stage.rules, mods: { 0: modsFromLoadout(talents) } },
-    save: { kind: { mode: 'campaign', stage: stage.id, talents: { ...talents } }, title: stage.endless ? stage.name : `${stage.name} (${stageLabel(stage).toLowerCase().replace('act ii', 'Act II')})` },
+    rules: { ...stage.rules, mods: { 0: applyRelics(modsFromLoadout(talents), relics) } },
+    save: { kind: { mode: 'campaign', stage: stage.id, talents: { ...talents }, relics: [...relics] }, title: stage.endless ? stage.name : `${stage.name} (${stageLabel(stage).toLowerCase().replace('act ii', 'Act II')})` },
     attach: (view, local) => {
       new GoalTracker(view, local, stage);
       local.system(`${stage.name}: ${stage.story}`);

@@ -177,7 +177,7 @@ export class MenuScreen {
         'div',
         { class: 'menu-links' },
         h('button', { class: 'btn', onclick: () => openHelp() }, icon('help', 16), 'How to play'),
-        h('button', { class: 'btn', onclick: () => this.solo.achievements() }, icon('trophy', 16), 'Achievements', this.featSub),
+        h('button', { class: 'btn', onclick: () => this.solo.achievements() }, icon('trophy', 16), 'Relics & achievements', this.featSub),
         this.musicButton(),
       ),
     );

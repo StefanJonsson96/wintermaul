@@ -88,3 +88,17 @@ describe('achievements', () => {
     expect(a.tally).toEqual({ games: 5, wins: 2, kills: 1200 });
   });
 });
+
+describe('relics', () => {
+  it('are each won by one achievement', async () => {
+    const { RELICS, relicSlots, cleanRelics, applyRelics } = await import('../src/shared/relics');
+    const ids = new Set(FEATS.map((f) => f.id));
+    for (const r of RELICS) expect(ids.has(r.feat)).toBe(true);
+    expect(new Set(RELICS.map((r) => r.feat)).size).toBe(RELICS.length);
+    expect(new Set(RELICS.map((r) => r.id)).size).toBe(RELICS.length);
+    expect(relicSlots(0)).toBe(1);
+    expect(relicSlots(12)).toBe(2);
+    expect(cleanRelics(['tooth', 'tooth', 'nope', 'ward', 'wardstone', 'lily'])).toEqual(['tooth', 'wardstone']);
+    expect(applyRelics({}, ['tooth', 'wardstone'])).toEqual({ vsBoss: 1.2, lives: 5 });
+  });
+});

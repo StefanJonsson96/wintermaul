@@ -61,7 +61,7 @@ const ARMOR_NAMES: Record<ArmorType, string> = { light: 'Light', medium: 'Medium
 const TYPE_NAMES: Record<DamageType, string> = { pierce: 'Pierce', impact: 'Impact', magic: 'Magic', elemental: 'Elemental', pure: 'Pure' };
 const list = (names: string[]) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
 
-const E = {
+export const E = {
   damage: (v: number): Effect => ({ text: `${pct(v)} damage`, apply: mul('dmg', v), bad: v < 0 }),
   types: (types: DamageType[], v: number): Effect => ({
     bad: v < 0,
@@ -113,7 +113,7 @@ const E = {
   leakMul: (v: number): Effect => ({ text: `Creeps that leak from your lane cost ${v + 1 === 2 ? 'twice' : `${Math.round((v + 1) * 100)}%`} the lives`, apply: mul('leakMul', v), bad: true }),
   gold: (n: number): Effect => ({ text: `+${n} starting gold`, apply: add('startGold', n) }),
   lumber: (n: number): Effect => ({ text: `+${n} lumber at the start: an extra race, or an early Legend`, apply: add('startLumber', n) }),
-  bounty: (v: number): Effect => ({ text: `Kills pay ${pct(v)} gold`, apply: mul('bounty', v) }),
+  bounty: (v: number): Effect => ({ text: `Kills pay ${pct(v)} gold`, apply: mul('bounty', v), bad: v < 0 }),
   waveBonus: (v: number): Effect => ({ text: `The end-of-wave bonus pays ${pct(v)}`, apply: mul('waveBonus', v), bad: v < 0 }),
   refund: (v: number): Effect => ({ text: `Selling refunds ${Math.round(v * 100)}% more`, apply: add('refund', v) }),
   interest: (rate: number, cap: number): Effect => ({

@@ -1,6 +1,7 @@
 // Progress lives in localStorage: stars per stage, runestones, the talent loadout and achievements.
 import { ALL_STAGES, type Chapter, CHAPTERS, chapterOf, ENDLESS_AFTER, endlessReward, STAGES, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
 import { type Loadout, NODE_BY_ID, sanitizeLoadout, totalSpent } from '../../shared/talents';
+import { cleanRelics } from '../../shared/relics';
 import { CloudSave } from './cloud';
 
 const KEY = 'winterward.campaign.v1';
@@ -21,6 +22,8 @@ export interface CampaignSave {
   feats: Record<string, number>;
   /** Totals over every game played to the end. */
   tally: Tally;
+  /** Relics carried into games (unlocked by achievements). */
+  relics: string[];
 }
 
 export interface Tally {
@@ -30,7 +33,7 @@ export interface Tally {
 }
 
 export function emptySave(): CampaignSave {
-  return { stars: {}, best: {}, stones: 0, talents: {}, endlessBest: 0, feats: {}, tally: { games: 0, wins: 0, kills: 0 } };
+  return { stars: {}, best: {}, stones: 0, talents: {}, endlessBest: 0, feats: {}, tally: { games: 0, wins: 0, kills: 0 }, relics: [] };
 }
 
 function numbers(raw: unknown): Record<string, number> {
@@ -63,6 +66,7 @@ export function parseSave(json: string | null): CampaignSave {
       refunded: old || raw.refunded === true || undefined,
       feats: numbers(raw.feats),
       tally: tally(raw.tally),
+      relics: cleanRelics(raw.relics),
     };
   } catch {
     return emptySave();

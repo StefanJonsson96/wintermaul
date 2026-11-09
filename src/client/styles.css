@@ -3582,3 +3582,132 @@ kbd {
 .music-btn.off {
   opacity: 0.6;
 }
+
+/* relics */
+.feats-tabs {
+  display: flex;
+  gap: 6px;
+  margin-right: auto;
+  margin-left: 14px;
+}
+
+.relic-intro {
+  margin: 10px 0 8px;
+  font-size: 13px;
+}
+
+.relic-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.relic-slot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--border-strong);
+  min-height: 58px;
+}
+
+.relic-slot.on {
+  border-style: solid;
+  border-color: rgba(190, 140, 255, 0.55);
+  background: linear-gradient(100deg, rgba(120, 70, 200, 0.18), rgba(255, 255, 255, 0.02));
+}
+
+.relic-slot > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.relic-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: #56627a;
+}
+
+.relic-slot.on .relic-icon,
+.relic.got .relic-icon {
+  background: radial-gradient(circle at 35% 30%, rgba(214, 180, 255, 0.45), rgba(120, 70, 200, 0.25));
+  color: #f1e4ff;
+  box-shadow: 0 0 14px rgba(170, 120, 255, 0.35);
+}
+
+.relic {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.025);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.relic:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.relic.got:hover {
+  border-color: rgba(190, 140, 255, 0.5);
+}
+
+.relic.worn {
+  border-color: rgba(190, 140, 255, 0.8);
+  background: rgba(150, 100, 255, 0.1);
+}
+
+.relic-worn {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: rgba(190, 140, 255, 0.25);
+  color: #e9dcff;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.relic-fx {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #bfe6c9;
+}
+
+.relic-fx .bad {
+  color: #ffb3b3;
+}
+
+.relic-flavor {
+  font-style: italic;
+  color: #8f98ad !important;
+}
+
+.feat-reward {
+  color: #cdb4ff !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.feat-toast em,
+.fe-row em {
+  font-style: normal;
+  font-size: 11.5px;
+  color: #d9c4ff;
+}

@@ -14,6 +14,7 @@ import {
 } from '../shared/protocol';
 import { Bot } from '../shared/sim/bot';
 import { Game, type GameRules } from '../shared/sim/game';
+import { applyRelics, cleanRelics } from '../shared/relics';
 import { type Loadout, modsFromLoadout, sanitizeLoadout, totalSpent } from '../shared/talents';
 import { VERSION } from '../shared/version';
 import { endStats, GameRunner } from '../shared/sim/runner';
@@ -29,6 +30,7 @@ export interface Session {
   budget: number;
   budgetAt: number;
   talents: Loadout;
+  relics: string[];
 }
 
 interface Seat {
@@ -361,7 +363,7 @@ export class Room {
     if (players.length === 0) return;
     const seed = (Math.random() * 2 ** 31) | 0;
     const rules: GameRules = {};
-    if (this.settings.talents) rules.mods = Object.fromEntries(this.seats.flatMap((seat, id) => (seat?.session ? [[id, modsFromLoadout(seat.session.talents)]] : [])));
+    if (this.settings.talents) rules.mods = Object.fromEntries(this.seats.flatMap((seat, id) => (seat?.session ? [[id, applyRelics(modsFromLoadout(seat.session.talents), seat.session.relics)]] : [])));
     this.game = new Game({ ...this.settings }, players, seed, { rules });
     this.seats.forEach((seat, id) => {
       if (seat?.isBot) seat.bot = new Bot(id, seed + id);
@@ -378,7 +380,7 @@ export class Room {
     const chooser = this.game.phase === 'setup' ? this.seats[this.game.chooser] : null;
     if (chooser) this.system(`The game begins! ${chooser.name} chooses the rules.`);
     else this.system(`The game begins! ${DIFFICULTIES[this.settings.difficulty].label}, ${RACE_MODES[this.settings.raceMode].label}${this.settings.endless ? ', endless' : ''}.`);
-    if (this.settings.talents) this.system('Campaign talents are on: everyone fights with the talents they earned.');
+    if (this.settings.talents) this.system('Campaign talents are on: everyone fights with the passives and relics they earned.');
   }
 
   backToLobby(): void {
@@ -435,6 +437,7 @@ export class Lobby {
       budget: 60,
       budgetAt: Date.now(),
       talents: {},
+      relics: [],
     };
     this.sessions.set(s.id, s);
     this.byToken.set(s.token, s);
@@ -532,6 +535,7 @@ export class Lobby {
         return;
       case 'talents':
         s.talents = sanitizeLoadout(msg.loadout);
+        s.relics = cleanRelics(msg.relics);
         if (s.room?.state === 'lobby') s.room.broadcastRoom();
         return;
       default:

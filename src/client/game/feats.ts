@@ -1,5 +1,6 @@
 // Watches a game for achievements, and announces new ones.
 import type { GameEvent } from '../../shared/protocol';
+import { RELICS } from '../../shared/relics';
 import { audio } from '../audio';
 import { earn, type Feat, FEAT_BY_ID } from '../campaign/feats';
 import { loadSave, storeSave } from '../campaign/save';
@@ -11,7 +12,8 @@ import type { GameView } from './view';
 export function announce(f: Feat): void {
   const root = document.getElementById('toasts');
   if (!root) return;
-  const el = h('div', { class: 'toast feat-toast' }, h('span', { class: 'ft-icon' }, icon(f.icon, 20)), h('div', null, h('small', null, 'Achievement'), h('b', null, f.name), h('span', null, f.text)));
+  const relic = RELICS.find((r) => r.feat === f.id);
+  const el = h('div', { class: 'toast feat-toast' }, h('span', { class: 'ft-icon' }, icon(f.icon, 20)), h('div', null, h('small', null, 'Achievement'), h('b', null, f.name), h('span', null, f.text), relic ? h('em', null, `Relic won: ${relic.name}`) : null));
   root.appendChild(el);
   audio.play('feat', 0.7);
   setTimeout(() => el.classList.add('out'), 4800);
@@ -141,7 +143,7 @@ export class FeatTracker {
       'div',
       { class: 'feat-earned' },
       h('div', { class: 'fe-title' }, this.fresh.length > 1 ? `${this.fresh.length} achievements earned` : 'Achievement earned'),
-      ...this.fresh.map((f) => h('div', { class: 'fe-row' }, h('span', { class: 'ft-icon' }, icon(f.icon, 16)), h('b', null, f.name), h('span', null, f.text))),
+      ...this.fresh.map((f) => h('div', { class: 'fe-row' }, h('span', { class: 'ft-icon' }, icon(f.icon, 16)), h('b', null, f.name), h('span', null, f.text), RELICS.some((r) => r.feat === f.id) ? h('em', null, `relic: ${RELICS.find((r) => r.feat === f.id)!.name}`) : null)),
     );
   }
 }

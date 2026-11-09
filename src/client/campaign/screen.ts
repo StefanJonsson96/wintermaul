@@ -1,5 +1,6 @@
 // The campaign screen: a map per act, a briefing for the chosen stage and the runestone purse.
 import { type Chapter, CHAPTERS, chapterOf, ENDLESS_AFTER, STAGE_BY_ID, type Stage } from '../../shared/campaign';
+import { openAchievements, relicLine } from '../ui/achievements';
 import { RACE_BY_ID } from '../../shared/data/races';
 import { CREEPS, wavesOf } from '../../shared/data/waves';
 import { abilityLines } from '../game/describe';
@@ -76,6 +77,7 @@ export class CampaignScreen {
   private map: CampaignMap;
   private brief: HTMLElement;
   private purse: HTMLElement;
+  private relicBtn: HTMLButtonElement;
   private talentBtn: HTMLButtonElement;
   private selected: Stage;
   private chapter: Chapter = CHAPTERS[0];
@@ -97,6 +99,7 @@ export class CampaignScreen {
       this.actions.talentsChanged?.();
     };
     this.talentBtn = h('button', { class: 'btn primary', onclick: () => openTalents(this.save, changed) }, icon('star', 16), 'Rune Web') as HTMLButtonElement;
+    this.relicBtn = h('button', { class: 'btn', title: 'Relics you carry', onclick: () => openAchievements({ onChange: () => (this.save = loadSave(), changed()) }) }, icon('gem', 16), h('span', { class: 'roomy-only' }, 'Relics')) as HTMLButtonElement;
     this.tabs = h('div', { class: 'camp-tabs' });
     this.title = h('h2', null, '');
     root.append(
@@ -108,7 +111,7 @@ export class CampaignScreen {
           { class: 'camp-head' },
           h('button', { class: 'btn ghost', onclick: () => this.actions.back() }, icon('back', 16), 'Menu'),
           h('div', { class: 'camp-title' }, this.title, this.tabs),
-          h('div', { class: 'camp-head-right' }, this.purse, this.talentBtn),
+          h('div', { class: 'camp-head-right' }, this.purse, this.relicBtn, this.talentBtn),
         ),
         h('div', { class: 'camp-body' }, h('div', { class: 'panel camp-map' }, canvas), this.brief),
       ),
@@ -186,6 +189,7 @@ export class CampaignScreen {
     clear(this.purse);
     this.purse.append(icon('rune', 18), h('b', null, String(free)), h('span', null, free === 1 ? 'runestone' : 'runestones'));
     this.talentBtn.classList.toggle('glow', free > 0);
+    this.relicBtn.title = `Relics you carry: ${relicLine(this.save)}`;
     this.renderTabs();
     this.renderBrief();
   }

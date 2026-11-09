@@ -62,9 +62,9 @@ function boot(): void {
   const menu = new MenuScreen($('#screen-menu'), net, {
     tutorial: () => startLocal(tutorialOptions({ campaign: leaveTo('campaign'), menu: leaveTo('menu') })),
     campaign: () => show('campaign'),
-    skirmish: () => startLocal(skirmishOptions()),
+    skirmish: () => startLocal(skirmishOptions(loadSave().relics)),
     campaignProgress: () => progressLine(loadSave()),
-    achievements: () => openAchievements(),
+    achievements: () => openAchievements({ onChange: sendTalents }),
     featLine: () => {
       const { got, all } = featCount();
       return `${got} / ${all}`;
@@ -76,7 +76,10 @@ function boot(): void {
   const lobby = new LobbyScreen($('#screen-lobby'), net, () => sendTalents());
   const stageActions = { play: (stage: Stage) => playStage(stage), map: leaveTo('campaign') };
   const playStage = (stage: Stage) => startLocal(stageOptions(stage, loadSave(), stageActions));
-  const sendTalents = () => net.send({ type: 'talents', loadout: loadSave().talents });
+  const sendTalents = () => {
+    const s = loadSave();
+    net.send({ type: 'talents', loadout: s.talents, relics: s.relics });
+  };
   const campaign = new CampaignScreen($('#screen-campaign'), {
     play: playStage,
     back: () => show('menu'),
@@ -121,10 +124,10 @@ function boot(): void {
   function optionsFor(kind: SavedKind): Omit<LocalOptions, 'name'> | null {
     switch (kind.mode) {
       case 'skirmish':
-        return skirmishOptions();
+        return skirmishOptions(kind.relics ?? []);
       case 'campaign': {
         const stage = STAGE_BY_ID[kind.stage];
-        return stage ? stageOptions(stage, loadSave(), stageActions, kind.talents) : null;
+        return stage ? stageOptions(stage, loadSave(), stageActions, kind.talents, kind.relics ?? []) : null;
       }
       default:
         return null;

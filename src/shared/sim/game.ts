@@ -296,6 +296,12 @@ export class Game {
     return n;
   }
 
+  towerCount(owner: number): number {
+    let n = 0;
+    for (const t of this.towers.values()) if (t.owner === owner) n++;
+    return n;
+  }
+
   build(p: Player, defId: string, x: number, y: number): CommandResult {
     const def = TOWERS[defId];
     if (!def) return { ok: false, error: 'Unknown tower' };
@@ -307,6 +313,7 @@ export class Game {
     }
     const cost = towerCost(def, p.mods);
     if (p.gold < cost) return { ok: false, error: 'Not enough gold' };
+    if (this.rules.maxTowers && this.towerCount(p.id) >= this.rules.maxTowers) return { ok: false, error: `No more stones: at most ${this.rules.maxTowers} towers here` };
     const lane = this.lanes[p.lane];
     const res = lane.grid.canPlace(x, y, this.occupiedCells(lane.index));
     if (!res.ok) return { ok: false, error: res.reason };
@@ -536,7 +543,7 @@ export class Game {
   private startWave(n: number): void {
     this.wave = n;
     this.phase = 'wave';
-    this.setWeather(this.settings.weather === false ? 'clear' : weatherOf(this.seed, n));
+    this.setWeather(this.rules.weather ?? (this.settings.weather === false ? 'clear' : weatherOf(this.seed, n)));
     this.phaseCounter++;
     for (const p of this.players) p.ready = false;
     const { wave } = this.waveInfo(n);
@@ -573,7 +580,7 @@ export class Game {
       return;
     }
     this.setWeather('clear');
-    if (this.settings.omens !== false && isOmenWave(n, this.finalWave, this.settings.endless)) this.offerOmens(n);
+    if (this.settings.omens !== false && isOmenWave(n, this.finalWave, this.settings.endless, this.rules.omenEvery)) this.offerOmens(n);
     this.phase = 'build';
     this.phaseCounter++;
     this.countdown = BETWEEN_WAVES;
@@ -746,6 +753,8 @@ export class Game {
       wave: this.waveState(),
       endlessDefs: this.endlessDefs,
       weatherSeed: this.settings.weather === false ? undefined : this.seed,
+      weatherForced: this.rules.weather,
+      maxTowers: this.rules.maxTowers,
       races: this.rules.races?.length ? this.rules.races : undefined,
       mods: Object.fromEntries(this.players.filter((p) => Object.keys(p.mods).length).map((p) => [p.id, p.mods])),
     };

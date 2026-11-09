@@ -80,6 +80,8 @@ export class ClientState {
   beams: { tower: number; creep: number; ramp: number }[] = [];
   /** Seeds the weather forecast; null when the game has no weather. */
   weatherSeed: number | null;
+  weatherForced: WeatherId | null;
+  maxTowers: number | null;
   private endless = new Map<string, CreepDef>();
   private timeline: GameEvent[] = [];
   private offset: number | null = null;
@@ -103,6 +105,8 @@ export class ClientState {
     this.mods = full.mods ?? {};
     this.races = full.races ?? null;
     this.weatherSeed = full.weatherSeed ?? null;
+    this.weatherForced = full.weatherForced ?? null;
+    this.maxTowers = full.maxTowers ?? null;
     this.grids = full.laneOwners.map(() => new LaneGrid());
     for (const d of full.endlessDefs) this.endless.set(d.id, d);
     for (const t of full.towers) this.addTower(t, -10);
@@ -121,6 +125,7 @@ export class ClientState {
 
   /** The forecast for a wave. */
   weatherAt(n: number): WeatherId {
+    if (this.weatherForced) return this.weatherForced;
     return this.weatherSeed === null || this.settings.weather === false ? 'clear' : weatherOf(this.weatherSeed, n);
   }
 

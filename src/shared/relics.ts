@@ -39,6 +39,7 @@ export const RELICS: Relic[] = [
   { id: 'oathband', name: 'Oathband', feat: 'coop_win', icon: 'people', flavor: 'Sworn on a shared wall.', effects: [E.lives(3), E.bossLeak(3)] },
   { id: 'compass', name: "Pathfinder's Compass", feat: 'act1', icon: 'map', flavor: 'It points north, where the trouble is.', effects: [E.prep(20), gift(40)] },
   { id: 'seed', name: 'Glacier Seed', feat: 'act2', icon: 'crystal', flavor: 'Ice that grew from a single grain.', effects: [E.stun(0.25), E.damage(0.03)] },
+  { id: 'dawnstone', name: 'Dawnstone', feat: 'act3', icon: 'flame', flavor: 'The first light after the long night, kept in a stone.', effects: [E.damage(0.06), E.lives(3), gift(50)] },
   { id: 'mantle', name: 'Starlit Mantle', feat: 'stars', icon: 'star', flavor: 'Every star you earned, sewn in.', effects: [E.damage(0.04), E.range(0.04), E.speed(0.04)] },
   { id: 'ring', name: 'Runebound Ring', feat: 'keystone', icon: 'rune', flavor: 'The web hums when you wear it.', effects: [E.types(['magic', 'elemental', 'pure'], 0.1)] },
   { id: 'thread', name: "Weaver's Thread", feat: 'weaver', icon: 'rune', flavor: 'Spun from a hundred spent runes.', effects: [E.types(['impact', 'pierce'], 0.1)] },

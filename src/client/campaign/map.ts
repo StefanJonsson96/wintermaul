@@ -95,7 +95,7 @@ export class CampaignMap {
     this.h = r.height;
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
-    const paint = this.chapter.id === 'thaw' ? paintThaw : paintTerrain;
+    const paint = this.chapter.id === 'thaw' ? paintThaw : this.chapter.id === 'night' ? paintNight : paintTerrain;
     this.terrain = paint(this.w, this.h, this.dpr, (x, y) => this.pos(x, y));
     this.flakes = Array.from({ length: Math.round((this.w * this.h) / 7000) }, () => ({ x: Math.random() * this.w, y: Math.random() * this.h, r: Math.random() * 1.6 + 0.4, v: Math.random() * 14 + 8, p: Math.random() * 6.28 }));
   }
@@ -875,6 +875,185 @@ function paintThaw(w: number, h: number, dpr: number, pos: Pos): HTMLCanvasEleme
   ctx.lineWidth = 1.5;
   ctx.strokeRect(6.5, 6.5, w - 13, h - 13);
   ctx.strokeStyle = 'rgba(120,230,220,0.1)';
+  ctx.strokeRect(11.5, 11.5, w - 23, h - 23);
+  return c;
+}
+
+// ─────────────────────────────────────────────────────────── Act III: the long night
+
+/** Paints the polar night: stars and aurora over dark tundra, the pilgrims' shrines, the cairns, a red moon, the fog sea and the Night's Eye. */
+function paintNight(w: number, h: number, dpr: number, pos: Pos): HTMLCanvasElement {
+  const [c, ctx] = makeCanvas(w * dpr, h * dpr);
+  ctx.scale(dpr, dpr);
+  const rng = new Rng(3131);
+  const rnd = () => rng.next();
+  const u = Math.min(w, h) / 600;
+
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#04060e');
+  bg.addColorStop(0.45, '#0a1226');
+  bg.addColorStop(1, '#141d33');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+  // stars, thick in the sky and fading over the snow
+  for (let i = 0; i < 420; i++) {
+    const y = rnd() ** 1.6 * h;
+    ctx.fillStyle = `rgba(230,240,255,${(0.2 + rnd() * 0.7) * (1 - y / h)})`;
+    ctx.fillRect(rnd() * w, y, rnd() < 0.08 ? 2 : 1, rnd() < 0.08 ? 2 : 1);
+  }
+  // a great aurora, curtains of green and violet
+  for (let k = 0; k < 5; k++) {
+    for (let i = 0; i <= 60; i++) {
+      const x = (i / 60) * w;
+      const y = h * (0.1 + k * 0.03) + Math.sin(i * 0.3 + k * 1.3) * 22 * u + Math.sin(i * 0.11 + k) * 30 * u;
+      const g = ctx.createLinearGradient(x, y - 60 * u, x, y + 10 * u);
+      const col = k % 2 ? '170,120,255' : '100,255,190';
+      g.addColorStop(0, `rgba(${col},0)`);
+      g.addColorStop(0.8, `rgba(${col},${0.05 + 0.02 * (k % 3)})`);
+      g.addColorStop(1, `rgba(${col},0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(x, y - 60 * u, w / 60 + 1, 70 * u);
+    }
+  }
+  // the red moon over its stage
+  const moon = pos(0.62, 0.06);
+  const mg = ctx.createRadialGradient(moon.x, moon.y, 0, moon.x, moon.y, 70 * u);
+  mg.addColorStop(0, 'rgba(255,120,100,0.5)');
+  mg.addColorStop(1, 'rgba(255,60,60,0)');
+  ctx.fillStyle = mg;
+  ctx.fillRect(moon.x - 70 * u, moon.y - 70 * u, 140 * u, 140 * u);
+  ctx.fillStyle = '#d9483c';
+  ctx.beginPath();
+  ctx.arc(moon.x, moon.y, 16 * u, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(120,20,20,0.5)';
+  ctx.beginPath();
+  ctx.arc(moon.x + 4 * u, moon.y - 3 * u, 5 * u, 0, Math.PI * 2);
+  ctx.arc(moon.x - 6 * u, moon.y + 5 * u, 3 * u, 0, Math.PI * 2);
+  ctx.fill();
+  // dark tundra: rolling drifts, lit faintly by the sky
+  for (let i = 0; i < 9; i++) {
+    const y0 = h * (0.34 + i * 0.08);
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let x = 0; x <= w; x += w / 40) ctx.lineTo(x, y0 + Math.sin(x / w * 6 + i * 1.7) * 14 * u + Math.sin(x / w * 17 + i) * 5 * u);
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${40 + i * 6},${52 + i * 7},${82 + i * 8},0.22)`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(170,200,255,0.07)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  // mountains along the edges, the whiteout pass among them
+  const peaks: { x: number; y: number; s: number }[] = [];
+  for (let i = 0; i < 9; i++) peaks.push({ ...pos(-0.03 + rnd() * 0.06, 0.25 + i * 0.07), s: 30 + rnd() * 26 });
+  for (let i = 0; i < 6; i++) peaks.push({ ...pos(0.14 + (rnd() - 0.5) * 0.14, 0.5 + (rnd() - 0.5) * 0.12), s: 24 + rnd() * 18 });
+  for (let i = 0; i < 12; i++) peaks.push({ ...pos(0.2 + i * 0.065 + (rnd() - 0.5) * 0.03, 0.97 + rnd() * 0.05), s: 22 + rnd() * 20 });
+  peaks.sort((a, b) => a.y - b.y);
+  for (const p of peaks) {
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    mountain(ctx, p.x, p.y, p.s * u, rnd);
+    ctx.restore();
+  }
+  // snow streaks over the whiteout pass
+  const pass = pos(0.2, 0.58);
+  ctx.strokeStyle = 'rgba(230,240,255,0.18)';
+  for (let i = 0; i < 40; i++) {
+    const x = pass.x + (rnd() - 0.5) * 120 * u;
+    const y = pass.y + (rnd() - 0.5) * 90 * u;
+    ctx.lineWidth = 1 + rnd();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 18 * u, y + 5 * u);
+    ctx.stroke();
+  }
+  // the village of last light: a few warm windows
+  const vil = pos(0.1, 0.84);
+  for (let i = 0; i < 6; i++) {
+    const x = vil.x + (rnd() - 0.3) * 70 * u;
+    const y = vil.y + (rnd() - 0.5) * 30 * u;
+    ctx.fillStyle = '#1a2033';
+    ctx.fillRect(x - 6 * u, y - 5 * u, 12 * u, 9 * u);
+    ctx.beginPath();
+    ctx.moveTo(x - 8 * u, y - 5 * u);
+    ctx.lineTo(x, y - 12 * u);
+    ctx.lineTo(x + 8 * u, y - 5 * u);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,190,90,0.9)';
+    ctx.fillRect(x - 2 * u, y - 2 * u, 3 * u, 3 * u);
+    const lg = ctx.createRadialGradient(x, y, 0, x, y, 16 * u);
+    lg.addColorStop(0, 'rgba(255,180,80,0.25)');
+    lg.addColorStop(1, 'rgba(255,180,80,0)');
+    ctx.fillStyle = lg;
+    ctx.fillRect(x - 16 * u, y - 16 * u, 32 * u, 32 * u);
+  }
+  // shrine lanterns along the pilgrims' road
+  for (let i = 0; i < 7; i++) {
+    const p = pos(0.25 + i * 0.03 + (rnd() - 0.5) * 0.02, 0.72 + Math.sin(i) * 0.04);
+    ctx.fillStyle = '#2a2f40';
+    ctx.fillRect(p.x - 1.5 * u, p.y - 10 * u, 3 * u, 10 * u);
+    const lg = ctx.createRadialGradient(p.x, p.y - 11 * u, 0, p.x, p.y - 11 * u, 10 * u);
+    lg.addColorStop(0, 'rgba(255,215,130,0.9)');
+    lg.addColorStop(1, 'rgba(255,200,100,0)');
+    ctx.fillStyle = lg;
+    ctx.fillRect(p.x - 10 * u, p.y - 21 * u, 20 * u, 20 * u);
+  }
+  // the last cairns: piled stones
+  for (let i = 0; i < 9; i++) {
+    const p = pos(0.5 + (rnd() - 0.5) * 0.14, 0.52 + (rnd() - 0.5) * 0.12);
+    for (let k = 0; k < 3; k++) {
+      const r = (6 - k * 1.5) * u;
+      ctx.fillStyle = k % 2 ? '#5a6278' : '#454c60';
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y - k * 6 * u, r * 1.3, r, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  // the fog sea
+  const sea = pos(0.78, 0.6);
+  for (let i = 0; i < 26; i++) {
+    const x = sea.x + (rnd() - 0.5) * 220 * u;
+    const y = sea.y + (rnd() - 0.5) * 120 * u;
+    const r = (30 + rnd() * 40) * u;
+    const fg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    fg.addColorStop(0, 'rgba(210,225,240,0.14)');
+    fg.addColorStop(1, 'rgba(210,225,240,0)');
+    ctx.fillStyle = fg;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // the Night's Eye: a black spire with a pale, open eye
+  const eye = pos(0.89, 0.13);
+  ctx.fillStyle = '#05070d';
+  ctx.beginPath();
+  ctx.moveTo(eye.x - 18 * u, eye.y + 10 * u);
+  ctx.lineTo(eye.x - 5 * u, eye.y - 70 * u);
+  ctx.lineTo(eye.x, eye.y - 84 * u);
+  ctx.lineTo(eye.x + 5 * u, eye.y - 70 * u);
+  ctx.lineTo(eye.x + 18 * u, eye.y + 10 * u);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(170,140,255,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  const eg = ctx.createRadialGradient(eye.x, eye.y - 50 * u, 0, eye.x, eye.y - 50 * u, 22 * u);
+  eg.addColorStop(0, 'rgba(220,210,255,0.9)');
+  eg.addColorStop(0.3, 'rgba(150,120,255,0.4)');
+  eg.addColorStop(1, 'rgba(120,90,255,0)');
+  ctx.fillStyle = eg;
+  ctx.fillRect(eye.x - 22 * u, eye.y - 72 * u, 44 * u, 44 * u);
+
+  compass(ctx, pos(0.06, 0.08).x, pos(0.06, 0.08).y, 30 * u);
+  const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(1,2,8,0.75)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(170,140,255,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(6.5, 6.5, w - 13, h - 13);
+  ctx.strokeStyle = 'rgba(170,140,255,0.1)';
   ctx.strokeRect(11.5, 11.5, w - 23, h - 23);
   return c;
 }

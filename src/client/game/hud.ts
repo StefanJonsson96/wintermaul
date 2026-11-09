@@ -57,6 +57,7 @@ export class Hud {
   selectionKeys: { key: string; action: () => void }[] = [];
   private raceModal: ModalHandle | null = null;
   private omenModal: ModalHandle | null = null;
+  private buildTitle!: HTMLElement;
   private setup: { modal: ModalHandle; refresh: () => void } | null = null;
   private endModal: ModalHandle | null = null;
 
@@ -129,8 +130,9 @@ export class Hud {
     const mini = h('div', { class: 'panel minimap' }, this.minimap);
 
     this.buildGrid = h('div', { class: 'build-grid' });
+    this.buildTitle = h('span', null, 'Build');
     this.buildHint = h('span', null, touchDevice ? 'Tap a tower, then the map' : 'Shift = keep placing');
-    this.buildPanel = h('div', { class: 'panel build-panel' }, h('div', { class: 'panel-title' }, h('span', null, 'Build'), this.buildHint), this.buildGrid);
+    this.buildPanel = h('div', { class: 'panel build-panel' }, h('div', { class: 'panel-title' }, this.buildTitle, this.buildHint), this.buildGrid);
     this.selectPanel = h('div', { class: 'panel select-panel hidden' });
     const card = h('div', { class: 'command-card' }, this.buildPanel, this.selectPanel);
     this.card = card;
@@ -205,6 +207,11 @@ export class Hud {
     this.lastLives = w.lives;
     this.setText(this.goldEl, fmt(me?.gold ?? 0));
     this.setText(this.lumberEl, String(me?.lumber ?? 0));
+    if (s.maxTowers) {
+      let n = 0;
+      for (const t of s.towers.values()) if (t.owner === s.you) n++;
+      this.setText(this.buildTitle, `Build · ${n}/${s.maxTowers} towers`);
+    }
     const humans = s.players.filter((p) => !p.isBot && p.connected);
     const readyN = humans.filter((p) => p.ready).length;
     const canReady = w.phase === 'build' && s.you >= 0;

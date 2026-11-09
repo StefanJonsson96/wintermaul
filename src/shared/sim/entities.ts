@@ -25,6 +25,12 @@ export interface GameRules {
   regen?: number;
   armor?: number;
   countMul?: number;
+  /** Every wave has this weather (whatever the rules dialog says). */
+  weather?: import('./omens').WeatherId;
+  /** Shrines come after every this many waves instead of five. */
+  omenEvery?: number;
+  /** At most this many towers per player. */
+  maxTowers?: number;
   /** Talent bonuses by player id. */
   mods?: Record<number, PlayerMods>;
 }

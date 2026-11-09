@@ -84,26 +84,26 @@ export interface Boon {
 }
 
 export const BOONS: Boon[] = [
-  { id: 'ember', name: "The Smith's Ember", icon: 'hammer', effects: [E.damage(0.08)] },
-  { id: 'hawk', name: "Hawk's Eye", icon: 'eye', effects: [E.range(0.08)] },
-  { id: 'hands', name: 'Restless Hands', icon: 'bolt', effects: [E.speed(0.1)] },
-  { id: 'wolf', name: 'Wolf Winter', icon: 'crown', effects: [E.vsBoss(0.25)] },
-  { id: 'pockets', name: 'Deep Pockets', icon: 'coin', effects: [], goldPerWave: 22 },
-  { id: 'hearth', name: 'Hearth Blessing', icon: 'heart', effects: [], now: { lives: 6 } },
+  { id: 'ember', name: "The Smith's Ember", icon: 'hammer', effects: [E.damage(0.05)] },
+  { id: 'hawk', name: "Hawk's Eye", icon: 'eye', effects: [E.range(0.05)] },
+  { id: 'hands', name: 'Restless Hands', icon: 'bolt', effects: [E.speed(0.06)] },
+  { id: 'wolf', name: 'Wolf Winter', icon: 'crown', effects: [E.vsBoss(0.15)] },
+  { id: 'pockets', name: 'Deep Pockets', icon: 'coin', effects: [], goldPerWave: 15 },
+  { id: 'hearth', name: 'Hearth Blessing', icon: 'heart', effects: [], now: { lives: 4 } },
   { id: 'axe', name: "Woodcutter's Luck", icon: 'log', effects: [], now: { lumber: 1 } },
-  { id: 'raven', name: "Raven's Tithe", icon: 'wing', effects: [E.bounty(0.12)] },
-  { id: 'coldiron', name: 'Cold Iron', icon: 'snow', effects: [E.slow(0.2), E.slowDur(0.2)] },
-  { id: 'witchfire', name: 'Witchfire', icon: 'flame', effects: [E.poison(0.3), E.burn(0.3)] },
-  { id: 'frostedge', name: 'Frost Edge', icon: 'sword', effects: [E.crit(0.06)] },
-  { id: 'sunder', name: 'Sundering Hymn', icon: 'shield', effects: [E.vsArmor(['heavy', 'fortified'], 0.18)] },
-  { id: 'starlight', name: 'Starlight', icon: 'star', effects: [E.types(['magic', 'elemental', 'pure'], 0.15)] },
-  { id: 'steelrain', name: 'Steel Rain', icon: 'arrows', effects: [E.types(['impact', 'pierce'], 0.15)] },
-  { id: 'skyhunter', name: 'Skyhunter', icon: 'wing', effects: [E.vsAir(0.3)] },
-  { id: 'moon', name: "Executioner's Moon", icon: 'skull', effects: [E.execute(0.05)] },
+  { id: 'raven', name: "Raven's Tithe", icon: 'wing', effects: [E.bounty(0.08)] },
+  { id: 'coldiron', name: 'Cold Iron', icon: 'snow', effects: [E.slow(0.12), E.slowDur(0.15)] },
+  { id: 'witchfire', name: 'Witchfire', icon: 'flame', effects: [E.poison(0.2), E.burn(0.2)] },
+  { id: 'frostedge', name: 'Frost Edge', icon: 'sword', effects: [E.crit(0.04)] },
+  { id: 'sunder', name: 'Sundering Hymn', icon: 'shield', effects: [E.vsArmor(['heavy', 'fortified'], 0.12)] },
+  { id: 'starlight', name: 'Starlight', icon: 'star', effects: [E.types(['magic', 'elemental', 'pure'], 0.1)] },
+  { id: 'steelrain', name: 'Steel Rain', icon: 'arrows', effects: [E.types(['impact', 'pierce'], 0.1)] },
+  { id: 'skyhunter', name: 'Skyhunter', icon: 'wing', effects: [E.vsAir(0.2)] },
+  { id: 'moon', name: "Executioner's Moon", icon: 'skull', effects: [E.execute(0.03)] },
   { id: 'mason', name: 'Mason’s Oath', icon: 'brick', effects: [E.walls(2), E.refund(0.1)] },
-  { id: 'bloodprice', name: 'Blood Price', icon: 'gem', effects: [E.damage(0.22), E.leakMul(0.5)] },
-  { id: 'longnight', name: 'The Long Night', icon: 'infinity', effects: [E.speed(0.2), { text: 'Creeps in your lane run 6% faster', bad: true, apply: (m) => (m.creepSlow = (m.creepSlow ?? 0) - 0.06) }] },
-  { id: 'stoneskin', name: 'Stoneskin Pact', icon: 'shield', effects: [E.speed(-0.08)], now: { lives: 10 } },
+  { id: 'bloodprice', name: 'Blood Price', icon: 'gem', effects: [E.damage(0.14), E.leakMul(0.5)] },
+  { id: 'longnight', name: 'The Long Night', icon: 'infinity', effects: [E.speed(0.12), { text: 'Creeps in your lane run 6% faster', bad: true, apply: (m) => (m.creepSlow = (m.creepSlow ?? 0) - 0.06) }] },
+  { id: 'stoneskin', name: 'Stoneskin Pact', icon: 'shield', effects: [E.speed(-0.08)], now: { lives: 8 } },
 ];
 
 export const BOON_BY_ID: Record<string, Boon> = Object.fromEntries(BOONS.map((b) => [b.id, b]));
@@ -117,9 +117,9 @@ export function boonText(b: Boon, wave: number): { text: string; bad?: boolean }
   return out;
 }
 
-/** Every fifth wave, before the last. */
-export function isOmenWave(wave: number, finalWave: number, endless: boolean): boolean {
-  return wave > 0 && wave % 5 === 0 && (endless || wave < finalWave);
+/** Every fifth wave (or `every`), before the last. */
+export function isOmenWave(wave: number, finalWave: number, endless: boolean, every = 5): boolean {
+  return wave > 0 && wave % every === 0 && (endless || wave < finalWave);
 }
 
 /** The boons a shrine offers a player after a wave: `count` different ones they don't have. */

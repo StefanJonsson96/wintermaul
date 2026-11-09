@@ -22,9 +22,11 @@ describe('campaign stages', () => {
     }
   });
 
-  it('give runestones for a good part of the web, but not all of it', () => {
-    expect(CAMPAIGN_STONES).toBeGreaterThan(TREE_COST * 0.5);
-    expect(CAMPAIGN_STONES).toBeLessThan(TREE_COST);
+  it('give runestones for most of the web in two acts, and all of it in three', () => {
+    const stones = (c: (typeof CHAPTERS)[number]) => c.stages.reduce((n, st) => n + st.rewards[0] + st.rewards[1] + st.rewards[2], 0);
+    expect(stones(CHAPTERS[0]) + stones(CHAPTERS[1])).toBeGreaterThan(TREE_COST * 0.8);
+    expect(stones(CHAPTERS[0]) + stones(CHAPTERS[1])).toBeLessThan(TREE_COST);
+    expect(CAMPAIGN_STONES).toBeGreaterThanOrEqual(TREE_COST);
   });
 
   it('award stars for reaching, winning and winning cleanly', () => {

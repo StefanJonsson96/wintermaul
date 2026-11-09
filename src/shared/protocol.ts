@@ -133,6 +133,10 @@ export interface FullState {
   races?: string[];
   /** Seeds the weather forecast (absent when weather is off). */
   weatherSeed?: number;
+  /** A stage where every wave has this weather. */
+  weatherForced?: import('./sim/omens').WeatherId;
+  /** At most this many towers per player. */
+  maxTowers?: number;
   /** Talent bonuses by player id (only players that have any). */
   mods?: Record<number, import('./sim/mods').PlayerMods>;
 }

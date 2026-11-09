@@ -357,7 +357,7 @@ export const THAW_STAGES: Stage[] = [
 ];
 
 export interface Chapter {
-  id: 'winter' | 'thaw';
+  id: 'winter' | 'thaw' | 'night';
   act: string;
   name: string;
   blurb: string;
@@ -368,9 +368,134 @@ export interface Chapter {
   opensAfter?: string;
 }
 
+const RACES_AURORA = ['arcane', 'storm', 'sun', 'prism', 'shadow', 'frost'];
+
+/** Act III: the polar night, where weather and the old shrines decide the war. */
+export const NIGHT_STAGES: Stage[] = [
+  {
+    id: 'lastlight',
+    name: 'Last Light',
+    x: 0.08,
+    y: 0.82,
+    story: 'The sun sets and does not rise again. In the last village before the long dark, the shrines are lit more often than ever.',
+    difficulty: 'normal',
+    rules: { finalWave: 14, lives: 20, omenEvery: 3, hpMul: 2.6 },
+    mutators: [{ name: 'Lit shrines', text: 'A shrine offers boons after every third wave.' }],
+    reach: 8,
+    flawless: 3,
+    rewards: [1, 1, 1],
+  },
+  {
+    id: 'whiteout',
+    name: 'Whiteout Pass',
+    x: 0.2,
+    y: 0.58,
+    story: 'The pass is one long blizzard. Towers see a stone’s throw ahead; the horde wades through the drifts.',
+    difficulty: 'normal',
+    rules: { firstWave: 6, finalWave: 20, lives: 20, startGold: 420, startLumber: 1, firstWaveDelay: 80, weather: 'blizzard', hpMul: 2.4 },
+    mutators: [{ name: 'Whiteout', text: 'Every wave is a blizzard: towers see 15% less far, creeps wade 10% slower.' }],
+    reach: 13,
+    flawless: 3,
+    rewards: [1, 1, 1],
+  },
+  {
+    id: 'pilgrims',
+    name: "Pilgrims' Road",
+    x: 0.37,
+    y: 0.76,
+    story: 'Pilgrims lit a shrine at every mile of this road. Take every gift they left you: you will need them all.',
+    difficulty: 'normal',
+    rules: { firstWave: 8, finalWave: 24, lives: 20, startGold: 560, startLumber: 2, firstWaveDelay: 90, omenEvery: 2, hpMul: 2.8 },
+    mutators: [{ name: 'Mile shrines', text: 'A shrine after every second wave, but the creeps are much tougher.' }],
+    reach: 16,
+    flawless: 3,
+    rewards: [1, 1, 1],
+    waves: 'thaw',
+  },
+  {
+    id: 'cairns',
+    name: 'The Last Cairns',
+    x: 0.5,
+    y: 0.52,
+    story: 'Nothing grows here and no stone is left to quarry. Sixty towers is all the land will give you.',
+    difficulty: 'normal',
+    rules: { firstWave: 10, finalWave: 24, lives: 20, startGold: 820, startLumber: 2, firstWaveDelay: 100, maxTowers: 60, hpMul: 2.0 },
+    mutators: [{ name: 'No more stones', text: 'At most 60 towers: make every one count, and upgrade.' }],
+    reach: 17,
+    flawless: 4,
+    rewards: [1, 1, 1],
+  },
+  {
+    id: 'auroravale',
+    name: 'Aurora Vale',
+    x: 0.36,
+    y: 0.3,
+    story: 'Under the lights the old magic wakes. Only the orders that wield it will follow you into the vale.',
+    difficulty: 'normal',
+    rules: { firstWave: 12, finalWave: 26, lives: 20, startGold: 960, startLumber: 2, firstWaveDelay: 100, weather: 'aurora', races: RACES_AURORA, hpMul: 2.6 },
+    mutators: [
+      { name: 'Endless aurora', text: 'Every wave: Magic, Elemental and Pure damage +25%.' },
+      { name: 'Orders of the lights', text: 'Only Arcanum, Stormcallers, Sunguard, Prismatic, Umbral and Frostborn.' },
+    ],
+    reach: 19,
+    flawless: 4,
+    rewards: [1, 1, 2],
+    waves: 'thaw',
+  },
+  {
+    id: 'redmoon',
+    name: 'Night of the Red Moon',
+    x: 0.6,
+    y: 0.27,
+    story: 'Once a generation the moon bleeds. The horde comes fat and furious, and its gold spills everywhere.',
+    difficulty: 'hard',
+    rules: { firstWave: 15, finalWave: 30, lives: 20, startGold: 1500, startLumber: 2, firstWaveDelay: 110, weather: 'bloodmoon', hpMul: 2.0 },
+    mutators: [{ name: 'Blood moon', text: 'Every wave: creeps have 20% more health and pay 40% more gold.' }],
+    reach: 22,
+    flawless: 4,
+    rewards: [1, 1, 2],
+  },
+  {
+    id: 'fogsea',
+    name: 'The Fog Sea',
+    x: 0.76,
+    y: 0.55,
+    story: 'A frozen sea under a fog so thick the towers fire at shadows. Slows linger in the cold; nothing else does.',
+    difficulty: 'normal',
+    rules: { firstWave: 18, finalWave: 32, lives: 20, startGold: 2000, startLumber: 3, firstWaveDelay: 120, weather: 'fog', omenEvery: 4, hpMul: 2.4 },
+    mutators: [
+      { name: 'Freezing fog', text: 'Every wave: slows last twice as long, towers attack 10% slower.' },
+      { name: 'Sea shrines', text: 'A shrine after every fourth wave.' },
+    ],
+    reach: 25,
+    flawless: 4,
+    rewards: [1, 1, 2],
+    waves: 'thaw',
+  },
+  {
+    id: 'longnight',
+    name: 'The Long Night',
+    x: 0.88,
+    y: 0.16,
+    story: 'At the top of the world the night itself marches. Forty waves of every weather, and the Hollow King at the end of it.',
+    difficulty: 'hard',
+    rules: { lives: 20, omenEvery: 4, hpMul: 1.75 },
+    mutators: [
+      { name: 'All the weathers', text: 'Every storm the north has, wave after wave.' },
+      { name: 'Night shrines', text: 'A shrine after every fourth wave.' },
+    ],
+    reach: 30,
+    flawless: 5,
+    rewards: [2, 2, 3],
+    waves: 'thaw',
+  },
+];
+
+
 export const CHAPTERS: Chapter[] = [
   { id: 'winter', act: 'Act I', name: 'The Long Winter', blurb: 'The road north, to the Throne of Winter.', stages: STAGES, endless: ENDLESS },
   { id: 'thaw', act: 'Act II', name: 'The Thaw', blurb: 'What slept under the glacier is waking.', stages: THAW_STAGES, opensAfter: 'mill' },
+  { id: 'night', act: 'Act III', name: 'The Long Night', blurb: 'The sun has set for good. Weather and the old shrines decide the war.', stages: NIGHT_STAGES, opensAfter: 'hexwood' },
 ];
 
 /** Every stage of every chapter, the endless ones included. */

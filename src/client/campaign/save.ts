@@ -1,5 +1,5 @@
 // Progress lives in localStorage: stars per stage, runestones, the talent loadout and achievements.
-import { ALL_STAGES, type Chapter, CHAPTERS, chapterOf, ENDLESS_AFTER, endlessReward, STAGES, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
+import { ALL_STAGES, type Chapter, CHAPTERS, chapterOf, ENDLESS_AFTER, endlessReward, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
 import { type Loadout, NODE_BY_ID, sanitizeLoadout, totalSpent } from '../../shared/talents';
 import { cleanRelics } from '../../shared/relics';
 import { CloudSave } from './cloud';
@@ -151,7 +151,7 @@ export function unspent(s: CampaignSave): number {
 
 const won = (s: CampaignSave, id: string) => (s.stars[id] ?? 0) >= 2;
 
-/** Whether a chapter is open: Act II opens once a stage of Act I is won. */
+/** Whether a chapter is open: Acts II and III open once a given earlier stage is won. */
 export function chapterOpen(chapter: Chapter, s: CampaignSave): boolean {
   return !chapter.opensAfter || won(s, chapter.opensAfter);
 }
@@ -210,7 +210,7 @@ export function totalStars(s: CampaignSave): number {
 /** One line for the menu tile. */
 export function progressLine(s: CampaignSave): string {
   const count = (c: Chapter) => c.stages.filter((st) => won(s, st.id)).length;
-  if (count(CHAPTERS[0]) === 0 && s.stones === 0) return `${STAGES.length + CHAPTERS[1].stages.length} stages in two acts · earn runestones`;
+  if (count(CHAPTERS[0]) === 0 && s.stones === 0) return `${CHAPTERS.reduce((n, c) => n + c.stages.length, 0)} stages in ${CHAPTERS.length} acts · earn runestones`;
   const free = unspent(s);
   const acts = CHAPTERS.filter((c) => chapterOpen(c, s)).map((c) => `${c.act} ${count(c)}/${c.stages.length}`).join(' · ');
   return `${acts} · ${totalStars(s)}★${free > 0 ? ` · ${free} runestone${free > 1 ? 's' : ''} to spend` : ''}`;

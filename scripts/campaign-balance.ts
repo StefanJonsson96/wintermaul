@@ -45,7 +45,7 @@ function play(stage: Stage, seed: number, stones: number) {
   const b = pool[(seed * 7 + 3) % pool.length] === a ? pool[(seed + 1) % pool.length] : pool[(seed * 7 + 3) % pool.length];
   const loadout = loadoutFor(stones, [a, b]);
   const init = [{ id: 0, name: 'Bot', color: 0, isBot: true }];
-  const game = new Game({ difficulty: stage.difficulty, raceMode: 'pick', endless: false, waves: stage.waves }, init, seed, { skipSetup: true, rules: { ...stage.rules, mods: { 0: modsFromLoadout(loadout) } } });
+  const game = new Game({ difficulty: stage.difficulty, raceMode: 'pick', endless: false, waves: stage.waves, weather: true, omens: true }, init, seed, { skipSetup: true, rules: { ...stage.rules, mods: { 0: modsFromLoadout(loadout) } } });
   const bot = new Bot(0, seed, [a, b]);
   while (!game.over && game.time < 6000) {
     bot.update(game);
@@ -73,11 +73,17 @@ function report(stage: Stage, budget: number): void {
 
 // Act I in order; Act II as played alongside it: a player starts its stage k having won Act I
 // up to the stage that opens it plus k more, and Act II up to stage k
-const [act1, act2] = CHAPTERS;
+const [act1, act2, act3] = CHAPTERS;
 const opens = act1.stages.findIndex((s) => s.id === act2.opensAfter) + 1;
 act1.stages.forEach((stage, i) => {
   if (!only || stage.id === only) report(stage, forcedStones ? Number(forcedStones) : twoStars(act1.stages, i));
 });
 act2.stages.forEach((stage, k) => {
   if (!only || stage.id === only) report(stage, forcedStones ? Number(forcedStones) : twoStars(act1.stages, Math.min(act1.stages.length, opens + k)) + twoStars(act2.stages, k));
+});
+// Act III opens after a stage of Act II; its players have come about that far in both earlier acts
+const opens3 = act2.stages.findIndex((s) => s.id === act3.opensAfter) + 1;
+act3.stages.forEach((stage, k) => {
+  const budget = twoStars(act1.stages, Math.min(act1.stages.length, opens + opens3 + k)) + twoStars(act2.stages, Math.min(act2.stages.length, opens3 + k)) + twoStars(act3.stages, k);
+  if (!only || stage.id === only) report(stage, forcedStones ? Number(forcedStones) : budget);
 });

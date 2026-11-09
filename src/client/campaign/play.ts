@@ -95,7 +95,7 @@ export function stageOptions(stage: Stage, save: CampaignSave, actions: StageAct
     settings: { difficulty: stage.difficulty, raceMode: 'pick', endless: !!stage.endless, waves: stage.waves },
     skipSetup: true,
     rules: { ...stage.rules, mods: { 0: applyRelics(modsFromLoadout(talents), relics) } },
-    save: { kind: { mode: 'campaign', stage: stage.id, talents: { ...talents }, relics: [...relics] }, title: stage.endless ? stage.name : `${stage.name} (${stageLabel(stage).toLowerCase().replace('act ii', 'Act II')})` },
+    save: { kind: { mode: 'campaign', stage: stage.id, talents: { ...talents }, relics: [...relics] }, title: stage.endless ? stage.name : `${stage.name} (${stageLabel(stage).replace('Stage', 'stage')})` },
     attach: (view, local) => {
       new GoalTracker(view, local, stage);
       local.system(`${stage.name}: ${stage.story}`);

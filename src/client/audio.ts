@@ -30,12 +30,19 @@ export class Audio {
   private voices = 0;
   volume = 0.6;
   muted = false;
+  /** The music (music.ts) has its own switch and volume, under the master mute. */
+  musicOn = true;
+  musicVolume = 0.5;
+  private musicBus: GainNode | null = null;
 
   constructor() {
     try {
       const v = localStorage.getItem('winterward.volume');
       if (v !== null) this.volume = Math.max(0, Math.min(1, Number(v)));
       this.muted = localStorage.getItem('winterward.muted') === '1';
+      this.musicOn = localStorage.getItem('winterward.music') !== '0';
+      const mv = localStorage.getItem('winterward.musicVolume');
+      if (mv !== null) this.musicVolume = Math.max(0, Math.min(1, Number(mv)));
     } catch {
       /* no storage */
     }
@@ -60,11 +67,58 @@ export class Audio {
     comp.threshold.value = -16;
     comp.ratio.value = 6;
     this.master.connect(comp).connect(this.ctx.destination);
+    // music gets its own bus and limiter, so it never pumps with the effects
+    this.musicBus = this.ctx.createGain();
+    this.musicBus.gain.value = this.musicLevel();
+    const limit = this.ctx.createDynamicsCompressor();
+    limit.threshold.value = -10;
+    limit.ratio.value = 12;
+    this.musicBus.connect(limit).connect(this.ctx.destination);
     const len = this.ctx.sampleRate;
     this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
     const d = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     return true;
+  }
+
+  private musicLevel(): number {
+    return this.muted || !this.musicOn ? 0 : this.musicVolume * 1.1;
+  }
+
+  /** Where the music plays, once sound has been unlocked by a tap or key (never creates it). */
+  musicTarget(): { ctx: AudioContext; out: GainNode } | null {
+    return this.ctx && this.musicBus ? { ctx: this.ctx, out: this.musicBus } : null;
+  }
+
+  /** Whether music would be heard at all. */
+  get musicAudible(): boolean {
+    return this.musicLevel() > 0;
+  }
+
+  /** Fades the music bus to its level (or out, e.g. while the tab is hidden). */
+  fadeMusic(on = true): void {
+    if (!this.ctx || !this.musicBus) return;
+    this.musicBus.gain.setTargetAtTime(on ? this.musicLevel() : 0, this.ctx.currentTime, 0.4);
+  }
+
+  setMusic(on: boolean): void {
+    this.musicOn = on;
+    try {
+      localStorage.setItem('winterward.music', on ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+    this.fadeMusic();
+  }
+
+  setMusicVolume(v: number): void {
+    this.musicVolume = v;
+    try {
+      localStorage.setItem('winterward.musicVolume', String(v));
+    } catch {
+      /* ignore */
+    }
+    this.fadeMusic();
   }
 
   setVolume(v: number): void {
@@ -85,6 +139,7 @@ export class Audio {
       /* ignore */
     }
     if (this.master) this.master.gain.value = m ? 0 : this.volume * 0.5;
+    this.fadeMusic();
   }
 
   /** gain: 0..1 relative loudness (use it for distance attenuation). */

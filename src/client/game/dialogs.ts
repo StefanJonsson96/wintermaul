@@ -186,6 +186,8 @@ export function openSettingsDialog(view: GameView): void {
   };
   const vol = h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: String(audio.volume) }) as HTMLInputElement;
   vol.addEventListener('input', () => audio.setVolume(Number(vol.value)));
+  const mvol = h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: String(audio.musicVolume) }) as HTMLInputElement;
+  mvol.addEventListener('input', () => audio.setMusicVolume(Number(mvol.value)));
   const p = view.prefs;
   openModal(
     h(
@@ -197,6 +199,8 @@ export function openSettingsDialog(view: GameView): void {
         { class: 'settings-list', style: { marginTop: '14px' } },
         row('Volume', vol),
         row('Sound on', toggle(!audio.muted, (on) => audio.setMuted(!on))),
+        row('Music', toggle(audio.musicOn, (on) => audio.setMusic(on))),
+        row('Music volume', mvol),
         row('Show creep path', toggle(p.showPath, (on) => view.setPref('showPath', on))),
         row('Show build grid', toggle(p.showGrid, (on) => view.setPref('showGrid', on))),
         row('Scroll at screen edges', toggle(p.edgePan, (on) => view.setPref('edgePan', on))),

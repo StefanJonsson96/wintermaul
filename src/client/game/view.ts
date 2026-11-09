@@ -1,6 +1,7 @@
 
 import { towerMeta } from '../art/towers';
 import { audio } from '../audio';
+import { music } from '../music';
 import { LANE_H, LANE_MARGIN_X, LANE_W, laneOriginY, PLAYER_COLORS } from '../../shared/constants';
 import { RACE_BY_ID, TOWERS } from '../../shared/data/races';
 import { WAVE_SETS } from '../../shared/data/waves';
@@ -91,6 +92,8 @@ export class GameView {
     this.hud = new Hud(hudRoot, this);
     this.fx.quality = this.prefs.hq ? 1 : 0.4;
     this.state.onEvent = (ev) => this.onEvent(ev);
+    const w = this.state.wave;
+    music.setMood(w.phase === 'wave' ? (this.hud.waveInfo(w.n)?.creep.boss ? 'boss' : 'wave') : w.phase === 'victory' || w.phase === 'defeat' ? 'menu' : 'build');
     this.state.onSold = (t, refund) => this.onSold(t, refund);
     this.renderer.resize();
     this.renderer.focusLane(you >= 0 ? this.state.myLane : 0);
@@ -132,6 +135,7 @@ export class GameView {
 
   onGameOver(victory: boolean, stats: EndStats): void {
     audio.play(victory ? 'victory' : 'defeat');
+    music.setMood('menu');
     const local = this.link.local;
     setTimeout(() => {
       if (!this.alive) return;
@@ -347,7 +351,9 @@ export class GameView {
           this.hud.banner(`Wave ${ev.n}`, info ? `${info.creep.name}${info.title ? ` — ${info.title}` : ''}` : '', boss ? 'boss' : '');
           if (info?.hint) this.hud.chat.system(`Wave ${ev.n}: ${info.hint}`);
           audio.play(boss ? 'boss' : 'wave', 0.8);
-        } else if (ev.phase === 'build' && ev.n > 0 && ev.n === this.startedWave) {
+          music.setMood(boss ? 'boss' : 'wave');
+        } else if (ev.phase === 'build') music.setMood('build');
+        if (ev.phase === 'build' && ev.n > 0 && ev.n === this.startedWave) {
           toast(`Wave ${ev.n} cleared!`, 'good', 2000);
           if (ev.n < 15 || ev.n % 2 === 0) this.showTip(4000);
         }

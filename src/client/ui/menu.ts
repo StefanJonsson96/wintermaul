@@ -1,5 +1,6 @@
 import type { RoomInfo } from '../../shared/protocol';
 import { VERSION } from '../../shared/version';
+import { audio } from '../audio';
 import { OFFLINE } from '../mode';
 import { DIFFICULTIES } from '../../shared/protocol';
 import type { Net } from '../net';
@@ -63,6 +64,22 @@ export class MenuScreen {
     this.dailySub.textContent = this.solo.dailyLine();
     this.featSub.textContent = this.solo.featLine();
     this.renderContinue();
+  }
+
+  /** Music on or off, from the menu (the in-game settings have the volume). */
+  private musicButton(): HTMLElement {
+    const label = h('span', null, '');
+    const btn = h('button', { class: 'btn music-btn', title: 'Music' }, icon('music', 16), label);
+    const paint = () => {
+      label.textContent = audio.musicOn ? 'Music on' : 'Music off';
+      btn.classList.toggle('off', !audio.musicOn);
+    };
+    btn.addEventListener('click', () => {
+      audio.setMusic(!audio.musicOn);
+      paint();
+    });
+    paint();
+    return btn;
   }
 
   /** The game in progress, if any, above the single-player tiles. */
@@ -168,6 +185,7 @@ export class MenuScreen {
         { class: 'menu-links' },
         h('button', { class: 'btn', onclick: () => openHelp() }, icon('help', 16), 'How to play'),
         h('button', { class: 'btn', onclick: () => this.solo.achievements() }, icon('trophy', 16), 'Achievements', this.featSub),
+        this.musicButton(),
       ),
     );
 

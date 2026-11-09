@@ -16,6 +16,8 @@ import { type Link, LocalGame, type LocalOptions } from './local';
 import { catchUp, featCount, onFeat } from './campaign/feats';
 import { announce, type FeatContext, FeatTracker } from './game/feats';
 import { dailyLine, dailyOptions, openDaily } from './modes/daily';
+import { audio } from './audio';
+import { music } from './music';
 import { openAchievements } from './ui/achievements';
 import { skirmishOptions } from './modes/skirmish';
 import { tutorialOptions } from './modes/tutorial';
@@ -92,6 +94,7 @@ function boot(): void {
     current = screen;
     for (const s of ['menu', 'lobby', 'campaign', 'game'] as const) $(`#screen-${s}`).classList.toggle('hidden', screen !== s);
     backdrop.setRunning(screen !== 'game');
+    if (screen !== 'game') music.setMood('menu');
     if (screen !== 'game' && game) {
       game.destroy();
       game = null;
@@ -255,6 +258,8 @@ function boot(): void {
   // handy for debugging in the console
   (window as unknown as { winterward: unknown }).winterward = {
     net,
+    audio,
+    music,
     get game() {
       return game;
     },

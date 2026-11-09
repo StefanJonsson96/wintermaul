@@ -18,6 +18,7 @@ export interface SoloActions {
   /** Short progress line for the campaign tile, e.g. "Stage 3 · 7 stars". */
   campaignProgress(): string;
   achievements(): void;
+  transfer(): void;
   /** "5 / 33", for the achievements button. */
   featLine(): string;
   /** The game in progress, if there is one. */
@@ -178,6 +179,7 @@ export class MenuScreen {
         { class: 'menu-links' },
         h('button', { class: 'btn', onclick: () => openHelp() }, icon('help', 16), 'How to play'),
         h('button', { class: 'btn', onclick: () => this.solo.achievements() }, icon('trophy', 16), 'Relics & achievements', this.featSub),
+        h('button', { class: 'btn', onclick: () => this.solo.transfer() }, icon('copy', 16), 'Move progress'),
         this.musicButton(),
       ),
     );

@@ -18,6 +18,7 @@ import { announce, type FeatContext, FeatTracker } from './game/feats';
 import { audio } from './audio';
 import { music } from './music';
 import { openAchievements } from './ui/achievements';
+import { openTransfer } from './ui/transfer';
 import { skirmishOptions } from './modes/skirmish';
 import { tutorialOptions } from './modes/tutorial';
 import { Net } from './net';
@@ -65,6 +66,11 @@ function boot(): void {
     skirmish: () => startLocal(skirmishOptions(loadSave().relics)),
     campaignProgress: () => progressLine(loadSave()),
     achievements: () => openAchievements({ onChange: sendTalents }),
+    transfer: () =>
+      openTransfer(() => {
+        menu.refresh();
+        sendTalents();
+      }),
     featLine: () => {
       const { got, all } = featCount();
       return `${got} / ${all}`;

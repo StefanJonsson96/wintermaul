@@ -26,7 +26,7 @@ const KEY = 'winterward.game.v1';
 /** The latest save, for when browser storage is blocked. */
 let memory: SavedGame | null = null;
 
-function valid(raw: unknown): raw is SavedGame {
+export function validGame(raw: unknown): raw is SavedGame {
   const g = raw as SavedGame;
   return !!g && typeof g === 'object' && typeof g.version === 'string' && typeof g.seed === 'number' && typeof g.tick === 'number' && Array.isArray(g.cmds) && !!g.kind && typeof g.kind.mode === 'string';
 }
@@ -36,7 +36,7 @@ export function loadGame(): SavedGame | null {
     const json = localStorage.getItem(KEY);
     if (json) {
       const raw = JSON.parse(json) as unknown;
-      return valid(raw) ? raw : null;
+      return validGame(raw) ? raw : null;
     }
   } catch {
     // storage blocked or a broken save

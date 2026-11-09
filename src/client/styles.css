@@ -283,69 +283,10 @@ input:focus {
 
 .solo-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
-.solo-tile.daily .solo-icon {
-  background: rgba(255, 138, 92, 0.16);
-  color: #ff9a6a;
-}
-
-/* the daily challenge: medals, the week, the streak */
-.medal {
-  display: inline-block;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.35), inset 0 2px 2px rgba(255, 255, 255, 0.45);
-  border: 1px solid rgba(0, 0, 0, 0.45);
-}
-
-.medal.m0 {
-  opacity: 0.45;
-}
-
-.rw-medal {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 20px;
-}
-
-.daily {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.daily-week {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-  margin: 12px 0 6px;
-}
-
-.dw-day {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.dw-day.today {
-  color: #fff;
-  font-weight: 700;
-}
-
-.daily-streak {
-  font-size: 12.5px;
-}
-
-.daily .cb-goal .medal {
-  margin-right: 8px;
-}
 
 .solo-tile {
   display: flex;
@@ -1240,59 +1181,6 @@ input:focus {
   color: var(--lumber);
   left: 4px;
   right: auto;
-}
-
-/* commander spells, with their cooldown filling down */
-.spell-panel {
-  padding: 10px;
-}
-
-.spell-grid {
-  display: flex;
-  gap: 6px;
-}
-
-.cmd-btn.spell {
-  display: grid;
-  place-items: center;
-  color: var(--spell);
-  background: radial-gradient(circle at 50% 35%, rgba(60, 90, 140, 0.4), rgba(14, 22, 40, 0.95));
-}
-
-.cmd-btn.spell svg {
-  filter: drop-shadow(0 0 6px var(--spell));
-}
-
-.cmd-btn.spell .sp-cd {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 0;
-  background: rgba(4, 8, 16, 0.72);
-  pointer-events: none;
-}
-
-.cmd-btn.spell .sp-left {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 17px;
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 1px 3px #000;
-  pointer-events: none;
-}
-
-.cmd-btn.spell.cooling svg {
-  opacity: 0.45;
-  filter: none;
-}
-
-.cmd-btn.spell.active {
-  border-color: var(--spell);
-  box-shadow: 0 0 18px var(--spell);
 }
 
 .cmd-btn.special {
@@ -2291,7 +2179,7 @@ kbd {
 
 .cb-facts {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
 
@@ -2850,8 +2738,7 @@ kbd {
     display: none;
   }
   .build-panel,
-  .select-panel,
-  .spell-panel {
+  .select-panel {
     padding: 6px;
   }
   .panel-title {
@@ -3150,7 +3037,7 @@ kbd {
     flex-wrap: wrap;
   }
   .solo-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .solo-tile.continue {
     min-width: 0;

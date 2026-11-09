@@ -4,7 +4,7 @@ import type { JournalEntry } from '../shared/sim/replay';
 import { VERSION } from '../shared/version';
 
 /** How the game was set up: enough to set it up the same way again. */
-export type SavedKind = { mode: 'skirmish' } | { mode: 'campaign'; stage: string; talents: Record<string, number> } | { mode: 'daily'; date: string };
+export type SavedKind = { mode: 'skirmish' } | { mode: 'campaign'; stage: string; talents: Record<string, number> };
 
 export interface SavedGame {
   /** The game version that played it: a replay is only exact with the same rules. */

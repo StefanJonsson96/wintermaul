@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { catchUp, earn, FEAT_GROUPS, featCount, FEATS, onFeat } from '../src/client/campaign/feats';
-import { emptySave, loadSave, mergeCareer, recordDaily, recordResult, saveHooks, storeSave } from '../src/client/campaign/save';
+import { emptySave, loadSave, mergeCareer, recordResult, saveHooks, storeSave } from '../src/client/campaign/save';
 import { CHAPTERS } from '../src/shared/campaign';
-import { dailyFor } from '../src/shared/daily';
 import { NODES, pathTo } from '../src/shared/talents';
 
 const heard: string[] = [];
@@ -45,16 +44,13 @@ describe('achievements', () => {
     expect(heard).not.toContain('stars');
   });
 
-  it('come from the Rune Web and the daily challenge', () => {
+  it('come from the Rune Web', () => {
     const s = loadSave();
     s.stones = 150;
     const keystone = NODES.find((n) => n.kind === 'keystone')!;
     for (const id of pathTo(keystone.id, s.talents)) s.talents[id] = 1;
     storeSave(s);
     expect(heard).toContain('keystone');
-    const d = dailyFor('2026-11-09');
-    recordDaily(loadSave(), d, { victory: true, wave: d.rules.finalWave!, livesLost: 0 });
-    expect(heard).toEqual(expect.arrayContaining(['daily_medal', 'daily_gold']));
   });
 
   it('count career totals', () => {
@@ -70,14 +66,13 @@ describe('achievements', () => {
 
   it('a save from before achievements catches up quietly', () => {
     const s = emptySave();
-    const d = dailyFor('2026-11-09');
-    s.daily[d.date] = { medal: 2, wave: 20, plays: 1 };
+    s.tally = { games: 30, wins: 0, kills: 0 };
     const hooks = saveHooks.splice(0);
     storeSave(s);
     saveHooks.push(...hooks);
     expect(catchUp()).toBe(1);
     expect(heard).toEqual([]);
-    expect(loadSave().feats.daily_medal).toBeGreaterThan(0);
+    expect(loadSave().feats.career_games).toBeGreaterThan(0);
     expect(catchUp()).toBe(0);
   });
 

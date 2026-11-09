@@ -39,7 +39,7 @@ export interface LocalOptions {
   onGameOver?: (victory: boolean, stats: EndStats, game: Game) => void;
   /** Saves the game as it goes, so it can be continued after the page closes. */
   save?: { kind: SavedKind; title: string };
-  /** A fixed seed (the daily challenge is the same game for everyone). */
+  /** A fixed seed, instead of a random one. */
   seed?: number;
 }
 

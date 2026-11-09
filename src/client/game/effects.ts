@@ -1,7 +1,6 @@
 // What combat looks and sounds like: projectiles, lightning, impacts, bursts and floating numbers.
 import { LANE_H, LANE_MARGIN_X, LANE_W } from '../../shared/constants';
 import type { GameEvent } from '../../shared/protocol';
-import { SPELL_BY_ID } from '../../shared/sim/spells';
 import { creepLift } from '../art/creeps';
 import { towerMeta } from '../art/towers';
 import { audio } from '../audio';
@@ -179,33 +178,6 @@ export class Effects {
         fx.burst(p.x, p.y + c.def.size, '#d8e85a', 12, { speed: 1.4, life: 0.5, size: 0.07, kind: 'shard', add: false, up: 1.5 });
         fx.burst(p.x, p.y + c.def.size, '#6a7a44', 3, { speed: 0.5, life: 0.6, size: 0.13, kind: 'smoke', add: false, grav: 0, up: 0.3 });
         audio.play('shot:poison', this.gainAt(p) * 0.3);
-        return true;
-      }
-      case 'cast': {
-        const def = SPELL_BY_ID[ev.spell];
-        const p = toWorld(ev.lane, ev.x, ev.y);
-        const mine = ev.p === s.you;
-        if (ev.spell === 'nova') {
-          fx.ring(p.x, p.y, def.radius, '#bff4ff', now, 0.6, 0.12, true);
-          fx.ring(p.x, p.y, def.radius * 0.6, '#ffffff', now, 0.4, 0.08, false);
-          fx.burst(p.x, p.y, '#e6f8ff', 26, { speed: def.radius * 2.2, life: 0.7, size: 0.09, kind: 'shard', add: false, up: 1.5 });
-          audio.play('freeze', this.gainAt(p));
-        } else if (ev.spell === 'meteor') {
-          // it falls from high above and lands a second later
-          const sky = { x: p.x - 4, y: p.y - 9 };
-          fx.projectile('meteor', sky, () => p, this.realSeconds(1), '#ff8a3c', now, (at) => {
-            fx.ring(at.x, at.y, def.radius, '#ffb46a', performance.now() / 1000, 0.55, 0.14, true);
-            fx.burst(at.x, at.y, '#ff9a3c', 30, { speed: def.radius * 2.4, life: 0.6, size: 0.1 });
-            fx.burst(at.x, at.y, '#5a4a44', 8, { speed: 1.2, life: 1, size: 0.2, kind: 'smoke', add: false, up: 0.8, grav: 0 });
-            audio.play('impact', this.gainAt(at));
-          });
-          audio.play('shot:meteor', this.gainAt(p) * 0.8);
-        } else {
-          fx.ring(p.x, p.y, def.radius, '#ffd35a', now, 0.7, 0.1, false);
-          fx.burst(p.x, p.y, '#ffe08a', 18, { speed: 2, life: 0.8, size: 0.07, up: 2 });
-          if (mine) fx.text(p.x, p.y - 1, 'War Cry!', '#ffe08a', now, 15, 1.3);
-          audio.play('upgrade', this.gainAt(p) * 0.8);
-        }
         return true;
       }
       case 'freeze': {

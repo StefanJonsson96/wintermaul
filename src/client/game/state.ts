@@ -13,7 +13,6 @@ import {
   type WaveState,
 } from '../../shared/protocol';
 import { attackRange, type PlayerMods, towerCost } from '../../shared/sim/mods';
-import { SPELL_BY_ID, WARCRY } from '../../shared/sim/spells';
 import type { CreepDef, TowerDef } from '../../shared/types';
 
 export interface CTower extends NetTower {
@@ -26,9 +25,6 @@ export interface CTower extends NetTower {
   /** Frozen solid by a hexer between these game times. */
   frozenFrom: number;
   frozenUntil: number;
-  /** Under a War Cry between these game times. */
-  rallyFrom: number;
-  rallyUntil: number;
 }
 
 interface Sample {
@@ -65,7 +61,7 @@ export interface CCreep {
 
 const INTERP_DELAY = 0.16;
 
-const TIMELINE_EVENTS = new Set(['spawn', 'die', 'leak', 'shot', 'chain', 'line', 'impact', 'pulse', 'crit', 'fire', 'heal', 'split', 'level', 'blink', 'ward', 'brood', 'freeze', 'cast']);
+const TIMELINE_EVENTS = new Set(['spawn', 'die', 'leak', 'shot', 'chain', 'line', 'impact', 'pulse', 'crit', 'fire', 'heal', 'split', 'level', 'blink', 'ward', 'brood', 'freeze']);
 
 export class ClientState {
   you: number;
@@ -176,7 +172,7 @@ export class ClientState {
 
   private addTower(t: NetTower, builtAt: number): void {
     const tdef = TOWERS[t.def];
-    this.towers.set(t.id, { ...t, tdef, angle: -Math.PI / 2 + (t.id % 7) * 0.3, targetAngle: 0, firedAt: -10, pulsedAt: -10, builtAt, frozenFrom: 0, frozenUntil: t.frozen ?? 0, rallyFrom: 0, rallyUntil: 0 });
+    this.towers.set(t.id, { ...t, tdef, angle: -Math.PI / 2 + (t.id % 7) * 0.3, targetAngle: 0, firedAt: -10, pulsedAt: -10, builtAt, frozenFrom: 0, frozenUntil: t.frozen ?? 0 });
     this.grids[t.lane]?.setFootprint(t.x, t.y, CELL_TOWER);
   }
 
@@ -327,19 +323,6 @@ export class ClientState {
         if (t) {
           t.frozenFrom = ev.t;
           t.frozenUntil = ev.until;
-        }
-        break;
-      }
-      case 'cast': {
-        const p = this.player(ev.p);
-        if (p) p.spells = { ...p.spells, [ev.spell]: ev.ready };
-        if (ev.spell === 'warcry') {
-          const r = SPELL_BY_ID.warcry.radius;
-          for (const t of this.towers.values()) {
-            if (t.owner !== ev.p || t.lane !== ev.lane || (t.x + 1 - ev.x) ** 2 + (t.y + 1 - ev.y) ** 2 > r * r) continue;
-            t.rallyFrom = ev.t;
-            t.rallyUntil = ev.t + WARCRY.dur;
-          }
         }
         break;
       }

@@ -1,6 +1,5 @@
 // Watches a game for achievements, and announces new ones.
-import { CREEP_FLAG, type GameEvent } from '../../shared/protocol';
-import { SPELL_BY_ID, type SpellId } from '../../shared/sim/spells';
+import type { GameEvent } from '../../shared/protocol';
 import { audio } from '../audio';
 import { earn, type Feat, FEAT_BY_ID } from '../campaign/feats';
 import { loadSave, storeSave } from '../campaign/save';
@@ -21,19 +20,11 @@ export function announce(f: Feat): void {
 
 export interface FeatContext {
   /** What kind of game this is; the tutorial earns nothing. */
-  mode: 'online' | 'skirmish' | 'campaign' | 'daily' | 'tutorial';
+  mode: 'online' | 'skirmish' | 'campaign' | 'tutorial';
   /** The first wave played (later in some campaign stages and dailies). */
   firstWave: number;
   /** False once the game was tampered with (developer commands). */
   fair: () => boolean;
-}
-
-interface Meteor {
-  lands: number;
-  lane: number;
-  x: number;
-  y: number;
-  kills: number;
 }
 
 /** Watches one game for achievements. */
@@ -41,8 +32,6 @@ export class FeatTracker {
   private have: Set<string>;
   /** Earned in this game, for the end screen. */
   readonly fresh: Feat[] = [];
-  private casts: Partial<Record<SpellId, number>> = {};
-  private meteors: Meteor[] = [];
   private nextLook = 0;
   private over = false;
 
@@ -75,35 +64,6 @@ export class FeatTracker {
         if (ev.by !== this.you) return;
         const c = st.creeps.get(ev.id);
         if (c?.def.boss) this.earn('boss');
-        for (const m of this.meteors) {
-          if (Math.abs(ev.t - m.lands) > 0.08 || !c || c.lane !== m.lane) continue;
-          const at = c.samples[c.samples.length - 1] ?? c;
-          if ((at.x - m.x) ** 2 + (at.y - m.y) ** 2 > (SPELL_BY_ID.meteor.radius + 1) ** 2) continue;
-          if (++m.kills >= 6) this.earn('meteor');
-        }
-        return;
-      }
-      case 'cast': {
-        if (ev.p !== this.you) return;
-        this.casts[ev.spell] = ev.t;
-        if ((['nova', 'meteor', 'warcry'] as SpellId[]).every((id) => this.casts[id] !== undefined && ev.t - this.casts[id]! <= 10)) this.earn('all_spells');
-        const r2 = SPELL_BY_ID[ev.spell].radius ** 2;
-        if (ev.spell === 'nova') {
-          let n = 0;
-          for (const c of st.creeps.values()) {
-            if (c.lane !== ev.lane || c.deadAt <= ev.t || c.def.immune || c.def.boss || c.flags & CREEP_FLAG.burrowed) continue;
-            const at = c.samples[c.samples.length - 1] ?? c;
-            if ((at.x - ev.x) ** 2 + (at.y - ev.y) ** 2 <= r2) n++;
-          }
-          if (n >= 12) this.earn('nova');
-        } else if (ev.spell === 'warcry') {
-          let n = 0;
-          for (const t of st.towers.values()) if (t.owner === this.you && t.lane === ev.lane && (t.x + 1 - ev.x) ** 2 + (t.y + 1 - ev.y) ** 2 <= r2) n++;
-          if (n >= 12) this.earn('warcry');
-        } else {
-          this.meteors = this.meteors.filter((m) => m.lands > ev.t - 2);
-          this.meteors.push({ lands: ev.t + 1, lane: ev.lane, x: ev.x, y: ev.y, kills: 0 });
-        }
         return;
       }
       case 'level': {

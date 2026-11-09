@@ -74,8 +74,6 @@ export interface ViewState {
   marks: { lane: number; x: number; y: number; w: number; h: number }[];
   showPath: boolean;
   showGrid: boolean;
-  /** Where a spell would land. */
-  aim: { x: number; y: number; r: number; color: string } | null;
 }
 
 interface Flake {
@@ -264,7 +262,6 @@ export class Renderer {
 
     // ghost tower
     if (view.ghost) this.drawGhost(view.ghost, now, state.reachOf(view.ghost.def, state.you));
-    if (view.aim) this.drawAim(view.aim, now);
 
     this.fx.drawAir(ctx, now);
 
@@ -399,12 +396,6 @@ export class Renderer {
       ctx.lineWidth = 0.05;
       ellipse(ctx, x, y + 0.1, 1.12, 0.82);
       ctx.stroke();
-    }
-    if (state.renderTime >= t.rallyFrom && state.renderTime < t.rallyUntil) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      glow(ctx, x, y + 0.1, 1.4, '#ffd35a', 0.35 + 0.12 * Math.sin(now * 10 + t.id));
-      ctx.restore();
     }
     const spr = towerSprite(def);
     const m = towerMeta(def);
@@ -652,31 +643,6 @@ export class Renderer {
     const r = c.def.size;
     if (misty) this.fx.burst(x, y - r, '#dfeef8', 7, { speed: 0.9, life: 0.7, size: 0.13, kind: 'smoke', add: false, up: 0.5, grav: 0 });
     else this.fx.burst(x, y, '#eef6ff', 12, { speed: 1.8, life: 0.5, size: 0.07, kind: 'shard', add: false, up: 2.2 });
-  }
-
-  /** Where a spell would land: a pulsing ring with a cross at its heart. */
-  private drawAim(a: NonNullable<ViewState['aim']>, now: number): void {
-    const { ctx } = this;
-    const pulse = 0.5 + 0.5 * Math.sin(now * 6);
-    ctx.save();
-    ctx.fillStyle = alpha(a.color, 0.1 + 0.05 * pulse);
-    ctx.strokeStyle = alpha(a.color, 0.85);
-    ctx.lineWidth = 0.07;
-    ctx.setLineDash([0.3, 0.18]);
-    ctx.lineDashOffset = -now * 0.6;
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.lineWidth = 0.05;
-    ctx.beginPath();
-    ctx.moveTo(a.x - 0.4, a.y);
-    ctx.lineTo(a.x + 0.4, a.y);
-    ctx.moveTo(a.x, a.y - 0.4);
-    ctx.lineTo(a.x, a.y + 0.4);
-    ctx.stroke();
-    ctx.restore();
   }
 
   /** A tower frozen solid by a hexer, with a bar for how long until it thaws. */

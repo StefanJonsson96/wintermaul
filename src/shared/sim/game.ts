@@ -33,7 +33,6 @@ import { Rng } from '../rng';
 import { Combat } from './combat';
 import type { CommandResult, Creep, GameRules, Lane, Player, PlayerInit, Tower } from './entities';
 import { Horde } from './horde';
-import { Spells } from './spells';
 import { sellRefund, towerCost, upgradeCost } from './mods';
 import type { CreepDef, WaveDef } from '../types';
 
@@ -51,7 +50,6 @@ export class Game {
   towers = new Map<number, Tower>();
   readonly horde = new Horde(this);
   readonly combat = new Combat(this);
-  readonly spells = new Spells(this);
   events: GameEvent[] = [];
   wave = 0;
   phase: WaveState['phase'] = 'setup';
@@ -103,7 +101,6 @@ export class Game {
         ready: false,
         goldMul: 1,
         mods,
-        spells: {},
       });
       this.lanes.push({ index: i, owner: p.id, grid: new LaneGrid(), rubble: [], creeps: [] });
     });
@@ -205,7 +202,6 @@ export class Game {
         if (st.raceMode && ['pick', 'double', 'random', 'same'].includes(st.raceMode)) this.settings.raceMode = st.raceMode;
         if (typeof st.endless === 'boolean') this.settings.endless = st.endless;
         if (st.waves && st.waves in WAVE_SETS) this.settings.waves = st.waves;
-        if (typeof st.spells === 'boolean') this.settings.spells = st.spells;
         this.lives = this.maxLives = this.startLives();
         this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: this.lives, finalWave: this.settings.endless ? 0 : this.finalWave });
         return { ok: true };
@@ -234,8 +230,6 @@ export class Game {
       case 'setup':
       case 'setupDone':
         return { ok: false, error: 'The rules are already set' };
-      case 'cast':
-        return this.spells.cast(p, cmd.spell, cmd.lane | 0, Number(cmd.x), Number(cmd.y));
       case 'gift': {
         const to = this.player(cmd.to);
         const amount = Math.floor(cmd.amount);
@@ -334,7 +328,6 @@ export class Game {
       beamRamp: 1,
       pulseCd: 0,
       frozenUntil: 0,
-      rallyUntil: 0,
     };
     this.towers.set(t.id, t);
     this.combat.refreshAuras(lane.index);
@@ -458,7 +451,6 @@ export class Game {
     this.combat.updateAuraEffects();
     this.combat.updateFires();
     this.combat.resolveHits();
-    this.spells.update();
     this.combat.updateTowers();
     if (this.lives <= 0 && !this.over) {
       if (this.secondWind > 0 && !this.tyrantEscaped) {

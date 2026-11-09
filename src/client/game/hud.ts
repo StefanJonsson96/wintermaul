@@ -8,7 +8,6 @@ import { CREEPS, FINAL_WAVE, waveDef } from '../../shared/data/waves';
 import { abilityWords } from './describe';
 import { type EndStats } from '../../shared/protocol';
 import { attackRange, sellRefund, upgradeCost } from '../../shared/sim/mods';
-import { SPELLS, type SpellDef } from '../../shared/sim/spells';
 import { TARGET_MODES, type CreepDef, type TargetMode, type TowerDef } from '../../shared/types';
 import { ChatBox } from '../ui/chat';
 import { clear, fmt, h, hideTooltip, tooltip } from '../ui/dom';
@@ -41,8 +40,6 @@ export class Hud {
   private buildPanel!: HTMLElement;
   private buildGrid!: HTMLElement;
   private selectPanel!: HTMLElement;
-  private spellPanel!: HTMLElement;
-  private spellButtons: { def: SpellDef; el: HTMLElement; cd: HTMLElement; left: HTMLElement }[] = [];
   private preview!: HTMLElement;
   private buildKey = '';
   private selKey = '';
@@ -133,8 +130,7 @@ export class Hud {
     this.buildHint = h('span', null, touchDevice ? 'Tap a tower, then the map' : 'Shift = keep placing');
     this.buildPanel = h('div', { class: 'panel build-panel' }, h('div', { class: 'panel-title' }, h('span', null, 'Build'), this.buildHint), this.buildGrid);
     this.selectPanel = h('div', { class: 'panel select-panel hidden' });
-    this.spellPanel = h('div', { class: 'panel spell-panel hidden' }, h('div', { class: 'panel-title' }, h('span', null, 'Spells')), this.spellGrid());
-    const card = h('div', { class: 'command-card' }, this.spellPanel, this.buildPanel, this.selectPanel);
+    const card = h('div', { class: 'command-card' }, this.buildPanel, this.selectPanel);
     this.card = card;
 
     const rotate = h(
@@ -229,7 +225,6 @@ export class Hud {
     this.updateScoreboard();
     this.refreshBuildPanel();
     this.refreshSelection();
-    this.refreshSpells();
     void now;
   }
 
@@ -377,36 +372,6 @@ export class Hud {
     const btn = h('button', { class: `cmd-btn${affordable ? '' : ' poor'}${active ? ' active' : ''}`, onclick: () => this.view.startBuild(def.id) }, c, h('span', { class: 'cost' }, String(cost)));
     tooltip(btn, () => towerTooltip(def, { cost, mods: this.state.modsOf(this.state.you) }));
     return btn;
-  }
-
-  // ───────────────────────────────────────── spells
-  private spellGrid(): HTMLElement {
-    const grid = h('div', { class: 'spell-grid' });
-    SPELLS.forEach((def, i) => {
-      const cd = h('span', { class: 'sp-cd' });
-      const left = h('span', { class: 'sp-left' });
-      const el = h('button', { class: 'cmd-btn spell', onclick: () => this.view.startSpell(def.id) }, icon(def.glyph, 26), cd, left, touchDevice ? null : h('span', { class: 'hk' }, String(i + 1)));
-      el.style.setProperty('--spell', def.color);
-      tooltip(el, () => h('div', null, h('div', { class: 'tt-title' }, def.name), h('div', { class: 'tt-meta' }, `Every ${def.cooldown}s${touchDevice ? '' : ` · hotkey ${i + 1}`}`), h('div', null, def.desc), h('div', { class: 'muted', style: { marginTop: '4px', fontSize: '12px' } }, touchDevice ? 'Tap it, then the map.' : 'Click it, then the map. Right-click or Esc puts it away.')));
-      this.spellButtons.push({ def, el, cd, left });
-      grid.append(el);
-    });
-    return grid;
-  }
-
-  /** Spell buttons: which one is being aimed, and how long until each is ready. */
-  refreshSpells(_force = false): void {
-    const s = this.state;
-    const on = s.settings.spells !== false && s.you >= 0 && s.wave.phase !== 'setup';
-    this.spellPanel.classList.toggle('hidden', !on);
-    if (!on) return;
-    for (const b of this.spellButtons) {
-      const wait = Math.max(0, (s.me?.spells?.[b.def.id] ?? 0) - s.renderTime);
-      b.cd.style.height = `${Math.min(1, wait / b.def.cooldown) * 100}%`;
-      this.setText(b.left, wait > 0 ? String(Math.ceil(wait)) : '');
-      b.el.classList.toggle('active', this.view.spell?.id === b.def.id);
-      b.el.classList.toggle('cooling', wait > 0);
-    }
   }
 
   // ───────────────────────────────────────── selection panel

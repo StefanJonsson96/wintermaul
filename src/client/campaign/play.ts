@@ -15,7 +15,7 @@ export interface StageActions {
   map(): void;
 }
 
-/** The goal list on the left of the HUD, updated as the game goes (stars, or a daily's medals). */
+/** The goal list on the left of the HUD, updated as the game goes (stars). */
 export class GoalTracker {
   private el: HTMLElement;
   private key = '';

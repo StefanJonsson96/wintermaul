@@ -224,7 +224,7 @@ class Coach {
 export function tutorialOptions(actions: { campaign: () => void; menu: () => void }): Omit<LocalOptions, 'name'> {
   return {
     mode: 'tutorial',
-    settings: { difficulty: 'normal', raceMode: 'pick', endless: false, spells: false },
+    settings: { difficulty: 'normal', raceMode: 'pick', endless: false },
     skipSetup: true,
     rules: { finalWave: 8, lives: 20, firstWaveDelay: 90, hpMul: 1.1 },
     prepare: (game) => {

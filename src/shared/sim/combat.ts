@@ -4,7 +4,6 @@ import type { AttackDef, DamageType, OnHit, TargetKind, TargetMode } from '../ty
 import type { Creep, Dot, Tower } from './entities';
 import type { Game } from './game';
 import { attackRange, baseDamageMul, typeDamageMul } from './mods';
-import { WARCRY } from './spells';
 
 interface PendingHit {
   at: number;
@@ -324,13 +323,8 @@ export class Combat {
     }
   }
 
-  /** Attack speed right now: auras and talents, and a War Cry. */
-  private pace(t: Tower): number {
-    return this.g.time < t.rallyUntil ? t.spdMul * WARCRY.speed : t.spdMul;
-  }
-
   private updateAttack(t: Tower, a: AttackDef): void {
-    t.cd -= DT * this.pace(t);
+    t.cd -= DT * t.spdMul;
     if (t.cd > 0) return;
     const targets = this.acquire(t, this.rangeOf(t, a), a.targets, a.multishot ?? 1);
     if (targets.length === 0) {
@@ -501,7 +495,7 @@ export class Combat {
       target = found;
       t.beamTarget = found.id;
     }
-    const dps = a.dmg[0] * t.dmgMul * this.pace(t) * this.growthMul(t) * t.beamRamp * typeDamageMul(a.type, this.g.player(t.owner)?.mods);
+    const dps = a.dmg[0] * t.dmgMul * t.spdMul * this.growthMul(t) * t.beamRamp * typeDamageMul(a.type, this.g.player(t.owner)?.mods);
     this.damage(target, dps * DT, a.type, t.owner, t.id, a.onHit);
     this.reap(target, t);
     t.beamRamp = Math.min(beam.maxMult, t.beamRamp + beam.ramp * DT);
@@ -509,7 +503,7 @@ export class Combat {
 
   private updatePulse(t: Tower): void {
     const pu = t.def.pulse!;
-    t.pulseCd -= DT * this.pace(t);
+    t.pulseCd -= DT * t.spdMul;
     if (t.pulseCd > 0) return;
     const r2 = pu.radius * pu.radius;
     let hits = this.g.lanes[t.lane].creeps.filter((c) => c.alive && c.lane === t.lane && !this.hidden(c) && this.canTarget(pu.targets, c) && (c.x - t.cx) ** 2 + (c.y - t.cy) ** 2 <= r2);

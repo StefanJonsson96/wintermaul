@@ -1,18 +1,16 @@
 // Achievements: things to do in Winterward. They are kept with the campaign save (so they travel
 // with it between devices) and announced the moment they are earned. Some come from the save
-// alone (campaign progress, the Rune Web, daily medals, career totals); the rest are watched for
+// alone (campaign progress, the Rune Web, career totals); the rest are watched for
 // during a game (game/feats.ts).
 import { CHAPTERS } from '../../shared/campaign';
 import { NODE_BY_ID, totalSpent } from '../../shared/talents';
-import { type CampaignSave, dailyStreak, loadSave, saveHooks, storeSave, totalStars } from './save';
+import { type CampaignSave, loadSave, saveHooks, storeSave, totalStars } from './save';
 
-export type FeatGroup = 'battle' | 'command' | 'campaign' | 'daily' | 'career';
+export type FeatGroup = 'battle' | 'campaign' | 'career';
 
 export const FEAT_GROUPS: { id: FeatGroup; name: string }[] = [
   { id: 'battle', name: 'Battle' },
-  { id: 'command', name: 'Commander' },
   { id: 'campaign', name: 'Campaign' },
-  { id: 'daily', name: 'Daily challenge' },
   { id: 'career', name: 'Career' },
 ];
 
@@ -31,7 +29,6 @@ export interface Feat {
 
 const wonAll = (s: CampaignSave, chapter: number) => CHAPTERS[chapter].stages.filter((st) => !st.endless).every((st) => (s.stars[st.id] ?? 0) >= 2);
 const allStars = CHAPTERS.flatMap((c) => c.stages).filter((st) => !st.endless).length * 3;
-const medals = (s: CampaignSave, m: number) => Object.values(s.daily).some((r) => r.medal >= m);
 
 export const FEATS: Feat[] = [
   { id: 'first_win', name: 'First Light', text: 'Win a game.', icon: 'star', group: 'battle' },
@@ -53,10 +50,6 @@ export const FEATS: Feat[] = [
   { id: 'endless_60', name: "Beyond the Map's Edge", text: 'Reach wave 60 in an endless game.', icon: 'infinity', group: 'battle' },
   { id: 'coop_win', name: 'Shoulder to Shoulder', text: 'Win an online game alongside another player.', icon: 'people', group: 'battle' },
 
-  { id: 'nova', name: 'Flash Freeze', text: 'Freeze 12 creeps with one Frost Nova.', icon: 'snow', group: 'command' },
-  { id: 'meteor', name: 'Extinction Event', text: 'Kill 6 creeps with one Meteor.', icon: 'flame', group: 'command' },
-  { id: 'warcry', name: 'Rally the Banners', text: 'Rouse 12 towers with one War Cry.', icon: 'banner', group: 'command' },
-  { id: 'all_spells', name: 'Commander', text: 'Cast all three spells within ten seconds.', icon: 'wing', group: 'command' },
 
   { id: 'act1', name: "Winter's End", text: 'Win every stage of Act I.', icon: 'map', group: 'campaign', fromSave: (s) => wonAll(s, 0) },
   { id: 'act2', name: 'The Thaw Turned', text: 'Win every stage of Act II.', icon: 'map', group: 'campaign', fromSave: (s) => wonAll(s, 1) },
@@ -64,9 +57,6 @@ export const FEATS: Feat[] = [
   { id: 'keystone', name: 'Keystone', text: 'Take a keystone on the Rune Web.', icon: 'rune', group: 'campaign', fromSave: (s) => Object.keys(s.talents).some((id) => NODE_BY_ID[id]?.kind === 'keystone') },
   { id: 'weaver', name: 'Weaver', text: 'Spend 100 runestones on the Rune Web.', icon: 'rune', group: 'campaign', count: (s) => totalSpent(s.talents), goal: 100 },
 
-  { id: 'daily_medal', name: 'Daily Bread', text: 'Earn a medal in the daily challenge.', icon: 'target', group: 'daily', fromSave: (s) => medals(s, 1) },
-  { id: 'daily_gold', name: 'Gold Standard', text: 'Earn a Gold medal in the daily challenge.', icon: 'target', group: 'daily', fromSave: (s) => medals(s, 3) },
-  { id: 'streak_7', name: 'Creature of Habit', text: 'Play the daily challenge seven days in a row.', icon: 'check', group: 'daily', count: (s) => dailyStreak(s), goal: 7 },
 
   { id: 'career_games', name: 'Old Soldier', text: 'Play 30 games to the end.', icon: 'shield', group: 'career', count: (s) => s.tally.games, goal: 30 },
   { id: 'career_wins', name: 'Warden of the North', text: 'Win 15 games.', icon: 'crown', group: 'career', count: (s) => s.tally.wins, goal: 15 },

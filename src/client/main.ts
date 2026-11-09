@@ -15,7 +15,6 @@ import { GameView } from './game/view';
 import { type Link, LocalGame, type LocalOptions } from './local';
 import { catchUp, featCount, onFeat } from './campaign/feats';
 import { announce, type FeatContext, FeatTracker } from './game/feats';
-import { dailyLine, dailyOptions, openDaily } from './modes/daily';
 import { audio } from './audio';
 import { music } from './music';
 import { openAchievements } from './ui/achievements';
@@ -65,8 +64,6 @@ function boot(): void {
     campaign: () => show('campaign'),
     skirmish: () => startLocal(skirmishOptions()),
     campaignProgress: () => progressLine(loadSave()),
-    daily: () => openDaily(dailyActions),
-    dailyLine: () => dailyLine(loadSave()),
     achievements: () => openAchievements(),
     featLine: () => {
       const { got, all } = featCount();
@@ -78,7 +75,6 @@ function boot(): void {
   });
   const lobby = new LobbyScreen($('#screen-lobby'), net, () => sendTalents());
   const stageActions = { play: (stage: Stage) => playStage(stage), map: leaveTo('campaign') };
-  const dailyActions = { play: (date: string) => startLocal(dailyOptions(date, dailyActions)), menu: leaveTo('menu'), saved: loadGame, resume: () => void continueGame() };
   const playStage = (stage: Stage) => startLocal(stageOptions(stage, loadSave(), stageActions));
   const sendTalents = () => net.send({ type: 'talents', loadout: loadSave().talents });
   const campaign = new CampaignScreen($('#screen-campaign'), {
@@ -130,8 +126,6 @@ function boot(): void {
         const stage = STAGE_BY_ID[kind.stage];
         return stage ? stageOptions(stage, loadSave(), stageActions, kind.talents) : null;
       }
-      case 'daily':
-        return dailyOptions(kind.date, dailyActions);
       default:
         return null;
     }

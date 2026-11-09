@@ -22,7 +22,7 @@ const body = html
   .trim();
 
 const page = `<title>Winterward</title>
-<meta name="description" content="Co-op maze tower defense in the spirit of Wintermaul: tutorial, a two-act campaign, the daily challenge and skirmish.">
+<meta name="description" content="Co-op maze tower defense in the spirit of Wintermaul: tutorial, campaign and skirmish.">
 <meta name="theme-color" content="#0b1220">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

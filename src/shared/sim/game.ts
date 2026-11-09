@@ -33,7 +33,7 @@ import { Rng } from '../rng';
 import { Combat } from './combat';
 import type { CommandResult, Creep, GameRules, Lane, Player, PlayerInit, Tower } from './entities';
 import { Horde } from './horde';
-import { BOON_BY_ID, effectiveMods, isOmenWave, omenOffers, type Weather, WEATHERS, type WeatherId, weatherOf } from './omens';
+import { BOON_BY_ID, botBoon, effectiveMods, isOmenWave, omenOffers, type Weather, WEATHERS, type WeatherId, weatherOf } from './omens';
 import { sellRefund, towerCost, upgradeCost } from './mods';
 import type { CreepDef, WaveDef } from '../types';
 
@@ -603,6 +603,8 @@ export class Game {
   private refreshMods(p: Player): void {
     p.mods = effectiveMods(p.baseMods, p.boons, this.weather);
     p.goldMul = p.baseGoldMul * (p.mods.bounty ?? 1);
+    // towers keep their damage and speed multipliers: recompute them where this player builds
+    for (const lane of this.lanes) if ([...this.towers.values()].some((t) => t.owner === p.id && t.lane === lane.index)) this.combat.refreshAuras(lane.index);
     this.emit({ e: 'mods', t: this.time, p: p.id, mods: p.mods });
   }
 
@@ -612,8 +614,9 @@ export class Game {
       // an offer left unanswered is settled with its first boon
       if (p.omen) this.takeBoon(p, p.omen[0]);
       p.omen = omenOffers(this.seed, p.id, n, p.boons, 3 + (p.baseMods.omenChoices ?? 0));
+      p.omenWave = n;
       this.emit({ e: 'omen', t: this.time, p: p.id, offers: [...p.omen], wave: n });
-      if (p.isBot) this.takeBoon(p, p.omen[0]);
+      if (p.isBot) this.takeBoon(p, botBoon(p.omen));
     }
   }
 
@@ -622,7 +625,8 @@ export class Game {
     const b = BOON_BY_ID[id];
     p.omen = null;
     p.boons.push(id);
-    const gold = (b.goldPerWave ?? 0) * Math.max(1, this.wave) + (b.now?.gold ?? 0);
+    // gold that scales is worth what the card said when it was offered
+    const gold = (b.goldPerWave ?? 0) * Math.max(1, p.omenWave ?? this.wave) + (b.now?.gold ?? 0);
     if (gold) {
       p.gold += gold;
       p.goldEarned += gold;

@@ -36,7 +36,9 @@ export class FeatTracker {
   readonly fresh: Feat[] = [];
   private nextLook = 0;
   /** A blizzard or fog wave under way, and the lives when it began. */
-  private storm: { wave: number; lives: number } | null = null;
+  private storm: { wave: number; leaked: number } | null = null;
+  /** Lives your team lost to leaks this game (healing can't hide them). */
+  private leaked = 0;
   private over = false;
 
   constructor(
@@ -85,11 +87,14 @@ export class FeatTracker {
         }
         if (ev.phase === 'wave') {
           const wx = st.weatherAt(ev.n);
-          this.storm = wx === 'blizzard' || wx === 'fog' ? { wave: ev.n, lives: st.wave.lives } : null;
+          this.storm = wx === 'blizzard' || wx === 'fog' ? { wave: ev.n, leaked: this.leaked } : null;
         } else if (ev.phase === 'build' && this.storm?.wave === ev.n) {
-          if (st.wave.lives >= this.storm.lives) this.earn('stormproof');
+          if (this.leaked === this.storm.leaked) this.earn('stormproof');
           this.storm = null;
         }
+        return;
+      case 'leak':
+        this.leaked += ev.cost;
         return;
       case 'boon':
         if (ev.p === this.you && (st.me?.boons?.length ?? 0) + 1 >= 6) this.earn('boons_6');
@@ -126,7 +131,7 @@ export class FeatTracker {
     const ids: string[] = [];
     if (victory) {
       ids.push('first_win');
-      if (w.lives >= w.maxLives) ids.push('flawless');
+      if (this.leaked === 0) ids.push('flawless');
       if (w.lives === 1) ids.push('last_life');
       const full = this.ctx.firstWave <= 1 && w.finalWave >= 40;
       if (full && (st.settings.difficulty === 'hard' || st.settings.difficulty === 'brutal')) ids.push('full_hard');

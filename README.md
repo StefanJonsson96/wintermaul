@@ -7,7 +7,7 @@ Play the tutorial, a 29-stage campaign in three acts with a passive tree in the 
 a quick skirmish, all running right in your browser, on a computer or a phone. Every wave has its weather,
 every fifth a shrine offers you a boon, and every achievement wins a relic to carry into battle.
 
-Version **2.0.0** · [Changelog](CHANGELOG.md)
+Version **3.0.0** · [Changelog](CHANGELOG.md)
 
 ![Gameplay](docs/images/gameplay.png)
 

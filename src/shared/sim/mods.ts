@@ -77,7 +77,8 @@ export interface PlayerMods {
 
 /** Gold price of a tower for a player with these bonuses. */
 export function towerCost(def: TowerDef, m?: PlayerMods): number {
-  return def.tier === 1 && m?.wallDiscount ? Math.max(1, def.cost - m.wallDiscount) : def.cost;
+  // discounts stack from talents, relics and boons; walls never drop below 70% of their price
+  return def.tier === 1 && m?.wallDiscount ? Math.max(Math.ceil(def.cost * 0.7), def.cost - m.wallDiscount) : def.cost;
 }
 
 /** Gold price of upgrading to this tower for a player with these bonuses. */

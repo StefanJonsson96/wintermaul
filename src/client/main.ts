@@ -17,6 +17,8 @@ import { catchUp, featCount, onFeat } from './campaign/feats';
 import { announce, type FeatContext, FeatTracker } from './game/feats';
 import { audio } from './audio';
 import { music } from './music';
+import { cleanRelics } from '../shared/relics';
+import { sanitizeLoadout } from '../shared/talents';
 import { openAchievements } from './ui/achievements';
 import { openTransfer } from './ui/transfer';
 import { skirmishOptions } from './modes/skirmish';
@@ -130,10 +132,10 @@ function boot(): void {
   function optionsFor(kind: SavedKind): Omit<LocalOptions, 'name'> | null {
     switch (kind.mode) {
       case 'skirmish':
-        return skirmishOptions(kind.relics ?? []);
+        return skirmishOptions(cleanRelics(kind.relics));
       case 'campaign': {
         const stage = STAGE_BY_ID[kind.stage];
-        return stage ? stageOptions(stage, loadSave(), stageActions, kind.talents, kind.relics ?? []) : null;
+        return stage ? stageOptions(stage, loadSave(), stageActions, sanitizeLoadout(kind.talents), cleanRelics(kind.relics)) : null;
       }
       default:
         return null;

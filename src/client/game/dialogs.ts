@@ -265,7 +265,7 @@ export function openOmenPicker(view: GameView, onClose: () => void): ModalHandle
   const me = s.me;
   if (!me?.omen?.length) return null;
   const offers = me.omen;
-  const wave = Math.max(1, s.wave.n);
+  const wave = Math.max(1, me.omenWave ?? s.wave.n);
   const cards = h('div', { class: 'omen-cards' });
   for (const id of offers) {
     const b = BOON_BY_ID[id];

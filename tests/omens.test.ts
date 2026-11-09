@@ -79,3 +79,39 @@ describe('omens', () => {
     expect(g.player(0)!.omen).toBeNull();
   });
 });
+
+describe('omens, regressions', () => {
+  const at5 = () => {
+    const g = new Game({ ...settings, weather: false }, [{ id: 0, name: 'P', color: 0, isBot: false }], 11, { skipSetup: true });
+    g.command(0, { c: 'race', race: 'fire' });
+    g.devGold(0, 500);
+    g.command(0, { c: 'build', tower: 'fire_1', x: 20, y: 10 });
+    g.devSkipTo(5);
+    for (let i = 0; i < 30000 && !(g.phase === 'build' && g.wave === 5); i++) g.step();
+    return g;
+  };
+
+  it('damage and speed boons reach towers already built', () => {
+    const g = at5();
+    const p = g.player(0)!;
+    p.omen = ['bloodprice', 'hands', 'ember'];
+    const t = [...g.towers.values()][0];
+    const before = { dmg: t.dmgMul, spd: t.spdMul };
+    g.command(0, { c: 'omen', pick: 'bloodprice' });
+    expect(t.dmgMul).toBeCloseTo(before.dmg * 1.14);
+    p.omen = ['hands'];
+    g.command(0, { c: 'omen', pick: 'hands' });
+    expect(t.spdMul).toBeCloseTo(before.spd * 1.06);
+  });
+
+  it('gold that scales is paid for the wave it was offered after', () => {
+    const g = at5();
+    const p = g.player(0)!;
+    p.omen = ['pockets', 'ember', 'hawk'];
+    p.omenWave = 5;
+    g.wave = 9;
+    const gold = p.gold;
+    g.command(0, { c: 'omen', pick: 'pockets' });
+    expect(p.gold - gold).toBe(15 * 5);
+  });
+});

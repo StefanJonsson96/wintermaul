@@ -28,6 +28,17 @@ network protocol break, the minor number for new features, the patch number for 
 - The achievements screen is now Relics & achievements; the campaign screen has a Relics button.
 - The lobby option is now *Campaign talents and relics*.
 
+- Career achievements ask for less (12 games, 6 wins, 10,000 kills) so their relics aren't a grind; the
+  Old Soldier's Pipe is weaker, Rime Crown, Thaw Lily and Starfall Sigil stronger. Storm Cloak keeps weather
+  out of your lane entirely. Wall discounts from talents, relics and boons stop at 30% of a wall's price.
+- Saved games from 2.x can't be continued (the rules changed); campaign progress carries over.
+
+### Fixed
+- Found by an adversarial review: damage and speed boons (and fog's slowdown) now reach towers already
+  built; Deep Pockets pays for the wave it was offered after, not when you take it; bots skip boons with a
+  price; relics only count when their achievement is earned; a broken saved game can't break Continue;
+  Not a Scratch and Weathered count leaks, so healing can't hide them.
+
 ### Removed
 - Commander spells (Frost Nova, Meteor, War Cry).
 - The daily challenge, with its medals, streak and achievements.

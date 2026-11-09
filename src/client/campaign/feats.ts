@@ -61,9 +61,9 @@ export const FEATS: Feat[] = [
   { id: 'weaver', name: 'Weaver', text: 'Spend 100 runestones on the Rune Web.', icon: 'rune', group: 'campaign', count: (s) => totalSpent(s.talents), goal: 100 },
 
 
-  { id: 'career_games', name: 'Old Soldier', text: 'Play 30 games to the end.', icon: 'shield', group: 'career', count: (s) => s.tally.games, goal: 30 },
-  { id: 'career_wins', name: 'Warden of the North', text: 'Win 15 games.', icon: 'crown', group: 'career', count: (s) => s.tally.wins, goal: 15 },
-  { id: 'career_kills', name: "Winter's Wrath", text: 'Kill 25,000 creeps, every game together.', icon: 'skull', group: 'career', count: (s) => s.tally.kills, goal: 25000 },
+  { id: 'career_games', name: 'Old Soldier', text: 'Play 12 games to the end.', icon: 'shield', group: 'career', count: (s) => s.tally.games, goal: 12 },
+  { id: 'career_wins', name: 'Warden of the North', text: 'Win 6 games.', icon: 'crown', group: 'career', count: (s) => s.tally.wins, goal: 6 },
+  { id: 'career_kills', name: "Winter's Wrath", text: 'Kill 10,000 creeps, every game together.', icon: 'skull', group: 'career', count: (s) => s.tally.kills, goal: 10000 },
 ];
 
 export const FEAT_BY_ID: Record<string, Feat> = Object.fromEntries(FEATS.map((f) => [f.id, f]));

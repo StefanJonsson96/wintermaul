@@ -51,6 +51,8 @@ export interface Player extends NetPlayer {
   baseGoldMul: number;
   boons: string[];
   omen: string[] | null;
+  /** The wave after which the waiting offer was made. */
+  omenWave?: number;
 }
 
 export interface Dot {

@@ -92,13 +92,13 @@ export const BOONS: Boon[] = [
   { id: 'hearth', name: 'Hearth Blessing', icon: 'heart', effects: [], now: { lives: 4 } },
   { id: 'axe', name: "Woodcutter's Luck", icon: 'log', effects: [], now: { lumber: 1 } },
   { id: 'raven', name: "Raven's Tithe", icon: 'wing', effects: [E.bounty(0.08)] },
-  { id: 'coldiron', name: 'Cold Iron', icon: 'snow', effects: [E.slow(0.12), E.slowDur(0.15)] },
-  { id: 'witchfire', name: 'Witchfire', icon: 'flame', effects: [E.poison(0.2), E.burn(0.2)] },
+  { id: 'coldiron', name: 'Cold Iron', icon: 'snow', effects: [E.slow(0.2), E.slowDur(0.25)] },
+  { id: 'witchfire', name: 'Witchfire', icon: 'flame', effects: [E.poison(0.3), E.burn(0.3)] },
   { id: 'frostedge', name: 'Frost Edge', icon: 'sword', effects: [E.crit(0.04)] },
   { id: 'sunder', name: 'Sundering Hymn', icon: 'shield', effects: [E.vsArmor(['heavy', 'fortified'], 0.12)] },
   { id: 'starlight', name: 'Starlight', icon: 'star', effects: [E.types(['magic', 'elemental', 'pure'], 0.1)] },
   { id: 'steelrain', name: 'Steel Rain', icon: 'arrows', effects: [E.types(['impact', 'pierce'], 0.1)] },
-  { id: 'skyhunter', name: 'Skyhunter', icon: 'wing', effects: [E.vsAir(0.2)] },
+  { id: 'skyhunter', name: 'Skyhunter', icon: 'wing', effects: [E.vsAir(0.35)] },
   { id: 'moon', name: "Executioner's Moon", icon: 'skull', effects: [E.execute(0.03)] },
   { id: 'mason', name: 'Mason’s Oath', icon: 'brick', effects: [E.walls(2), E.refund(0.1)] },
   { id: 'bloodprice', name: 'Blood Price', icon: 'gem', effects: [E.damage(0.14), E.leakMul(0.5)] },
@@ -134,10 +134,15 @@ export function omenOffers(seed: number, player: number, wave: number, have: str
   return out;
 }
 
+/** What a bot takes: the first boon without a price. */
+export function botBoon(offers: string[]): string {
+  return offers.find((id) => !BOON_BY_ID[id]?.effects.some((e) => e.bad)) ?? offers[0];
+}
+
 /** A player's bonuses: their own (talents, relics), their boons, and the weather. */
 export function effectiveMods(base: PlayerMods, boons: string[], weather: WeatherId): PlayerMods {
   const m: PlayerMods = structuredClone(base);
   for (const id of boons) for (const e of BOON_BY_ID[id]?.effects ?? []) e.apply(m);
-  for (const e of WEATHERS[weather].effects) if (!(base.weatherproof && e.bad)) e.apply(m);
+  if (!base.weatherproof) for (const e of WEATHERS[weather].effects) e.apply(m);
   return m;
 }

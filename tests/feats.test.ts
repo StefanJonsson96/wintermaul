@@ -55,18 +55,18 @@ describe('achievements', () => {
 
   it('count career totals', () => {
     const s = loadSave();
-    s.tally = { games: 29, wins: 3, kills: 24000 };
+    s.tally = { games: 11, wins: 3, kills: 9000 };
     storeSave(s);
     expect(heard).toEqual([]);
-    s.tally.games = 30;
-    s.tally.kills = 25000;
+    s.tally.games = 12;
+    s.tally.kills = 10000;
     storeSave(s);
     expect(heard.sort()).toEqual(['career_games', 'career_kills']);
   });
 
   it('a save from before achievements catches up quietly', () => {
     const s = emptySave();
-    s.tally = { games: 30, wins: 0, kills: 0 };
+    s.tally = { games: 12, wins: 0, kills: 0 };
     const hooks = saveHooks.splice(0);
     storeSave(s);
     saveHooks.push(...hooks);

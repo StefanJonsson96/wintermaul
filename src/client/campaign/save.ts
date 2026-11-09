@@ -1,7 +1,7 @@
 // Progress lives in localStorage: stars per stage, runestones, the talent loadout and achievements.
 import { ALL_STAGES, type Chapter, CHAPTERS, chapterOf, ENDLESS_AFTER, endlessReward, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
 import { type Loadout, NODE_BY_ID, sanitizeLoadout, totalSpent } from '../../shared/talents';
-import { cleanRelics } from '../../shared/relics';
+import { cleanRelics, RELIC_BY_ID, relicSlots } from '../../shared/relics';
 import { CloudSave } from './cloud';
 
 const KEY = 'winterward.campaign.v1';
@@ -42,6 +42,10 @@ function numbers(raw: unknown): Record<string, number> {
   return out;
 }
 
+function ownedRelics(relics: string[], feats: Record<string, number>): string[] {
+  return relics.filter((id) => feats[RELIC_BY_ID[id].feat]).slice(0, relicSlots(Object.keys(feats).length));
+}
+
 function tally(raw: unknown): Tally {
   const n = numbers(raw);
   const count = (v: number | undefined) => Math.max(0, Math.floor(v ?? 0));
@@ -66,7 +70,8 @@ export function parseSave(json: string | null): CampaignSave {
       refunded: old || raw.refunded === true || undefined,
       feats: numbers(raw.feats),
       tally: tally(raw.tally),
-      relics: cleanRelics(raw.relics),
+      // only relics whose achievement this save has earned, in the slots it has
+      relics: ownedRelics(cleanRelics(raw.relics), numbers(raw.feats)),
     };
   } catch {
     return emptySave();

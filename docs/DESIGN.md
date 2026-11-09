@@ -112,7 +112,7 @@ default and off in the tutorial.
   any of them changes and sent to clients as an event, so tooltips and range circles stay right.
 
 Stacked boons are strong: with a full set and campaign talents, bots won stages they used to lose.
-Each boon was cut to about two thirds; solo bots on Normal now average wave ~36 with both systems
+Each boon was cut to about two thirds, and wall discounts from every source stop at 30% of a wall's price; solo bots on Normal now average wave ~36 with both systems
 on against ~35 without, and a person choosing boons well does better.
 
 ## Single player
@@ -203,9 +203,9 @@ Latest results, 8 games per stage with random race pairs:
 | 11 The Rimewall | 6/8 | the Winter Tyrant; losses at wave 40 | | | |
 | 12 Throne of Winter | 6/8 | all 40 waves on Brutal | | | |
 
-Act III, 6 games per stage: Last Light 6/6, Whiteout Pass 6/6, Pilgrims' Road 5/6, The Last Cairns
-6/6 (bots never hit the cap's hardest choices), Aurora Vale 5/6, Night of the Red Moon 6/6, The Fog Sea
-5/6, The Long Night 5/6. Bots pick boons blindly and follow a fixed maze plan, so a person should do better; the last stages of
+Act III, 6 games per stage (lives lost when won in brackets): Last Light 6/6 (~6), Whiteout Pass 5/6
+(~9), Pilgrims' Road 6/6 (~9), The Last Cairns 6/6 (~6), Aurora Vale 6/6 (~5), Night of the Red Moon
+6/6 (~7), The Fog Sea 6/6 (~7), The Long Night 5/6 (~14). Bots there carry a lot of the Rune Web. Bots pick boons blindly and follow a fixed maze plan, so a person should do better; the last stages of
 each act are meant to take a few tries.
 
 ## Code architecture

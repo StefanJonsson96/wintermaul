@@ -28,7 +28,7 @@ let memory: SavedGame | null = null;
 
 export function validGame(raw: unknown): raw is SavedGame {
   const g = raw as SavedGame;
-  return !!g && typeof g === 'object' && typeof g.version === 'string' && typeof g.seed === 'number' && typeof g.tick === 'number' && Array.isArray(g.cmds) && !!g.kind && typeof g.kind.mode === 'string';
+  return !!g && typeof g === 'object' && typeof g.version === 'string' && typeof g.seed === 'number' && typeof g.tick === 'number' && Array.isArray(g.cmds) && !!g.kind && (g.kind.mode === 'skirmish' || (g.kind.mode === 'campaign' && typeof g.kind.stage === 'string' && !!g.kind.talents && typeof g.kind.talents === 'object'));
 }
 
 export function loadGame(): SavedGame | null {

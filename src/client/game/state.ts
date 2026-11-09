@@ -321,7 +321,10 @@ export class ClientState {
         break;
       case 'omen': {
         const p = this.player(ev.p);
-        if (p) p.omen = ev.offers;
+        if (p) {
+          p.omen = ev.offers;
+          p.omenWave = ev.wave;
+        }
         break;
       }
       case 'boon': {

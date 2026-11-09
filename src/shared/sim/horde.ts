@@ -137,7 +137,7 @@ export class Horde {
     if (this.g.time < c.burrowUntil) boost *= 1.25;
     const fr = c.def.frenzy;
     if (fr && c.hp < c.maxHp * fr.below) boost *= 1 + fr.speed;
-    return c.def.speed * (1 - slow) * boost * (this.g.rules.speedMul ?? 1) * (this.g.weatherDef.creepSpeed ?? 1) * (1 - (owner?.mods.creepSlow ?? 0));
+    return c.def.speed * (1 - slow) * boost * (this.g.rules.speedMul ?? 1) * (owner?.baseMods.weatherproof ? 1 : (this.g.weatherDef.creepSpeed ?? 1)) * (1 - (owner?.mods.creepSlow ?? 0));
   }
 
   /** One tick for every creep: regeneration and healers, poison and burns, abilities, then a step along the maze. */

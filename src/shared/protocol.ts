@@ -75,6 +75,7 @@ export interface NetPlayer {
   /** Boons taken from shrines, and the shrine's offer waiting to be answered. */
   boons?: string[];
   omen?: string[] | null;
+  omenWave?: number;
 }
 
 export interface NetTower {

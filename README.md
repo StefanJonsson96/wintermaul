@@ -1,11 +1,12 @@
 # ❄ Winterward
 
 **A co-op maze tower defense for the browser, in the spirit of the Warcraft III map *Wintermaul*.**
-Up to 8 players, no login, 12 races and 96 towers, 40 waves and a final boss. Build a maze on an open
-snowfield: whatever slips through your maze runs straight into your neighbour's. Alone? Play the tutorial,
-a 12-stage campaign with a talent tree, or a quick skirmish, all running right in your browser.
+Up to 8 players, no login, 12 races and 96 towers, two sets of 40 waves and their final bosses. Build a
+maze on an open snowfield: whatever slips through your maze runs straight into your neighbour's. Alone?
+Play the tutorial, a 21-stage campaign in two acts with a passive tree in the spirit of Path of Exile, the
+daily challenge or a quick skirmish, all running right in your browser, on a computer or a phone.
 
-Version **1.1.0** · [Changelog](CHANGELOG.md)
+Version **2.0.0** · [Changelog](CHANGELOG.md)
 
 ![Gameplay](docs/images/gameplay.png)
 
@@ -37,12 +38,31 @@ npm run dev           # then open http://localhost:5173
 | Mode | What it is |
 |---|---|
 | **Tutorial** | One click from the menu. An 8-wave game where a coach explains one idea at a time (walls, zig-zags, calling waves, upgrades, air, leaks, lumber) and waits for you to try it. |
-| **Campaign** | *The Long Winter*: twelve stages on the road north, each with its own twist, three stars to earn and runestones for the talent tree. |
-| **Skirmish** | A solo game with the classic rules. |
+| **Campaign** | Two acts, *The Long Winter* and *The Thaw*: 21 stages on two painted maps, each with its own twist, three stars to earn and runestones for the Rune Web. |
+| **Daily** | One game a day, the same for everyone: the date picks the seed, the waves, a war chest and a twist or two. Bronze, Silver and Gold medals and a play streak. |
+| **Skirmish** | A solo game with your rules: difficulty, Classic waves or The Thaw, forty waves or endless. |
 | **Multiplayer** | 1–8 players in a room, with bots to fill seats. The first player picks the rules, like Red in the original. |
 
 Single-player games are simulated in your browser: press **P** to pause (they also pause when you switch
-tabs) and **F** to play at 2× or 3× speed.
+tabs) and **F** to play at 2× or 3× speed. They save as you play: close the tab, come back later and press
+**Continue** on the menu.
+
+### The Thaw
+
+![The Thaw](docs/images/thaw.png)
+
+The rules dialog offers a second set of forty waves. What slept under the glacier fights back: **burrowers**
+dig in and can't be hit, **blinkers** jump ahead along the path, **brood mothers** drop hatchlings,
+**wardens** shield the creeps around them, **war drummers** speed their wave up, **frenzied** brutes run
+faster as they bleed, and **hexers** freeze your towers solid for a few seconds. Some waves mix two kinds
+of creep. The wave preview names every trick a wave has.
+
+### Commander spells
+
+Every player has three spells on their own cooldowns, cast on any lane with **1**, **2**, **3** (or the
+Spells panel): **Frost Nova** freezes the creeps in an area (bosses are slowed), **Meteor** lands a second
+later and hits everything around it hard, and **War Cry** makes your towers in a wide area attack 40%
+faster for eight seconds. The rules dialog can switch spells off for a purist game.
 
 ### On a phone or tablet
 
@@ -68,24 +88,50 @@ stars:
 2. **Win** the stage,
 3. win **losing at most a few lives**.
 
-Stars pay **runestones**. Win a stage to open the next; win *The Iron Pass* to open **The Endless
-Frontier**, which pays a runestone every 5 waves past wave 20 the first time you get there.
+Stars pay **runestones**. Win a stage to open the next; win *The Drowned Mill* to open **Act II, The
+Thaw**, nine stages on the glacier against the creeps that fight back. Win *The Iron Pass* to open **The
+Endless Frontier**, which pays a runestone every 5 waves past wave 20 the first time you get there.
 
-![Talents](docs/images/talents.png)
+### The Rune Web
 
-Spend runestones in the **talent tree**:
+![The Rune Web](docs/images/runeweb.png)
 
-| Branch | Talents |
+Runestones are spent on **the Rune Web**, a passive tree of 193 nodes in the spirit of Path of Exile. You
+start at the Hearth in the middle and take nodes next to what you have: click a node to take the whole
+path to it. Six regions (Arsenal, Precision, Rime, Bulwark, Fortune, Alchemy) each have small nodes,
+named **notables** and two **keystones** that change how you play, with a drawback:
+
+| Region | Keystones |
 |---|---|
-| **Arsenal** | Damage, range, attack speed, bonuses per damage type, and the *Deadeye* capstone (double-damage hits). |
-| **Alchemy** | Stronger poison, burns, slows and stuns, poison that spreads, and *Frostbite* (slowed creeps take more damage). |
-| **Fortune** | Starting gold, bounties, level bonus, better refunds, cheaper walls, interest, and *Timber Rights* (+1 lumber). |
-| **Bulwark** | Lives, extra build time, slower creeps in your lane, softer boss leaks, *Last Stand*, and *Second Wind* (a second chance, once per game). |
-| **Kinship** | Extra damage for each of the 12 races. |
+| **Arsenal** | *Glass Cannon*: +30% damage, but leaks from your lane cost double lives. *Fortune's Favor*: double-damage hits, but the other hits are weaker. |
+| **Precision** | *Overcharge*: much faster attacks, shorter range. *Sniper's Creed*: long range, slower attacks. |
+| **Rime** | *Frozen Heart*: stronger, longer slows for less damage. *Reaper's Mark*: your hits finish off creeps below 6% health, but you are weaker against bosses. |
+| **Bulwark** | *Ironclad*: +10 lives, slower attacks. *Unbreakable*: a much bigger Second Wind, less damage. |
+| **Fortune** | *Blood Money*: kills pay half again, the wave bonus half. *Architect*: cheap walls that build at once, dearer upgrades. |
+| **Alchemy** | *Plague Lord*: far stronger poison, weaker everything else. *Inferno*: stronger fire and wider splash, weaker direct hits. |
 
-Deeper rows open as you spend more in a branch. Respec is free. Progress is saved in your browser.
-In multiplayer the host can switch **Campaign talents** on in the lobby (off by default), and everyone
-brings the talents they earned.
+Around the rim sits a mastery for each of the 12 races. Search finds nodes by name or effect, Bonuses sums
+up what you have taken, and giving a node back is free (right-click it, or *Give back* on a phone) as
+long as nothing else hangs on it. In multiplayer the host can switch **Campaign talents** on in the lobby (off
+by default), and everyone brings the passives they took.
+
+### The daily challenge
+
+![Daily challenge](docs/images/daily.png)
+
+The **Daily** tile opens today's challenge: a stretch of fifteen waves from one of the two wave sets, a
+war chest to start with, sometimes Hard, and one or two twists (Swift, Mending, Iron hides, Horde,
+Plunder, Six races, Lean times). **Bronze** for reaching a wave, **Silver** for winning, **Gold** for
+winning while losing at most three lives. Play every day to keep your streak; the briefing shows the last
+week. It pays no runestones: it is for the medal.
+
+### Achievements
+
+![Achievements](docs/images/achievements.png)
+
+Thirty-three achievements, from killing your first boss to a 300-cell maze, a Gold medal, every star of the
+campaign or a win on Brutal. They are kept with your campaign progress and announced the moment you earn
+them. Games where developer commands were used earn nothing.
 
 ## How to play
 
@@ -116,6 +162,7 @@ brings the talents they earned.
 | Wheel, arrows, right- or middle-drag | Zoom and move the camera |
 | Space | Jump back to your lane |
 | G | Ready / call the next wave early |
+| 1 2 3 | Aim Frost Nova, Meteor or War Cry; click to cast |
 | P / F | Pause / game speed (single player) |
 | Alt + click | Ping the map for your team |
 | Enter | Chat (`-random`, `-ready`, `-help`) |
@@ -131,18 +178,22 @@ brings the talents they earned.
   (multiplayer), in the browser (single player), in the bots and in the headless balance scripts.
 - **Authoritative multiplayer**: Node + WebSocket server simulating at 20 Hz, 10 Hz snapshots,
   client-side interpolation, reconnect-by-token, spectators, lobby with public and private rooms.
-- **All art is procedural**: canvas drawing code for the towers (a building style per race), the 24
-  creature shapes, the terrain, the emblems and the campaign map. All sound is synthesized with
-  WebAudio. No third-party assets.
+- **All art is procedural**: canvas drawing code for the towers (a building style per race), the
+  creature shapes, the terrain, the emblems and the two campaign maps. All sound is synthesized with
+  WebAudio, music included: pads, bells and wind, with drums when a wave is on and a darker turn for
+  bosses. No third-party assets.
+- **Saves are replays.** A single-player game is saved as its seed and the commands you gave; Continue
+  plays them back on the same seed and lands on the same state.
 
 ```
 src/shared/          rules and data (races, towers, waves, campaign, talents), grid, protocol
 src/shared/sim/      the simulation: game (state, commands, waves), horde (creeps), combat (towers),
                      talent bonuses, bots, and the real-time runner
 src/server/          HTTP + WebSocket server, rooms and lobby
-src/client/          menu and lobby, local single-player games, tutorial
+src/client/          menu and lobby, local single-player games and saves, music
+src/client/modes/    tutorial, skirmish and the daily challenge
 src/client/game/     game view: renderer, HUD, dialogs, effects, input
-src/client/campaign/ campaign map, briefings, talent tree, saves
+src/client/campaign/ campaign maps, briefings, the Rune Web, progress and achievements
 src/client/art/      procedural towers (a kit per race), creatures, terrain
 scripts/             balance runners, determinism fingerprint, browser tests, README screenshots
 tests/               unit tests (vitest)
@@ -160,6 +211,8 @@ docs/                research notes, design, hosting guide
 | `node scripts/mobile-test.mjs` | Plays the tutorial on an emulated phone with touch input |
 | `npm run balance -- --players 2 --games 6` | Headless bot games for balancing |
 | `npm run balance:campaign` | Plays every campaign stage with bots holding typical talents |
+| `npm run balance:daily` | Plays bots on a run of daily challenges and prints the medals |
+| `node scripts/resume-test.mjs` | Saves a game mid-wave, reloads and checks it continues identically |
 | `npm run fingerprint` | Hashes seeded bot games: a refactor that changes nothing leaves it identical |
 | `WINTERWARD_DEV=1 npm start` | Testing chat commands: `-gold 5000`, `-wave 20`, `-speed 4`, `-lumber 1`, `-autopilot` |
 | `node scripts/readme-shots.mjs` | Regenerates the images in `docs/images` (needs a dev server) |

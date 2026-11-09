@@ -4,6 +4,43 @@ All notable changes to Winterward. The format follows [Keep a Changelog](https:/
 and the project uses [Semantic Versioning](https://semver.org/): the major number changes when saves or the
 network protocol break, the minor number for new features, the patch number for fixes and balance.
 
+## [2.0.0] - 2026-11-09
+
+### Added
+- **The Thaw**: a second set of forty waves, chosen in the rules dialog. Creeps that fight back:
+  burrowers that dig in out of reach, blinkers that jump ahead, brood mothers that drop hatchlings,
+  wardens that shield their neighbours, war drummers that speed up their wave, brutes that run faster as
+  they bleed, and hexers that freeze towers solid. Some waves mix two creeps; the wave preview names every
+  trick. Its bosses are Grimmaw the Deep Worm, the Hexmother, the Storm Herald and the Hollow King.
+- **Campaign Act II, The Thaw**: nine stages on a glacier map, open once *The Drowned Mill* is won. The
+  campaign screen has a tab per act, and the end screen says when a new act opens.
+- **The Rune Web** replaces the talent tree: a passive web of 193 nodes in the spirit of Path of Exile,
+  with six regions of small nodes, notables and two keystones each, race masteries around the rim, and
+  bridges between regions. Pan, zoom, search, a summary of your bonuses, free refunds of anything nothing
+  else hangs on, and a touch card on phones.
+- **Commander spells**: Frost Nova, Meteor and War Cry, each on its own cooldown, cast with 1, 2, 3 or the
+  new Spells panel. The rules dialog can switch them off.
+- **Daily challenge**: one game a day, the same for everyone. The date picks the seed, the wave set, a
+  stretch of fifteen waves with a war chest, and one or two twists. Bronze, Silver and Gold medals, a play
+  streak, and the last week in the briefing.
+- **Achievements**: 33 of them, announced as you earn them, listed on the end screen and in a new
+  Achievements screen with progress bars. They are kept with your campaign progress.
+- **Music**: generated as it plays (pads, bells, wind; drums during waves, darker for bosses), with a
+  switch on the menu and a switch and volume in the settings.
+- **Continue**: single-player games save as you play. Close the tab, come back, and press Continue on the
+  menu to pick up exactly where you were, paused.
+- `npm run balance:daily` and `scripts/resume-test.mjs`.
+
+### Changed
+- **Talents from the old tree are refunded** once, with a note on the campaign screen: spend the
+  runestones again on the Rune Web. The campaign now pays 174 runestones in all.
+- The protocol has new events, commands and settings, so servers and browsers must both be 2.0.
+- Skirmish uses your rules: difficulty, wave set, endless, spells.
+- The menu has a Daily tile and Achievements and Music buttons; on a narrow phone the tiles sit two by
+  two.
+- Messages show above dialogs.
+- Test scripts find Chromium wherever Playwright installed it.
+
 ## [1.1.0] - 2026-10-22
 
 ### Added

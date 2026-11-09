@@ -63,6 +63,25 @@ Upgrades happen in place (so they never change your maze) and get more gold-effi
 Damage types vs armor classes (Pierce / Impact / Magic / Elemental / Pure vs Light / Medium /
 Heavy / Fortified / Spirit) plus Warcraft-style numeric armor make race choice matter per wave.
 
+## The Thaw: a second set of waves
+
+The rules dialog (and the second act of the campaign) can swap the forty classic waves for **The
+Thaw** (`T` in `src/shared/data/waves.ts`), forty waves of creeps with abilities the classic set does
+not have. Each is a field on the creep definition, run by `Horde.useAbilities`:
+
+| Ability | What it does | The answer |
+|---|---|---|
+| Burrow | Digs in every few seconds: untargetable, a little faster | Towers that hit hard when it surfaces; slows |
+| Blink | Jumps a few cells ahead along its path | Long mazes still work; burst at the end |
+| Brood | Drops hatchlings as it walks | Splash |
+| Ward | Shields the creeps around it | Kill the warden first (target *strong*) |
+| War drums | Speeds up its whole wave | Slows, stuns |
+| Frenzy | Runs faster as it loses health | Finish it fast; slows |
+| Hex | Freezes a tower near it for a few seconds | Spread the damage over many towers |
+
+Some waves mix two creeps. The wave preview and the wave bar name every trick a wave has. Tuned with
+bots, a Thaw game goes about as far as a classic one (solo average wave ~32, duos ~32).
+
 ## Innovations (kept small on purpose)
 
 - **Live path preview** and path length while placing towers.
@@ -72,6 +91,12 @@ Heavy / Fortified / Spirit) plus Warcraft-style numeric armor make race choice m
 - **Pings** (Alt+click), in-game chat with old-school `-commands`.
 - **Bots** that build real mazes, for solo play or to fill seats.
 - **Endless mode** after wave 40.
+- **Commander spells**: Frost Nova, Meteor and War Cry (`src/shared/sim/spells.ts`), each on its own
+  cooldown (45, 55 and 60 s), cast on any lane. Nova freezes creeps for 2.5 s (bosses are slowed,
+  immune creeps ignore it); Meteor lands a second later for half a typical creep's health of this wave
+  (bosses take 30%); War Cry makes your towers in a wide circle attack 40% faster for 8 s. They are a
+  way to rescue a leak, not a damage source: a tower does more over a wave. A rules option turns them
+  off; bots never cast them.
 
 ## Single player
 
@@ -84,70 +109,101 @@ client clock keeps in step, and a hidden tab pauses the game.
   shows one idea at a time, highlights the cells or buttons involved and moves on when the player has
   done it. A player who follows along wins with a few leaks; one who stops building loses.
 - **Skirmish**: a solo game with the classic rules dialog.
+- **Saved games.** A single-player game is saved as its seed and the commands given, with the tick of
+  each (`src/client/saved.ts`). Continue builds a new game on the same seed and replays the commands
+  (`src/shared/sim/replay.ts`); since the simulation is deterministic it lands on the same state,
+  then shows it paused. The save is written every few seconds and when the tab is hidden or closed, and
+  a save from another version of the game is not offered. Developer commands make a game unsaveable.
+- **Daily challenge** (`src/shared/daily.ts`): the date, hashed, seeds a random generator that picks
+  the wave set, a first wave from a short list (1 to 24), fifteen waves from there, a war chest of
+  about nine tenths of what a player would have built up by then, 10% more creep health, sometimes
+  Hard, and one or two twists. Medals: Bronze for reaching nine waves in, Silver for winning, Gold for
+  winning losing at most three lives. `npm run balance:daily` plays bots over a run of days; over 40
+  days they earned no medal 13 times, Bronze 10, Silver 15 and Gold twice.
+- **Achievements**: 33 of them, kept with the campaign save. Some follow from the save (stars, the
+  web, medals, career totals: a hook on every save checks them); the rest are watched for during a
+  game by a tracker that reads the event stream and the player's state, in multiplayer too.
 
 ## The campaign
 
-*The Long Winter* is twelve stages on a painted map, each a rule set for the ordinary game
-(`src/shared/campaign.ts`). The rules can change the first and last wave, lives, starting gold and
-lumber, creep health, speed, armor and regeneration, the number of creeps per wave, bounty, and the
-races that can be picked. Late stages drop the player into the war (wave 15, 20, 30…) with a war
-chest and a long first countdown, which makes them a different puzzle: build a whole maze at once.
+The campaign is two acts on two painted maps (`src/shared/campaign.ts`): *The Long Winter*, twelve
+stages on the road north, and *The Thaw*, nine stages on the glacier with the second wave set, which
+opens once *The Drowned Mill* is won. Each stage is a rule set for the ordinary game. The rules can
+change the first and last wave, lives, starting gold and lumber, creep health, speed, armor and
+regeneration, the number of creeps per wave, bounty, and the races that can be picked. Late stages
+drop the player into the war (wave 15, 20, 30…) with a war chest and a long first countdown, which
+makes them a different puzzle: build a whole maze at once.
 
-Three stars per stage: reach a wave, win, win losing at most a few lives. Stars pay **runestones**
-(6 to 16 per stage, 125 in all); winning a stage opens the next. The Endless Frontier (open after
-stage 6) pays one runestone per 5 waves past wave 20 the first time they are reached, a long tail for
-players who want the whole tree.
+Three stars per stage: reach a wave, win, win losing at most a few lives. Stars pay **runestones**,
+174 in all; winning a stage opens the next. The Endless Frontier (open after *The Iron Pass*) pays one
+runestone per 5 waves past wave 20 the first time they are reached, a long tail for players who want
+more of the web.
 
-### Talents
+### The Rune Web
 
-The talent tree (`src/shared/talents.ts`) has four branches with gated rows, a capstone each, and a
-Kinship branch with a mastery per race. The whole tree costs 125 runestones, exactly what every
-star of the campaign pays; the Endless Frontier makes up for stars a player skips. Talents are data: each rank
-adds to a `PlayerMods` record (`src/shared/sim/mods.ts`), and the simulation reads those bonuses per
-player: damage by type and race, attack speed and range, poison and burn damage, slow strength, stun
-length, kill gold and wave bonus, refunds, wall prices, interest, lives, extra build time, slower
-creeps in your lane, softer boss leaks, Last Stand and Second Wind.
+The talent tree is a passive web in the spirit of Path of Exile (`src/shared/talents.ts`): 193 nodes
+around a start node, the Hearth, in six regions at 60° from each other: Arsenal (damage), Precision
+(range, speed, critical hits), Rime (slows and stuns), Bulwark (lives), Fortune (gold) and Alchemy
+(poison and fire). Every node costs one runestone and must connect to the Hearth through nodes already
+taken; clicking a far node takes the shortest path to it.
 
-Per-rank values are small (+2% damage, +5% for one damage type, +4% for one race), so a player
-halfway through the campaign is roughly 30–40% stronger than a new one, and later stages are tuned
-for that. Respec is free, so trying builds costs nothing.
+- **Small nodes** give a little each (+2% damage, +2% range, +3% against bosses…).
+- **Notables** sit on wheels around each region's hub and give a named, bigger bonus.
+- **Keystones**, two per region at the end of long branches, change how a build plays and come with
+  a drawback (*Glass Cannon*: +30% damage, leaks cost double lives).
+- **Race masteries** (+10% damage for one race, on short branches of +3% nodes) ring the rim, two
+  per region, one per race, so a build around a race pair crosses regions.
+- Bridges between neighbouring regions make loops, so there is more than one way to a keystone.
+
+The whole web costs 192 runestones and the campaign pays 174, so even a completionist leaves some
+of it untaken. Nodes are data: each adds to a `PlayerMods` record (`src/shared/sim/mods.ts`) that the
+simulation reads per player. A node can be given back for free unless that would cut off others. The
+saved loadout, and the one a browser sends a multiplayer server, are cleaned the same way: unknown
+nodes dropped, only what connects to the Hearth kept, within the runestones earned.
 
 In multiplayer the host can switch **Campaign talents** on (off by default). Each browser sends its
-loadout; the server keeps only what is possible (known talents, ranks within limits, gates met, at
-most the cost of the whole tree) and gives each player's lane their bonuses.
+loadout and the server keeps only what is possible.
 
 ### Campaign balance
 
-`npm run balance:campaign` plays every stage with a bot that owns the talents a player would have by
-then (every earlier stage won, no third stars). Latest results, 10 games per stage with random race
-pairs:
+`npm run balance:campaign` plays every stage with a bot that owns the passives a player would have by
+then (every earlier stage won, no third stars), spent along a typical path through the Rune Web.
+Latest results, 8 games per stage with random race pairs:
 
-| Stage | Bot wins | Notes |
-|---|---|---|
-| 1 Hollowmere | 10/10 | ~3 lives lost; 3 of 10 flawless |
-| 2 Pinewatch | 10/10 | ~6 lives lost |
-| 3 The Drowned Mill | 9/10 | ~10 lives lost |
-| 4 Crowspire | 10/10 | ~7 lives lost |
-| 5 Frostfen | 9/10 | ~13 of 24 lives lost: tense |
-| 6 The Iron Pass | 10/10 | ~11 lives lost |
-| 7 Glimmerdeep | 9/10 | depends a lot on the race pair |
-| 8 Wolfsmoor | 8/10 | the Queen of Rime decides it |
-| 9 The Ashen Gate | 8/10 | |
-| 10 Silent Barrow | 7/10 | |
-| 11 The Rimewall | 4/10 | the Winter Tyrant; losses are at wave 37–40 |
-| 12 Throne of Winter | 5/10 | all 40 waves on Brutal |
+| Act I stage | Bot wins | | Act II stage | Bot wins | |
+|---|---|---|---|---|---|
+| 1 Hollowmere | 8/8 | ~3 lives lost | 1 Meltwater Ford | 8/8 | ~2 lives lost |
+| 2 Pinewatch | 8/8 | ~6 | 2 The Drowned Fjord | 8/8 | ~4 |
+| 3 The Drowned Mill | 8/8 | ~6 | 3 Hexwood | 8/8 | ~7 |
+| 4 Crowspire | 8/8 | ~7 | 4 Shattered Causeway | 7/8 | |
+| 5 Frostfen | 8/8 | ~14 of 24: tense | 5 Brood Caverns | 6/8 | losses at wave 28 |
+| 6 The Iron Pass | 7/8 | | 6 Stormwatch | 8/8 | ~8 |
+| 7 Glimmerdeep | 7/8 | | 7 The Frozen Sea | 7/8 | |
+| 8 Wolfsmoor | 8/8 | ~10 | 8 The Hollow Throne | 5/8 | ~22 lives lost when won |
+| 9 The Ashen Gate | 7/8 | | 9 Heart of the Glacier | 6/8 | Brutal; losses at wave 40 |
+| 10 Silent Barrow | 7/8 | | | | |
+| 11 The Rimewall | 6/8 | the Winter Tyrant; losses at wave 40 | | | |
+| 12 Throne of Winter | 6/8 | all 40 waves on Brutal | | | |
+
+Bots cast no spells and follow a fixed maze plan, so a person should do better; the last stages of
+each act are meant to take a few tries.
 
 ## Code architecture
 
 - `src/shared/sim/game.ts` holds the state, the commands and the wave flow; `horde.ts` moves, heals,
-  leaks and kills creeps; `combat.ts` does targeting, attacks, damage and on-hit effects;
-  `entities.ts` has the plain data types. The simulation is deterministic for a given seed.
+  leaks and kills creeps and runs their abilities; `combat.ts` does targeting, attacks, damage and
+  on-hit effects; `spells.ts` the commander spells; `entities.ts` has the plain data types. The
+  simulation is deterministic for a given seed, which is what saved games rely on.
 - `npm run fingerprint` plays seeded bot games (with and without talents and stage rules) and hashes
   every event. A refactor that must not change behaviour has to leave its output identical; the split
   of the simulation into these modules was checked this way.
 - The client splits the game screen into the view (input, camera, frame loop), the renderer, the HUD,
   its dialogs and the combat effects. The procedural art lives in `src/client/art`, with a building kit
   per race and creatures grouped by body type.
+- Music (`src/client/music.ts`) is generated as it plays: a scheduler wakes four times a second and
+  writes the next bar or two of notes into WebAudio: pads over a D minor progression, bells walking the
+  pentatonic scale into an echo, a bass, wind, and drums while a wave is on (darker chords for
+  bosses). It has its own bus and limiter, so it never pumps with the sound effects.
 - Versions follow semantic versioning (see `CHANGELOG.md`). The server reports its version on
   `/healthz` and when a browser connects, and an outdated tab is asked to reload.
 

@@ -446,12 +446,32 @@ class RuneWeb {
       const p = this.toScreen(n.x, n.y);
       const r = Math.max(7, RADIUS[n.kind] * cam.zoom);
       ctx.font = `${n.kind === 'keystone' ? 700 : 600} ${n.kind === 'keystone' ? 12 : 11}px Inter, sans-serif`;
+      // the two keystones of the top and bottom regions sit side by side: their names lean apart, and
+      // at the top they go above the nodes, where there is room
+      let x = p.x;
+      let y = p.y + r + 4;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      if (n.kind === 'keystone' && n.region) {
+        const a = ((-90 + REGIONS.findIndex((reg) => reg.id === n.region) * 60) * Math.PI) / 180;
+        if (Math.abs(Math.sin(a)) > 0.9) {
+          const side = n.x - Math.cos(a) * Math.hypot(n.x, n.y);
+          ctx.textAlign = side < 0 ? 'right' : 'left';
+          x = p.x + (side < 0 ? r : -r);
+          if (Math.sin(a) < 0) {
+            ctx.textBaseline = 'bottom';
+            y = p.y - r - 4;
+          }
+        }
+      }
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(6,10,20,0.85)';
-      ctx.strokeText(n.name, p.x, p.y + r + 4);
+      ctx.strokeText(n.name, x, y);
       ctx.fillStyle = have.has(n.id) ? '#fff3cf' : 'rgba(207,224,244,0.8)';
-      ctx.fillText(n.name, p.x, p.y + r + 4);
+      ctx.fillText(n.name, x, y);
     }
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
   }
 
   private colorOf(n: PassiveNode, a = 1): string {

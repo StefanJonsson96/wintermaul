@@ -13,7 +13,10 @@ import { CampaignScreen } from './campaign/screen';
 import { VERSION } from '../shared/version';
 import { GameView } from './game/view';
 import { type Link, LocalGame, type LocalOptions } from './local';
+import { catchUp, featCount, onFeat } from './campaign/feats';
+import { announce, type FeatContext, FeatTracker } from './game/feats';
 import { dailyLine, dailyOptions, openDaily } from './modes/daily';
+import { openAchievements } from './ui/achievements';
 import { skirmishOptions } from './modes/skirmish';
 import { tutorialOptions } from './modes/tutorial';
 import { Net } from './net';
@@ -45,6 +48,7 @@ function boot(): void {
   const net = new Net();
   const backdrop = new Backdrop($('#bg-canvas') as HTMLCanvasElement);
   let game: GameView | null = null;
+  let feats: FeatTracker | null = null;
   let room: RoomState | null = null;
   let local: LocalGame | null = null;
   let pendingJoin = qs.get('room')?.toUpperCase() ?? null;
@@ -61,6 +65,11 @@ function boot(): void {
     campaignProgress: () => progressLine(loadSave()),
     daily: () => openDaily(dailyActions),
     dailyLine: () => dailyLine(loadSave()),
+    achievements: () => openAchievements(),
+    featLine: () => {
+      const { got, all } = featCount();
+      return `${got} / ${all}`;
+    },
     saved: loadGame,
     resume: () => void continueGame(),
     abandon: clearGame,
@@ -150,6 +159,13 @@ function boot(): void {
     }
   }
 
+  /** What the achievement tracker needs to know about a game. */
+  function featContext(from: Link): FeatContext {
+    const local = from.local;
+    if (!local) return { mode: 'online', firstWave: 1, fair: () => true };
+    return { mode: local.opts.save?.kind.mode ?? 'tutorial', firstWave: local.opts.rules?.firstWave ?? 1, fair: () => local.fair };
+  }
+
   /** Handles a message from the server or from a local game. */
   function route(msg: ServerMsg, from: Link): void {
     // a stray message from a game we already left
@@ -198,6 +214,7 @@ function boot(): void {
         show('game');
         game?.destroy();
         game = new GameView(from, $('#game-canvas') as HTMLCanvasElement, $('#hud'), msg.state, msg.you, () => !!room?.players.find((p) => p.id === room?.you)?.host);
+        feats = new FeatTracker(game, featContext(from));
         if (from.local) from.local.opts.attach?.(game, from.local);
         return;
       case 'snap':
@@ -210,10 +227,20 @@ function boot(): void {
         game?.onPing(msg.from, msg.lane, msg.x, msg.y);
         return;
       case 'gameOver':
+        // achievements first: the end screen lists the ones this game earned
+        feats?.gameOver(msg.victory);
         game?.onGameOver(msg.victory, msg.stats);
         return;
     }
   }
+
+  // achievements: announced as they come; a save from before them gets what it has earned
+  onFeat((f) => {
+    announce(f);
+    if (current === 'menu') menu.refresh();
+  });
+  const caught = catchUp();
+  if (caught > 0) setTimeout(() => toast(`New: achievements! Your progress so far has earned ${caught}.`, 'good', 6000), 1200);
 
   net.onStatus = (ok) => menu.setStatus(ok);
   net.onAny((msg) => route(msg, net));

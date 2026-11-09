@@ -1,4 +1,5 @@
-// Campaign progress lives in localStorage: stars per stage, runestones and the talent loadout.
+// Progress lives in localStorage: stars per stage, runestones and the talent loadout, daily
+// challenge medals and achievements.
 import { ALL_STAGES, type Chapter, CHAPTERS, chapterOf, ENDLESS_AFTER, endlessReward, STAGES, starReward, starsFor, type Stage, type StageResult } from '../../shared/campaign';
 import { type Daily, dayKey, type Medal, medalFor } from '../../shared/daily';
 import { type Loadout, NODE_BY_ID, sanitizeLoadout, totalSpent } from '../../shared/talents';
@@ -20,6 +21,16 @@ export interface CampaignSave {
   refunded?: boolean;
   /** Daily challenge results by date: the best medal and wave. */
   daily: Record<string, DailyResult>;
+  /** Achievements earned, with when (ms since 1970). */
+  feats: Record<string, number>;
+  /** Totals over every game played to the end. */
+  tally: Tally;
+}
+
+export interface Tally {
+  games: number;
+  wins: number;
+  kills: number;
 }
 
 export interface DailyResult {
@@ -30,7 +41,7 @@ export interface DailyResult {
 }
 
 export function emptySave(): CampaignSave {
-  return { stars: {}, best: {}, stones: 0, talents: {}, endlessBest: 0, daily: {} };
+  return { stars: {}, best: {}, stones: 0, talents: {}, endlessBest: 0, daily: {}, feats: {}, tally: { games: 0, wins: 0, kills: 0 } };
 }
 
 function numbers(raw: unknown): Record<string, number> {
@@ -54,6 +65,12 @@ function dailies(raw: unknown): Record<string, DailyResult> {
   return out;
 }
 
+function tally(raw: unknown): Tally {
+  const n = numbers(raw);
+  const count = (v: number | undefined) => Math.max(0, Math.floor(v ?? 0));
+  return { games: count(n.games), wins: count(n.wins), kills: count(n.kills) };
+}
+
 /** Reads the save, repairing anything malformed instead of failing. */
 export function parseSave(json: string | null): CampaignSave {
   if (!json) return emptySave();
@@ -71,6 +88,8 @@ export function parseSave(json: string | null): CampaignSave {
       last: typeof raw.last === 'string' ? raw.last : undefined,
       refunded: old || raw.refunded === true || undefined,
       daily: dailies(raw.daily),
+      feats: numbers(raw.feats),
+      tally: tally(raw.tally),
     };
   } catch {
     return emptySave();
@@ -92,7 +111,11 @@ export function loadSave(): CampaignSave {
 
 const cloud = new CloudSave();
 
+/** Run on every save before it is written (achievements earned from progress hook in here). */
+export const saveHooks: ((s: CampaignSave) => void)[] = [];
+
 export function storeSave(s: CampaignSave): void {
+  for (const hook of saveHooks) hook(s);
   const json = JSON.stringify(s);
   memory = parseSave(json);
   try {
@@ -122,9 +145,13 @@ export function syncCloud(onChange: () => void): void {
     const local = loadSave();
     if (JSON.stringify(remote) === JSON.stringify(local)) return;
     if (aheadOf(local, remote)) {
+      mergeCareer(local, remote);
       cloud.store(JSON.stringify(local));
       return;
     }
+    // achievements and totals from either copy are kept
+    mergeCareer(remote, local);
+    cloud.store(JSON.stringify(remote));
     try {
       localStorage.setItem(KEY, JSON.stringify(remote));
     } catch {
@@ -133,6 +160,12 @@ export function syncCloud(onChange: () => void): void {
     memory = remote;
     onChange();
   });
+}
+
+/** Adds the achievements and totals of `from` to `into`. */
+export function mergeCareer(into: CampaignSave, from: CampaignSave): void {
+  for (const [id, at] of Object.entries(from.feats)) into.feats[id] = Math.min(at, into.feats[id] ?? Infinity);
+  into.tally = { games: Math.max(into.tally.games, from.tally.games), wins: Math.max(into.tally.wins, from.tally.wins), kills: Math.max(into.tally.kills, from.tally.kills) };
 }
 
 export function unspent(s: CampaignSave): number {

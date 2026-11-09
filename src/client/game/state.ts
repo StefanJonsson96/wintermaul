@@ -91,6 +91,8 @@ export class ClientState {
   /** Receives every event: immediately for state events, at render time for visual ones. */
   onEvent: (ev: GameEvent, late: boolean) => void = () => {};
   onSold: (t: CTower, refund: number, rubble: boolean) => void = () => {};
+  /** Sees every event the moment it arrives, before it is applied (achievements listen here). */
+  onReceive: (ev: GameEvent) => void = () => {};
   private pathCache = new Map<number, { version: number; path: number[] }>();
 
   constructor(full: FullState, you: number) {
@@ -240,6 +242,7 @@ export class ClientState {
   }
 
   private receiveEvent(ev: GameEvent): void {
+    this.onReceive(ev);
     switch (ev.e) {
       case 'spawn': {
         const def = this.creepDef(ev.creep.def);

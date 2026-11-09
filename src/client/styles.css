@@ -1522,7 +1522,8 @@ input:focus {
   top: 124px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 20;
+  /* above dialogs, below tooltips */
+  z-index: 35;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3448,4 +3449,245 @@ kbd {
   .web-summary {
     width: min(260px, calc(100% - 24px));
   }
+}
+
+/* achievements */
+.menu-links {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.menu-links .chip {
+  margin-left: 2px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: rgba(255, 211, 90, 0.14);
+  color: #ffd35a;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.feat-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 260px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 16px 10px 12px;
+  border-color: rgba(255, 211, 90, 0.6);
+  background: linear-gradient(100deg, rgba(60, 46, 12, 0.95), rgba(12, 18, 32, 0.95) 60%);
+  box-shadow: 0 0 24px rgba(255, 211, 90, 0.22), var(--shadow);
+}
+
+.feat-toast > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+}
+
+.feat-toast small {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffd35a;
+}
+
+.feat-toast b {
+  font-size: 15px;
+  color: #fff;
+}
+
+.feat-toast span {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ft-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 211, 90, 0.16);
+  color: #ffd35a;
+}
+
+.feat-earned {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 211, 90, 0.35);
+  background: rgba(255, 211, 90, 0.06);
+  text-align: left;
+}
+
+.fe-title {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ffd35a;
+}
+
+.fe-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.fe-row .ft-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.fe-row span:last-child {
+  color: var(--muted);
+}
+
+.end-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feats-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.feats-head h2 {
+  margin: 0;
+}
+
+.feats-head span {
+  color: #ffd35a;
+  font-weight: 700;
+}
+
+.feats-bar {
+  height: 6px;
+  margin: 10px 0 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.feats-bar > div {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #d08a4e, #ffd35a);
+}
+
+.feats-group {
+  display: flex;
+  justify-content: space-between;
+  margin: 16px 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.feats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 8px;
+}
+
+.feat {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.feat .feat-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #56627a;
+}
+
+.feat.got {
+  border-color: rgba(255, 211, 90, 0.35);
+  background: rgba(255, 211, 90, 0.05);
+}
+
+.feat.got .feat-icon {
+  background: rgba(255, 211, 90, 0.16);
+  color: #ffd35a;
+}
+
+.feat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.feat-text b {
+  font-size: 13.5px;
+}
+
+.feat:not(.got) .feat-text b {
+  color: var(--muted);
+}
+
+.feat-text span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.feat-text small {
+  font-size: 11px;
+  color: #b9a46a;
+}
+
+.feat-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.fp-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.fp-bar > div {
+  height: 100%;
+  background: #8fb3ff;
+}
+
+.feat-progress small {
+  color: var(--muted);
+}
+
+.feats-tally {
+  margin-top: 16px;
+  font-size: 12.5px;
+  text-align: center;
 }

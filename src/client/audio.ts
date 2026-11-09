@@ -17,6 +17,7 @@ type SoundName =
   | 'pulse'
   | 'freeze'
   | 'coin'
+  | 'feat'
   | `shot:${string}`;
 
 const MIN_GAP: Record<string, number> = { die: 0.035, impact: 0.06, pulse: 0.1, coin: 0.05, freeze: 0.1 };
@@ -160,6 +161,11 @@ export class Audio {
       case 'freeze':
         this.hit(out, 5200, 0.25, 0.25, 'highpass');
         this.tone(out, 'sine', 2400, 3200, 0.2, 0.08);
+        break;
+      case 'feat':
+        // a little bell: a rising triad, then a shimmer
+        [784, 988, 1175, 1568].forEach((f, i) => this.tone(out, 'triangle', f, f, 0.5, 0.26, i * 0.08));
+        this.tone(out, 'sine', 3136, 3136, 0.9, 0.06, 0.32);
         break;
       default:
         this.shot(out, kind);

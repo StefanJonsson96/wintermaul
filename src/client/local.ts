@@ -75,6 +75,11 @@ export class LocalGame implements Link {
   /** A testing shortcut changed the game outside its commands, so it can no longer be saved. */
   private tainted = false;
 
+  /** False once developer commands were used: such a game earns no achievements. */
+  get fair(): boolean {
+    return !this.tainted;
+  }
+
   constructor(
     private readonly deliver: (msg: ServerMsg) => void,
     readonly opts: LocalOptions,

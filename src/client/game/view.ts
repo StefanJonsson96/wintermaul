@@ -10,7 +10,7 @@ import type { TargetMode, TowerDef } from '../../shared/types';
 import { type Link, SPEEDS } from '../local';
 import { upgradeCost } from '../../shared/sim/mods';
 import { SPELL_BY_ID, SPELLS, type SpellDef, type SpellId } from '../../shared/sim/spells';
-import { toast } from '../ui/dom';
+import { h, toast } from '../ui/dom';
 import { openHelp } from '../ui/help';
 import { anyModalOpen, confirmDialog } from '../ui/modal';
 import { Effects } from './effects';
@@ -57,6 +57,8 @@ export class GameView {
   marks: ViewState['marks'] = [];
   /** Called every frame, e.g. by the tutorial coach. */
   frameHooks: ((now: number) => void)[] = [];
+  /** Extra notes for the end screen (achievements earned, for one). */
+  endNotes: (() => HTMLElement | null)[] = [];
   private ghost: Ghost | null = null;
   private ghostKey = '';
   private pings: ViewState['pings'] = [];
@@ -131,7 +133,12 @@ export class GameView {
   onGameOver(victory: boolean, stats: EndStats): void {
     audio.play(victory ? 'victory' : 'defeat');
     const local = this.link.local;
-    setTimeout(() => this.alive && this.hud.showEnd(victory, stats, this.isHost(), local?.endActions(victory, stats), local?.endNote(victory, stats)), victory ? 600 : 1200);
+    setTimeout(() => {
+      if (!this.alive) return;
+      const notes = [local?.endNote(victory, stats), ...this.endNotes.map((f) => f())].filter((n): n is HTMLElement => !!n);
+      const extra = notes.length > 1 ? h('div', { class: 'end-notes' }, ...notes) : notes[0];
+      this.hud.showEnd(victory, stats, this.isHost(), local?.endActions(victory, stats), extra);
+    }, victory ? 600 : 1200);
   }
 
   togglePause(): void {

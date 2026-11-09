@@ -19,6 +19,9 @@ export interface SoloActions {
   daily(): void;
   /** Today's challenge and medal, for its tile. */
   dailyLine(): string;
+  achievements(): void;
+  /** "5 / 33", for the achievements button. */
+  featLine(): string;
   /** The game in progress, if there is one. */
   saved(): SavedGame | null;
   resume(): void;
@@ -43,6 +46,7 @@ export class MenuScreen {
   private codeInput!: HTMLInputElement;
   private campaignSub!: HTMLElement;
   private dailySub!: HTMLElement;
+  private featSub!: HTMLElement;
   private continueRow!: HTMLElement;
 
   constructor(
@@ -57,6 +61,7 @@ export class MenuScreen {
   refresh(): void {
     this.campaignSub.textContent = this.solo.campaignProgress();
     this.dailySub.textContent = this.solo.dailyLine();
+    this.featSub.textContent = this.solo.featLine();
     this.renderContinue();
   }
 
@@ -101,6 +106,7 @@ export class MenuScreen {
       h('button', { class: `solo-tile ${extra}`, onclick: () => (this.commitName(), onclick()) }, h('span', { class: 'solo-icon' }, icon(ic, 22)), h('b', null, title), typeof sub === 'string' ? h('span', null, sub) : sub);
     this.campaignSub = h('span', null, '');
     this.dailySub = h('span', null, '');
+    this.featSub = h('span', { class: 'chip' }, '');
     this.continueRow = h('div', { class: 'continue-row hidden' });
     const soloCard = h(
       'div',
@@ -157,7 +163,12 @@ export class MenuScreen {
         feature('star', '12 races, 96 towers', 'Pick a race, add a second after wave 7, a Legend later.'),
         feature('people', '1–8 players, no login', 'Share a 4-letter room code. Add bots to fill seats.'),
       ),
-      h('div', { style: { marginTop: '22px', display: 'flex', gap: '10px' } }, h('button', { class: 'btn', onclick: () => openHelp() }, icon('help', 16), 'How to play')),
+      h(
+        'div',
+        { class: 'menu-links' },
+        h('button', { class: 'btn', onclick: () => openHelp() }, icon('help', 16), 'How to play'),
+        h('button', { class: 'btn', onclick: () => this.solo.achievements() }, icon('trophy', 16), 'Achievements', this.featSub),
+      ),
     );
 
     this.root.append(

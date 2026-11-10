@@ -108,6 +108,16 @@ default and off in the tutorial.
   something given at once (gold that scales with the wave, lives, lumber), or both, and some have a
   price (*Blood Price*: +14% damage, leaks cost half again). An offer can wait; a new shrine settles
   an unanswered one with its first boon. Bots take theirs at once.
+- Weather also changes the board: a blizzard piles three 2×2 snowdrifts on each lane's current path
+  (placed like towers, so they never seal it; they block building and melt when the wave ends); under a
+  blood moon the last creep of each wave in every lane is moon-touched (4× health, 8× gold); a warm
+  wind melts rubble and selling in it leaves none. Drift positions come from the seed, the wave and the
+  lane, so replays agree. With weather on, solo bots reach a few waves less on average but win more
+  often: the storms swing games both ways.
+- Six boons bend the rules rather than add percentages: Snow Angel's Mercy (the first non-boss leak of
+  each wave is free), Undertow (leaks lose 40% health), Quarryman's Blessing (no rubble), Clean Sweep
+  and Night Vigil (gold, or a life, for a wave with no leak from your lane) and Avalanche (the first
+  leak of a wave stuns the rest of your lane for 3 s).
 - A player's bonuses are now their own (talents and relics) plus boons plus weather, recomputed when
   any of them changes and sent to clients as an event, so tooltips and range circles stay right.
 

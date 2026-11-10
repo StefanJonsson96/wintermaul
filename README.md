@@ -7,7 +7,7 @@ Play the tutorial, a 29-stage campaign in three acts with a passive tree in the 
 a quick skirmish, all running right in your browser, on a computer or a phone. Every wave has its weather,
 every fifth a shrine offers you a boon, and every achievement wins a relic to carry into battle.
 
-Version **3.0.0** · [Changelog](CHANGELOG.md)
+Version **3.1.0** · [Changelog](CHANGELOG.md)
 
 ![Gameplay](docs/images/gameplay.png)
 
@@ -62,13 +62,17 @@ of creep. The wave preview names every trick a wave has.
 ![Weather](docs/images/weather.png)
 
 Every wave has a **forecast**, shown in the wave bar and the preview of the next waves. **Blizzards**
-shorten every tower's reach and slow the creeps, **auroras** feed Magic, Elemental and Pure damage,
-**freezing fog** makes slows linger but towers sluggish, a **warm wind** speeds the creeps and feeds poison
-and fire, and a **blood moon** brings tougher creeps that pay much more. Plan the maze and the next race
-around what is coming.
+shorten every tower's reach and pile **snowdrifts** across the creeps' path, rerouting your maze until the
+wave ends. **Auroras** feed Magic, Elemental and Pure damage, **freezing fog** makes slows linger but towers
+sluggish, a **warm wind** speeds the creeps and melts rubble, and under a **blood moon** creeps are tougher
+and richer, and the last of each wave is a **moon-touched elite** worth eight times the gold. Plan the maze
+and the next race around what is coming.
 
-After every fifth wave a **wayside shrine** offers you three of twenty **boons** (The Smith's Ember, Cold
-Iron, Raven's Tithe, Blood Price, The Long Night…), some with a price. Take one and it stays with you for
+After every fifth wave a **wayside shrine** offers you three of twenty-two **boons**. Some bend the rules
+(*Snow Angel's Mercy* forgives the first leak of each wave, *Undertow* weakens what leaks out of your lane,
+*Avalanche* buries the rest of the wave when one leaks, *Clean Sweep* pays for a wave without a leak),
+some are plain strength (*The Smith's Ember*, *Cold Iron*), and some have a price (*Blood Price*). Everyone
+sees everyone's boons in the scoreboard. Take one and it stays with you for
 the rest of the game, so no two games build the same way. Both can be switched off in the rules dialog.
 
 ![A wayside shrine](docs/images/omens.png)

@@ -4,6 +4,20 @@ All notable changes to Winterward. The format follows [Keep a Changelog](https:/
 and the project uses [Semantic Versioning](https://semver.org/): the major number changes when saves or the
 network protocol break, the minor number for new features, the patch number for fixes and balance.
 
+## [3.1.0] - 2026-11-10
+
+### Added
+- **Weather that changes the board**: blizzards pile snowdrifts across the creeps' path (the maze reroutes
+  until the wave ends), a blood moon makes the last creep of each wave a moon-touched elite (4× health,
+  8× gold), and a warm wind melts rubble.
+- **Six boons that bend the rules**: Snow Angel's Mercy, Undertow, Quarryman's Blessing, Clean Sweep, Night
+  Vigil and Avalanche. Sundering Hymn, Starlight, Steel Rain and Executioner's Moon are gone.
+- The help screen explains weather, shrines and relics; the scoreboard shows everyone's boons (red when one
+  has a price); with campaign talents on, the lobby shows the relics each player brings.
+
+### Changed
+- Saved games from 3.0 can't be continued (the rules changed); campaign progress carries over.
+
 ## [3.0.0] - 2026-11-09
 
 ### Added

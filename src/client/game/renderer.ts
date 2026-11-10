@@ -185,10 +185,28 @@ export class Renderer {
       const mine = lane === state.myLane && state.you >= 0;
       // rubble
       const g = state.grids[lane];
+      const drifts = state.drifts[lane];
       for (let i = 0; i < g.cells.length; i++) {
         if (g.cells[i] !== CELL_RUBBLE) continue;
         const cx = LANE_MARGIN_X + (i % g.w);
         const cy = oy + Math.floor(i / g.w);
+        if (drifts?.has(i)) {
+          // a snowdrift: a soft white mound
+          // cells of one drift overlap into a single heap
+          ctx.fillStyle = 'rgba(120,150,190,0.4)';
+          ctx.beginPath();
+          ctx.ellipse(cx + 0.55, cy + 0.72, 0.7, 0.4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#eef6ff';
+          ctx.beginPath();
+          ctx.ellipse(cx + 0.5, cy + 0.5, 0.68, 0.55, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(200,222,248,0.85)';
+          ctx.beginPath();
+          ctx.ellipse(cx + 0.62, cy + 0.68, 0.4, 0.22, 0, 0, Math.PI * 2);
+          ctx.fill();
+          continue;
+        }
         ctx.fillStyle = 'rgba(70,64,60,0.85)';
         ctx.fillRect(cx + 0.08, cy + 0.12, 0.84, 0.76);
         ctx.fillStyle = 'rgba(150,140,130,0.9)';
@@ -477,6 +495,18 @@ export class Renderer {
       return;
     }
     if (!c.def.air) this.drawShadow(x, y, c.def.size * 0.95);
+    // moon-touched elite: a red corona and a bigger shadow
+    if (flags & CREEP_FLAG.elite) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      glow(ctx, x, y - c.def.size * 0.6, c.def.size * 3, '#ff2a3a', 0.55 + 0.2 * Math.sin(now * 4 + c.seed));
+      ctx.restore();
+      ctx.strokeStyle = `rgba(255,60,70,${0.6 + 0.3 * Math.sin(now * 5)})`;
+      ctx.lineWidth = 0.08;
+      ctx.beginPath();
+      ctx.ellipse(x, y + 0.05, c.def.size * (1.1 + 0.1 * Math.sin(now * 5)), c.def.size * 0.45, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     if (flags & CREEP_FLAG.frenzied) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';

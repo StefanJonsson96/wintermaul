@@ -150,7 +150,8 @@ export type GameEvent =
   | { e: 'build'; t: number; tower: NetTower }
   | { e: 'upgrade'; t: number; id: number; def: string; buildStart: number; buildUntil: number; invested: number }
   | { e: 'sell'; t: number; id: number; refund: number; rubble: boolean }
-  | { e: 'rubble'; t: number; lane: number; cells: number[] } // rubble cleared (cells empty now) or set
+  | { e: 'rubble'; t: number; lane: number; cells: number[] }
+  | { e: 'drift'; t: number; lane: number; cells: number[] } // snowdrifts set by a blizzard (cleared by 'rubble') // rubble cleared (cells empty now) or set
   | { e: 'shot'; t: number; tw: number; c: number; d: number; k: string; x?: number; y?: number }
   | { e: 'chain'; t: number; tw: number; ids: number[]; d: number }
   | { e: 'line'; t: number; tw: number; x: number; y: number }
@@ -207,6 +208,8 @@ export const CREEP_FLAG = {
   frenzied: 512,
   /** Driven on by war drums. */
   hasted: 1024,
+  /** Moon-touched elite. */
+  elite: 2048,
 };
 
 // ---------------------------------------------------------------------------

@@ -81,6 +81,8 @@ export class ClientState {
   /** Seeds the weather forecast; null when the game has no weather. */
   weatherSeed: number | null;
   weatherForced: WeatherId | null;
+  /** Snowdrift cells per lane (blocking like rubble, drawn as snow). */
+  drifts: Set<number>[] = [];
   maxTowers: number | null;
   private endless = new Map<string, CreepDef>();
   private timeline: GameEvent[] = [];
@@ -304,9 +306,20 @@ export class ClientState {
         }
         break;
       }
+      case 'drift': {
+        const g = this.grids[ev.lane];
+        const set = (this.drifts[ev.lane] ??= new Set());
+        for (const c of ev.cells) {
+          g.cells[c] = CELL_RUBBLE;
+          set.add(c);
+        }
+        g.recompute();
+        break;
+      }
       case 'rubble': {
         const g = this.grids[ev.lane];
         for (const c of ev.cells) if (g.cells[c] === CELL_RUBBLE) g.cells[c] = CELL_FREE;
+        for (const c of ev.cells) this.drifts[ev.lane]?.delete(c);
         g.recompute();
         break;
       }

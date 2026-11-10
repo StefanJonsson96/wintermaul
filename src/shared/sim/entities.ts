@@ -119,6 +119,8 @@ export interface Creep {
   broods: number;
   /** Extra speed from war drums this tick. */
   haste: number;
+  /** Moon-touched: a blood moon's elite, much tougher and far richer. */
+  elite?: boolean;
 }
 
 export interface Tower {
@@ -156,6 +158,10 @@ export interface Lane {
   grid: LaneGrid;
   rubble: number[];
   creeps: Creep[]; // rebuilt every tick
+  /** This wave: lives lost to leaks from this lane, leaks forgiven, and whether an avalanche fell. */
+  waveLeaks: number;
+  forgiven: number;
+  avalanche: boolean;
 }
 
 export type CommandResult = { ok: true } | { ok: false; error: string };

@@ -115,3 +115,56 @@ describe('omens, regressions', () => {
     expect(p.gold - gold).toBe(15 * 5);
   });
 });
+
+describe('weather on the board', () => {
+  const stepToWave = (g: Game, n: number) => {
+    g.devSkipTo(n);
+    for (let i = 0; i < 400 && !(g.phase === 'wave' && g.wave === n); i++) g.step();
+  };
+
+  it('blizzards pile snowdrifts on the path that never seal it, gone when the wave ends', () => {
+    const g = new Game({ ...settings }, [{ id: 0, name: 'P', color: 0, isBot: false }], 21, { skipSetup: true, rules: { weather: 'blizzard', lives: 999 } });
+    const lane = g.lanes[0];
+    const before = new Set(lane.grid.tracePath(lane.grid.spawnCells[Math.floor(lane.grid.spawnCells.length / 2)]));
+    stepToWave(g, 6);
+    const drift = g.drainEvents().find((e) => e.e === 'drift');
+    expect(drift && drift.e === 'drift' && drift.cells.length).toBeGreaterThan(0);
+    expect(Number.isFinite(lane.grid.tracePath(lane.grid.spawnCells[0]).length)).toBe(true);
+    // they land on the path the creeps were taking
+    expect(drift && drift.e === 'drift' && drift.cells.some((c) => before.has(c))).toBe(true);
+    for (let i = 0; i < 20000 && g.phase === 'wave'; i++) g.step();
+    expect(lane.rubble).toEqual([]);
+  });
+
+  it('a blood moon sends a moon-touched elite with every wave', () => {
+    const g = new Game({ ...settings }, [{ id: 0, name: 'P', color: 0, isBot: false }], 22, { skipSetup: true, rules: { weather: 'bloodmoon' } });
+    stepToWave(g, 6);
+    for (let i = 0; i < 2000 && g.horde.spawnQueue.length; i++) g.step();
+    const elites = [...g.creeps.values()].filter((c) => c.elite);
+    expect(elites.length).toBeLessThanOrEqual(1);
+    const all = g.drainEvents().filter((e) => e.e === 'spawn');
+    const big = all.filter((e) => e.e === 'spawn' && e.creep.maxHp >= 3.5 * Math.min(...all.map((x) => (x.e === 'spawn' ? x.creep.maxHp : Infinity))));
+    expect(big.length).toBe(1);
+  });
+});
+
+describe('rule-bending boons', () => {
+  it("Snow Angel's Mercy forgives a leak, Undertow weakens it, Clean Sweep pays for a clean wave", () => {
+    const g = new Game({ ...settings, weather: false }, [{ id: 0, name: 'P', color: 0, isBot: false }, { id: 1, name: 'Q', color: 1, isBot: false }], 23, { skipSetup: true, rules: { mods: { 0: { mercy: 1, undertow: 0.4 }, 1: { sweepGold: 4 } } } });
+    g.devSkipTo(2);
+    const lives = g.lives;
+    let first = true;
+    for (let i = 0; i < 20000 && !(g.wave === 2 && g.phase === 'build'); i++) {
+      g.step();
+      for (const e of g.drainEvents()) {
+        if (e.e === 'leak' && e.from === 0) {
+          if (first) expect(e.cost).toBe(0);
+          first = false;
+        }
+        if (e.e === 'bonus' && e.reason === 'clean sweep') expect(e.gold).toBe(8);
+      }
+    }
+    expect(first).toBe(false);
+    expect(g.lives).toBeLessThan(lives);
+  });
+});

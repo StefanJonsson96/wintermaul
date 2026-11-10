@@ -73,6 +73,18 @@ export interface PlayerMods {
   omenChoices?: number;
   /** Weather never weakens this player's towers. */
   weatherproof?: boolean;
+  /** Leaks from your lane each wave that cost no lives. */
+  mercy?: number;
+  /** Creeps leaking out of your lane lose this share of their health. */
+  undertow?: number;
+  /** Selling never leaves rubble. */
+  noRubble?: boolean;
+  /** Gold per wave number for a wave with no leak from your lane. */
+  sweepGold?: number;
+  /** Lives back for a wave with no leak from your lane. */
+  vigil?: number;
+  /** Seconds every creep in your lane is stunned by the first leak of a wave. */
+  avalanche?: number;
 }
 
 /** Gold price of a tower for a player with these bonuses. */

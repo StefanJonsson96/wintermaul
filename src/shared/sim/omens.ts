@@ -29,11 +29,11 @@ export interface Weather {
 
 export const WEATHERS: Record<WeatherId, Weather> = {
   clear: { id: 'clear', name: 'Still air', text: 'Nothing stirs.', icon: 'eye', color: '#9fb2c8', effects: [] },
-  blizzard: { id: 'blizzard', name: 'Blizzard', text: 'Towers see 15% less far; creeps wade 10% slower.', icon: 'snow', color: '#cfe8ff', effects: [E.range(-0.15)], creepSpeed: 0.9 },
+  blizzard: { id: 'blizzard', name: 'Blizzard', text: 'Towers see 15% less far; creeps wade 10% slower; snowdrifts block the path until the wave ends.', icon: 'snow', color: '#cfe8ff', effects: [E.range(-0.15)], creepSpeed: 0.9 },
   aurora: { id: 'aurora', name: 'Aurora', text: 'Magic, Elemental and Pure damage +25%.', icon: 'star', color: '#7dffc4', effects: [E.types(['magic', 'elemental', 'pure'], 0.25)] },
   fog: { id: 'fog', name: 'Freezing fog', text: 'Slows last twice as long; towers attack 10% slower.', icon: 'drop', color: '#d9e2ea', effects: [E.slowDur(1), E.speed(-0.1)] },
-  warm: { id: 'warm', name: 'Warm wind', text: 'Creeps run 12% faster; poison and burns +35%.', icon: 'flame', color: '#ffb46a', effects: [E.poison(0.35), E.burn(0.35)], creepSpeed: 1.12 },
-  bloodmoon: { id: 'bloodmoon', name: 'Blood moon', text: 'Creeps have 20% more health and pay 40% more gold.', icon: 'skull', color: '#ff5a5a', effects: [], creepHp: 1.2, bounty: 1.4 },
+  warm: { id: 'warm', name: 'Warm wind', text: 'Creeps run 12% faster; poison and burns +35%; rubble melts and selling leaves none.', icon: 'flame', color: '#ffb46a', effects: [E.poison(0.35), E.burn(0.35)], creepSpeed: 1.12 },
+  bloodmoon: { id: 'bloodmoon', name: 'Blood moon', text: 'Creeps have 20% more health and pay 40% more gold; the last of each wave is moon-touched (4× health, 8× gold).', icon: 'skull', color: '#ff5a5a', effects: [], creepHp: 1.2, bounty: 1.4 },
 };
 
 /** How often each weather comes (out of the total). */
@@ -95,12 +95,14 @@ export const BOONS: Boon[] = [
   { id: 'coldiron', name: 'Cold Iron', icon: 'snow', effects: [E.slow(0.2), E.slowDur(0.25)] },
   { id: 'witchfire', name: 'Witchfire', icon: 'flame', effects: [E.poison(0.3), E.burn(0.3)] },
   { id: 'frostedge', name: 'Frost Edge', icon: 'sword', effects: [E.crit(0.04)] },
-  { id: 'sunder', name: 'Sundering Hymn', icon: 'shield', effects: [E.vsArmor(['heavy', 'fortified'], 0.12)] },
-  { id: 'starlight', name: 'Starlight', icon: 'star', effects: [E.types(['magic', 'elemental', 'pure'], 0.1)] },
-  { id: 'steelrain', name: 'Steel Rain', icon: 'arrows', effects: [E.types(['impact', 'pierce'], 0.1)] },
   { id: 'skyhunter', name: 'Skyhunter', icon: 'wing', effects: [E.vsAir(0.35)] },
-  { id: 'moon', name: "Executioner's Moon", icon: 'skull', effects: [E.execute(0.03)] },
   { id: 'mason', name: 'Mason’s Oath', icon: 'brick', effects: [E.walls(2), E.refund(0.1)] },
+  { id: 'mercy', name: "Snow Angel's Mercy", icon: 'heart', effects: [{ text: 'The first leak from your lane each wave costs no lives (not a boss)', apply: (m) => (m.mercy = (m.mercy ?? 0) + 1) }] },
+  { id: 'undertow', name: 'Undertow', icon: 'drop', effects: [{ text: 'Creeps that leak out of your lane lose 40% of their health', apply: (m) => (m.undertow = 1 - (1 - (m.undertow ?? 0)) * 0.6) }] },
+  { id: 'quarry', name: "Quarryman's Blessing", icon: 'brick', effects: [{ text: 'Selling never leaves rubble, even mid-wave', apply: (m) => (m.noRubble = true) }] },
+  { id: 'sweep', name: 'Clean Sweep', icon: 'coin', effects: [{ text: 'A wave with no leak from your lane pays 4 gold per wave number', apply: (m) => (m.sweepGold = (m.sweepGold ?? 0) + 4) }] },
+  { id: 'vigil', name: 'Night Vigil', icon: 'eye', effects: [{ text: 'A wave with no leak from your lane gives the team a life back', apply: (m) => (m.vigil = (m.vigil ?? 0) + 1) }] },
+  { id: 'avalanche', name: 'Avalanche', icon: 'snow', effects: [{ text: 'The first leak of each wave buries every other creep in your lane: stunned 3 seconds', apply: (m) => (m.avalanche = Math.max(m.avalanche ?? 0, 3)) }] },
   { id: 'bloodprice', name: 'Blood Price', icon: 'gem', effects: [E.damage(0.14), E.leakMul(0.5)] },
   { id: 'longnight', name: 'The Long Night', icon: 'infinity', effects: [E.speed(0.12), { text: 'Creeps in your lane run 6% faster', bad: true, apply: (m) => (m.creepSlow = (m.creepSlow ?? 0) - 0.06) }] },
   { id: 'stoneskin', name: 'Stoneskin Pact', icon: 'shield', effects: [E.speed(-0.08)], now: { lives: 8 } },

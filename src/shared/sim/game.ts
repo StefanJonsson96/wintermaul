@@ -112,7 +112,7 @@ export class Game {
         boons: [],
         omen: null,
       });
-      this.lanes.push({ index: i, owner: p.id, grid: new LaneGrid(), rubble: [], creeps: [] });
+      this.lanes.push({ index: i, owner: p.id, grid: new LaneGrid(), rubble: [], creeps: [], waveLeaks: 0, forgiven: 0, avalanche: false });
     });
     this.lives = this.maxLives = this.startLives();
     this.secondWind = Math.max(0, ...this.players.map((p) => p.mods.secondWind ?? 0));
@@ -418,7 +418,7 @@ export class Game {
       this.towers.delete(id);
       const lane = this.lanes[t.lane];
       // Anti-juggle: selling while creeps are marching leaves rubble until the wave ends.
-      const rubble = this.phase === 'wave' && lane.creeps.some((c) => c.alive && !c.air);
+      const rubble = this.phase === 'wave' && !p.mods.noRubble && this.weather !== 'warm' && lane.creeps.some((c) => c.alive && !c.air);
       lane.grid.setFootprint(t.x, t.y, rubble ? CELL_RUBBLE : CELL_FREE);
       if (rubble) {
         const cells = lane.grid.footprint(t.x, t.y);
@@ -544,6 +544,14 @@ export class Game {
     this.wave = n;
     this.phase = 'wave';
     this.setWeather(this.rules.weather ?? (this.settings.weather === false ? 'clear' : weatherOf(this.seed, n)));
+    for (const lane of this.lanes) {
+      lane.waveLeaks = 0;
+      lane.forgiven = 0;
+      lane.avalanche = false;
+    }
+    // a warm wind melts the rubble; a blizzard piles snowdrifts across the path
+    if (this.weather === 'warm') this.clearRubble();
+    if (this.weather === 'blizzard') this.pileDrifts(n);
     this.phaseCounter++;
     for (const p of this.players) p.ready = false;
     const { wave } = this.waveInfo(n);
@@ -563,6 +571,13 @@ export class Game {
       }
     }
     this.horde.spawnQueue.sort((a, b) => a.at - b.at);
+    // under a blood moon the last creep of the wave in every lane is moon-touched
+    if (this.weather === 'bloodmoon') {
+      for (const lane of this.lanes) {
+        const last = this.horde.spawnQueue.filter((s) => s.wave === n && s.lane === lane.index).pop();
+        if (last) last.elite = true;
+      }
+    }
     this.emit({ e: 'wave', t: this.time, n, phase: 'wave' });
   }
 
@@ -579,6 +594,7 @@ export class Game {
       this.finish(true);
       return;
     }
+    this.rewardCleanLanes(n);
     this.setWeather('clear');
     if (this.settings.omens !== false && isOmenWave(n, this.finalWave, this.settings.endless, this.rules.omenEvery)) this.offerOmens(n);
     this.phase = 'build';
@@ -586,6 +602,48 @@ export class Game {
     this.countdown = BETWEEN_WAVES;
     for (const p of this.players) p.ready = false;
     this.emit({ e: 'wave', t: this.time, n, phase: 'build' });
+  }
+
+  /** Clean Sweep and Night Vigil: a wave with no leak from your lane pays. */
+  private rewardCleanLanes(n: number): void {
+    for (const lane of this.lanes) {
+      const p = this.player(lane.owner);
+      if (!p || lane.waveLeaks > 0) continue;
+      if (p.mods.sweepGold) {
+        const gold = Math.round(p.mods.sweepGold * n);
+        p.gold += gold;
+        p.goldEarned += gold;
+        this.emit({ e: 'bonus', t: this.time, p: p.id, gold, reason: 'clean sweep' });
+      }
+      if (p.mods.vigil) this.lives = Math.min(this.maxLives, this.lives + p.mods.vigil);
+    }
+  }
+
+  /** Snowdrifts: a few blocks of snow on the creeps' path, never sealing it, gone when the wave ends. */
+  private pileDrifts(n: number): void {
+    for (const lane of this.lanes) {
+      const rng = new Rng((this.seed ^ Math.imul(n, 2654435761) ^ Math.imul(lane.index + 1, 40503)) >>> 0);
+      const grid = lane.grid;
+      const path = grid.tracePath(grid.spawnCells[Math.floor(grid.spawnCells.length / 2)]);
+      const occupied = this.occupiedCells(lane.index);
+      const cells: number[] = [];
+      for (let tries = 0, placed = 0; tries < 60 && placed < 3 && path.length > 8; tries++) {
+        // somewhere along the middle of the path, so it matters
+        const at = path[Math.floor(path.length * (0.2 + 0.6 * rng.next()))];
+        const x = (at % grid.w) - (rng.next() < 0.5 ? 1 : 0);
+        const y = Math.floor(at / grid.w) - (rng.next() < 0.5 ? 1 : 0);
+        if (!grid.canPlace(x, y, occupied).ok) continue;
+        grid.setFootprint(x, y, CELL_RUBBLE);
+        const fp = grid.footprint(x, y);
+        lane.rubble.push(...fp);
+        cells.push(...fp);
+        placed++;
+      }
+      if (!cells.length) continue;
+      grid.recompute();
+      this.horde.repathCreeps(lane.index);
+      this.emit({ e: 'drift', t: this.time, lane: lane.index, cells });
+    }
   }
 
   /** The weather of the wave in force; every player's bonuses follow it. */
@@ -777,6 +835,7 @@ export class Game {
     if (now < c.burrowUntil) f |= CREEP_FLAG.burrowed;
     if (c.def.frenzy && c.hp < c.maxHp * c.def.frenzy.below) f |= CREEP_FLAG.frenzied;
     if (c.haste > 0) f |= CREEP_FLAG.hasted;
+    if (c.elite) f |= CREEP_FLAG.elite;
     return f;
   }
 

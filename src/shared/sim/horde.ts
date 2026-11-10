@@ -10,9 +10,14 @@ export interface SpawnEntry {
   lane: number;
   def: string;
   wave: number;
+  /** A blood moon's moon-touched elite. */
+  elite?: boolean;
 }
 
 const HISTORY_LEN = 16;
+
+/** A moon-touched elite: health and bounty multipliers. */
+export const ELITE = { hp: 4, bounty: 8 };
 
 /** The creeps: spawning, walking the maze, healing, leaking and dying. */
 export class Horde {
@@ -27,16 +32,16 @@ export class Horde {
   updateSpawns(): void {
     while (this.spawnQueue.length && this.spawnQueue[0].at <= this.g.time) {
       const s = this.spawnQueue.shift()!;
-      this.spawnCreep(this.g.creepDef(s.def), s.lane, s.wave);
+      this.spawnCreep(this.g.creepDef(s.def), s.lane, s.wave, undefined, s.elite);
       this.lastSpawnAt = this.g.time;
     }
   }
 
-  private spawnCreep(def: CreepDef, lane: number, wave: number, at?: { x: number; y: number; cell: number; history: number[]; visits: number; leakedFrom: number }): Creep {
+  private spawnCreep(def: CreepDef, lane: number, wave: number, at?: { x: number; y: number; cell: number; history: number[]; visits: number; leakedFrom: number }, elite = false): Creep {
     // Extra health on hard difficulties phases in over the first waves, so the opening stays
     // tight but survivable; easier settings are easier from the start.
     const mul = this.g.hpMul > 1 ? 1 + (this.g.hpMul - 1) * Math.min(1, wave / 15) : this.g.hpMul;
-    const hp = Math.round(def.hp * mul * (this.g.weatherDef.creepHp ?? 1));
+    const hp = Math.round(def.hp * mul * (this.g.weatherDef.creepHp ?? 1) * (elite ? ELITE.hp : 1));
     const air = !!def.air;
     const grid = this.g.lanes[lane].grid;
     let x: number, y: number, cell: number;
@@ -94,6 +99,7 @@ export class Horde {
       nextFreeze: 0,
       broods: 0,
       haste: 0,
+      elite: elite || undefined,
     };
     // abilities start at staggered times, so a wave doesn't act in lockstep
     const first = (every: number) => this.g.time + every * (0.4 + 0.6 * this.g.rng.next());
@@ -380,8 +386,22 @@ export class Horde {
     const from = c.lane;
     const owner = this.g.player(this.g.lanes[from].owner);
     const base = c.def.boss ? Math.max(1, c.def.leak - (owner?.mods.bossLeak ?? 0)) : c.def.leak;
-    const cost = Math.round(base * (owner?.mods.leakMul ?? 1));
+    const lane = this.g.lanes[from];
+    let cost = Math.round(base * (owner?.mods.leakMul ?? 1));
+    // Snow Angel's Mercy: the first leaks of a wave are forgiven (never a boss's)
+    if (!c.def.boss && lane.forgiven < (owner?.mods.mercy ?? 0)) {
+      lane.forgiven++;
+      cost = 0;
+    }
+    lane.waveLeaks += cost;
     this.g.lives -= cost;
+    // Avalanche: the first leak of a wave buries everything else in the lane for a moment
+    if (owner?.mods.avalanche && !lane.avalanche) {
+      lane.avalanche = true;
+      for (const o of this.g.creeps.values()) if (o.alive && o.lane === from && o !== c && !o.def.boss) o.stunUntil = Math.max(o.stunUntil, this.g.time + owner.mods.avalanche);
+    }
+    // Undertow: what leaks out of your lane arrives weaker
+    if (owner?.mods.undertow) c.hp = Math.max(1, c.hp * (1 - owner.mods.undertow));
     if (owner) owner.leaks++;
     // A leaked creep gets exactly one more run: through the next player's maze (or yours again, solo).
     const maxVisits = 2;
@@ -434,7 +454,7 @@ export class Horde {
     const p = this.g.player(owner);
     let gold = 0;
     if (p) {
-      gold = Math.round(c.def.bounty * p.goldMul * (this.g.weatherDef.bounty ?? 1));
+      gold = Math.round(c.def.bounty * p.goldMul * (this.g.weatherDef.bounty ?? 1) * (c.elite ? ELITE.bounty : 1));
       const t = this.g.towers.get(towerId);
       const e = t?.def.econ;
       if (e?.killGold && this.g.rng.chance(e.killGoldChance ?? 1)) gold += e.killGold;

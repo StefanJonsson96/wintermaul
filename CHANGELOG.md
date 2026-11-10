@@ -192,6 +192,7 @@ network protocol break, the minor number for new features, the patch number for 
 - Procedural art and sound: no image or audio files.
 - Docs (design notes, hosting guide), Dockerfile and unit tests.
 
+[3.2.0]: https://github.com/StefanJonsson96/wintermaul/compare/6fc79ca...e640991
 [3.1.0]: https://github.com/StefanJonsson96/wintermaul/compare/855dbaa...14b89b1
 [3.0.0]: https://github.com/StefanJonsson96/wintermaul/compare/884e287...6db1164
 [2.0.0]: https://github.com/StefanJonsson96/wintermaul/compare/6a6b98d...884e287

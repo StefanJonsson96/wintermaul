@@ -3,11 +3,11 @@
 **A co-op maze tower defense for the browser, in the spirit of the Warcraft III map *Wintermaul*.**
 Up to 8 players, no login, 12 races and 96 towers, two sets of 40 waves and their final bosses. Build a
 maze on an open snowfield: whatever slips through your maze runs straight into your neighbour's. Alone?
-Play the tutorial, a 29-stage campaign in three acts with a passive tree in the spirit of Path of Exile, or
+Play the tutorial, a 36-stage campaign in four acts with a passive tree in the spirit of Path of Exile, or
 a quick skirmish, all running right in your browser, on a computer or a phone. Every wave has its weather,
 every fifth a shrine offers you a boon, and every achievement wins a relic to carry into battle.
 
-Version **3.1.0** · [Changelog](CHANGELOG.md)
+Version **3.2.0** · [Changelog](CHANGELOG.md)
 
 ![Gameplay](docs/images/gameplay.png)
 
@@ -39,7 +39,7 @@ npm run dev           # then open http://localhost:5173
 | Mode | What it is |
 |---|---|
 | **Tutorial** | One click from the menu. An 8-wave game where a coach explains one idea at a time (walls, zig-zags, calling waves, upgrades, air, leaks, lumber) and waits for you to try it. |
-| **Campaign** | Three acts, *The Long Winter*, *The Thaw* and *The Long Night*: 29 stages on three painted maps, each with its own twist, three stars to earn and runestones for the Rune Web. |
+| **Campaign** | Four acts, *The Long Winter*, *The Thaw*, *The Long Night* and *The Sundered Coast*: 36 stages on four painted maps, each with its own twist, three stars to earn and runestones for the Rune Web. |
 | **Skirmish** | A solo game with your rules: difficulty, Classic waves or The Thaw, weather and omens, forty waves or endless. |
 | **Multiplayer** | 1–8 players in a room, with bots to fill seats. The first player picks the rules, like Red in the original. |
 
@@ -72,7 +72,8 @@ After every fifth wave a **wayside shrine** offers you three of twenty-two **boo
 (*Snow Angel's Mercy* forgives the first leak of each wave, *Undertow* weakens what leaks out of your lane,
 *Avalanche* buries the rest of the wave when one leaks, *Clean Sweep* pays for a wave without a leak),
 some are plain strength (*The Smith's Ember*, *Cold Iron*), and some have a price (*Blood Price*). Everyone
-sees everyone's boons in the scoreboard. Take one and it stays with you for
+sees everyone's boons in the scoreboard. With two or more players the shrine is **shared**: one offer for
+the team, two more boons than players, and what one of you takes the others can't. Take one and it stays with you for
 the rest of the game, so no two games build the same way. Both can be switched off in the rules dialog.
 
 ![A wayside shrine](docs/images/omens.png)
@@ -105,9 +106,11 @@ Stars pay **runestones**. Win a stage to open the next; win *The Drowned Mill* t
 Thaw**, nine stages on the glacier against the creeps that fight back, and *Hexwood* to open **Act III,
 The Long Night**: eight stages under the polar night where the weather is the enemy (a pass that is one
 long blizzard, a vale of endless aurora, a night of blood moons, a fog sea), the shrines come more often,
-or the land gives you only sixty towers. Win *The Iron Pass* to open **The Endless Frontier**, which pays a
-runestone every 5 waves past wave 20 the first time you get there. All three acts together pay for the
-whole Rune Web.
+or the land gives you only sixty towers. Win *The Last Cairns* to open **Act IV, The Sundered Coast**:
+seven stages where the horde comes over the frozen sea, with dunes of drifting snow, champions at the head
+of every wave, frozen ground where nothing can be sold, and gifts from the shore folk to start with. Win
+*The Iron Pass* to open **The Endless Frontier**, which pays a runestone every 5 waves past wave 20 the
+first time you get there. Three acts pay for the whole Rune Web.
 
 ### The Rune Web
 
@@ -136,10 +139,11 @@ by default), and everyone brings the passives they took.
 
 ![Relics](docs/images/relics.png)
 
-Twenty-nine achievements, from killing your first boss to a 300-cell maze, six boons in one game, every
+Thirty achievements, from killing your first boss to a 300-cell maze, six boons in one game, every
 star of the campaign or a win on Brutal. **Every achievement wins a relic**: a keepsake with a small
-bonus, sometimes with a price (*Tyrant's Tooth*: +20% damage against bosses; *Heart of Winter*: +15%
-damage, but leaks cost double; *Shrine Bell*: shrines offer four boons). Carry one into your games, two
+effect, sometimes with a price (*Ward Stone*: the first leak of every wave is free; *Minotaur Horn*:
+damage for the length of your maze; *Oathband*: your gifts arrive with 25% more; *Heart of Winter*: +15%
+damage, but leaks cost double). Carry one into your games, two
 once you have twelve achievements: in the campaign, in skirmish, and online when the host allows campaign
 talents. Games where developer commands were used earn nothing.
 

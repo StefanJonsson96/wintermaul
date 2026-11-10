@@ -2,8 +2,11 @@
 
 An independent, adversarial review run while 3.0 was being finished. Fixed in 3.0.0: B1, B2, B4, B5, B6,
 the relic-ownership half of B7, the leak-counting part of B8, the wall-discount stacking and the weakest
-picks; the version was bumped (B3). Still open: everything under "Next steps" below, the server trusting
-relics online (B7), a difficulty floor for achievements and gifted gold counting for the hoard (B8).
+picks; the version was bumped (B3). Fixed in 3.1 and 3.2: weather that changes the board (next step 3),
+rule-bending boons (4), most relics given real effects (5), smarter bot picks (6), help and team-visible
+boons (9), relics shown in the lobby and checked against claimed achievements (10; without accounts the
+server still can't prove them), achievement integrity (11: leaks counted, a Casual floor, gifted gold
+excluded) and shared co-op shrines (12).
 
 ---
 

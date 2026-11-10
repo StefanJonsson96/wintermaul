@@ -4,6 +4,23 @@ All notable changes to Winterward. The format follows [Keep a Changelog](https:/
 and the project uses [Semantic Versioning](https://semver.org/): the major number changes when saves or the
 network protocol break, the minor number for new features, the patch number for fixes and balance.
 
+## [3.2.0] - 2026-11-10
+
+### Added
+- **Campaign Act IV, The Sundered Coast**: seven stages on a new coast map, open once *The Last Cairns* is
+  won, with new stage rules: snowdrifts every wave, a champion with every wave, frozen ground where towers
+  can't be sold, and boons a stage gives you at the start. *Holder of the Seawall* wins Tidecaller's Conch.
+- **Shared shrines** in co-op: one offer for the team, two more boons than players; what one takes the
+  others can't. A rules option, on by default with two or more players.
+
+### Changed
+- Five relics bend the rules instead of adding stats: Ward Stone, Minotaur Horn, Mason's Level, Oathband
+  and Night Lantern.
+- Online, the server only accepts relics backed by the achievements the browser reports, within its slots.
+- Feats of skill aren't earned on Casual, and gold gifted by teammates doesn't count for Dragon's Hoard.
+- Champions (blood moon and Act IV) never replace a boss.
+- Saved games from 3.1 can't be continued; campaign progress carries over.
+
 ## [3.1.0] - 2026-11-10
 
 ### Added

@@ -118,6 +118,9 @@ default and off in the tutorial.
   each wave is free), Undertow (leaks lose 40% health), Quarryman's Blessing (no rubble), Clean Sweep
   and Night Vigil (gold, or a life, for a wave with no leak from your lane) and Avalanche (the first
   leak of a wave stuns the rest of your lane for 3 s).
+- **Shared shrines** (two or more players, a rules option on by default): one offer for the team, two
+  more boons than players; each takes one, and a taken boon is gone for the others. Bots take from what
+  is left as the next wave starts.
 - A player's bonuses are now their own (talents and relics) plus boons plus weather, recomputed when
   any of them changes and sent to clients as an event, so tooltips and range circles stay right.
 
@@ -152,18 +155,20 @@ client clock keeps in step, and a hidden tab pauses the game.
 
 ## The campaign
 
-The campaign is three acts on three painted maps (`src/shared/campaign.ts`): *The Long Winter*, twelve
+The campaign is four acts on four painted maps (`src/shared/campaign.ts`): *The Long Winter*, twelve
 stages on the road north; *The Thaw*, nine stages on the glacier with the second wave set, which opens
 once *The Drowned Mill* is won; and *The Long Night*, eight stages under the polar night, open once
 *Hexwood* is won, built on the new rules: forced weather on every wave, shrines every second to fourth
-wave, and a tower cap. Each stage is a rule set for the ordinary game. The rules can
+wave, and a tower cap; and *The Sundered Coast*, seven stages on the frozen sea, open once *The Last
+Cairns* is won, with snowdrifts every wave, a champion with every wave (never the boss), frozen ground
+where towers can't be sold, and boons a stage gives everyone at the start. Each stage is a rule set for the ordinary game. The rules can
 change the first and last wave, lives, starting gold and lumber, creep health, speed, armor and
 regeneration, the number of creeps per wave, bounty, and the races that can be picked. Late stages
 drop the player into the war (wave 15, 20, 30…) with a war chest and a long first countdown, which
 makes them a different puzzle: build a whole maze at once.
 
 Three stars per stage: reach a wave, win, win losing at most a few lives. Stars pay **runestones**,
-174 in the first two acts (most of the 192-node web) and 205 with Act III; winning a stage opens the next. The Endless Frontier (open after *The Iron Pass*) pays one
+174 in the first two acts (most of the 192-node web), 205 with Act III and 229 with Act IV; winning a stage opens the next. The Endless Frontier (open after *The Iron Pass*) pays one
 runestone per 5 waves past wave 20 the first time they are reached, a long tail for players who want
 more of the web.
 

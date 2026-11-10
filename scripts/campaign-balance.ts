@@ -73,7 +73,7 @@ function report(stage: Stage, budget: number): void {
 
 // Act I in order; Act II as played alongside it: a player starts its stage k having won Act I
 // up to the stage that opens it plus k more, and Act II up to stage k
-const [act1, act2, act3] = CHAPTERS;
+const [act1, act2, act3, act4] = CHAPTERS;
 const opens = act1.stages.findIndex((s) => s.id === act2.opensAfter) + 1;
 act1.stages.forEach((stage, i) => {
   if (!only || stage.id === only) report(stage, forcedStones ? Number(forcedStones) : twoStars(act1.stages, i));
@@ -85,5 +85,11 @@ act2.stages.forEach((stage, k) => {
 const opens3 = act2.stages.findIndex((s) => s.id === act3.opensAfter) + 1;
 act3.stages.forEach((stage, k) => {
   const budget = twoStars(act1.stages, Math.min(act1.stages.length, opens + opens3 + k)) + twoStars(act2.stages, Math.min(act2.stages.length, opens3 + k)) + twoStars(act3.stages, k);
+  if (!only || stage.id === only) report(stage, forcedStones ? Number(forcedStones) : budget);
+});
+// Act IV opens after a stage of Act III; by then a player has come far in all three
+const opens4 = act3.stages.findIndex((s) => s.id === act4.opensAfter) + 1;
+act4.stages.forEach((stage, k) => {
+  const budget = twoStars(act1.stages, act1.stages.length) + twoStars(act2.stages, Math.min(act2.stages.length, opens3 + opens4 + k)) + twoStars(act3.stages, Math.min(act3.stages.length, opens4 + k)) + twoStars(act4.stages, k);
   if (!only || stage.id === only) report(stage, forcedStones ? Number(forcedStones) : budget);
 });

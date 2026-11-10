@@ -89,6 +89,8 @@ export interface PlayerMods {
   mazeDmg?: boolean;
   /** Gifts you send arrive with this much more. */
   giftBonus?: number;
+  /** Moon-touched elites you kill pay this much more, and take this much more damage from you. */
+  eliteBane?: number;
 }
 
 /** Gold price of a tower for a player with these bonuses. */

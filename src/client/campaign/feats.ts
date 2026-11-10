@@ -56,6 +56,7 @@ export const FEATS: Feat[] = [
   { id: 'act1', name: "Winter's End", text: 'Win every stage of Act I.', icon: 'map', group: 'campaign', fromSave: (s) => wonAll(s, 0) },
   { id: 'act2', name: 'The Thaw Turned', text: 'Win every stage of Act II.', icon: 'map', group: 'campaign', fromSave: (s) => wonAll(s, 1) },
   { id: 'act3', name: 'Dawn', text: 'Win every stage of Act III.', icon: 'star', group: 'campaign', fromSave: (s) => wonAll(s, 2) },
+  { id: 'act4', name: 'Holder of the Seawall', text: 'Win every stage of Act IV.', icon: 'shield', group: 'campaign', fromSave: (s) => wonAll(s, 3) },
   { id: 'stars', name: 'Starlit', text: 'Earn every star in the campaign.', icon: 'star', group: 'campaign', count: totalStars, goal: allStars },
   { id: 'keystone', name: 'Keystone', text: 'Take a keystone on the Rune Web.', icon: 'rune', group: 'campaign', fromSave: (s) => Object.keys(s.talents).some((id) => NODE_BY_ID[id]?.kind === 'keystone') },
   { id: 'weaver', name: 'Weaver', text: 'Spend 100 runestones on the Rune Web.', icon: 'rune', group: 'campaign', count: (s) => totalSpent(s.talents), goal: 100 },

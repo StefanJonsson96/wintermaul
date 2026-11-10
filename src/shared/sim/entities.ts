@@ -31,6 +31,14 @@ export interface GameRules {
   omenEvery?: number;
   /** At most this many towers per player. */
   maxTowers?: number;
+  /** Snowdrifts every wave, whatever the weather. */
+  drifts?: boolean;
+  /** A moon-touched champion with every wave, whatever the weather. */
+  elites?: boolean;
+  /** Frozen ground: towers can't be sold (undoing one built this build phase still works). */
+  noSell?: boolean;
+  /** Boons every player starts with. */
+  startBoons?: string[];
   /** Talent bonuses by player id. */
   mods?: Record<number, PlayerMods>;
 }

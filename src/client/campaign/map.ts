@@ -95,7 +95,7 @@ export class CampaignMap {
     this.h = r.height;
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
-    const paint = this.chapter.id === 'thaw' ? paintThaw : this.chapter.id === 'night' ? paintNight : paintTerrain;
+    const paint = { winter: paintTerrain, thaw: paintThaw, night: paintNight, coast: paintCoast }[this.chapter.id];
     this.terrain = paint(this.w, this.h, this.dpr, (x, y) => this.pos(x, y));
     this.flakes = Array.from({ length: Math.round((this.w * this.h) / 7000) }, () => ({ x: Math.random() * this.w, y: Math.random() * this.h, r: Math.random() * 1.6 + 0.4, v: Math.random() * 14 + 8, p: Math.random() * 6.28 }));
   }
@@ -1054,6 +1054,196 @@ function paintNight(w: number, h: number, dpr: number, pos: Pos): HTMLCanvasElem
   ctx.lineWidth = 1.5;
   ctx.strokeRect(6.5, 6.5, w - 13, h - 13);
   ctx.strokeStyle = 'rgba(170,140,255,0.1)';
+  ctx.strokeRect(11.5, 11.5, w - 23, h - 23);
+  return c;
+}
+
+// ─────────────────────────────────────────────────────────── Act IV: the sundered coast
+
+/** Paints the coast: grey shore and marsh on the left, the frozen sea with floes on the right, the lighthouse pyre, the wreck and the seawall. */
+function paintCoast(w: number, h: number, dpr: number, pos: Pos): HTMLCanvasElement {
+  const [c, ctx] = makeCanvas(w * dpr, h * dpr);
+  ctx.scale(dpr, dpr);
+  const rng = new Rng(4747);
+  const rnd = () => rng.next();
+  const u = Math.min(w, h) / 600;
+
+  // the sea fills the canvas; the land is laid over it
+  const sea = ctx.createLinearGradient(0, 0, w, h);
+  sea.addColorStop(0, '#1b2d3f');
+  sea.addColorStop(1, '#0f1c2b');
+  ctx.fillStyle = sea;
+  ctx.fillRect(0, 0, w, h);
+  // the shore: a ragged coastline running from the bottom right to the top left
+  const shore: { x: number; y: number }[] = [];
+  for (let i = 0; i <= 30; i++) {
+    const t = i / 30;
+    const p = pos(0.3 + t * 0.45 + Math.sin(t * 9) * 0.04, 1.05 - t * 1.1);
+    shore.push(p);
+  }
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  for (const p of shore) ctx.lineTo(p.x + (rnd() - 0.5) * 10 * u, p.y);
+  ctx.lineTo(0, 0);
+  ctx.closePath();
+  const land = ctx.createLinearGradient(0, 0, w * 0.6, 0);
+  land.addColorStop(0, '#46566e');
+  land.addColorStop(1, '#5b6c84');
+  ctx.fillStyle = land;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(220,235,250,0.55)';
+  ctx.lineWidth = 3 * u;
+  ctx.stroke();
+  // surf and ice along the shore
+  ctx.strokeStyle = 'rgba(200,225,245,0.18)';
+  ctx.lineWidth = 1.5;
+  for (let k = 1; k <= 3; k++) {
+    ctx.beginPath();
+    shore.forEach((p, i) => (i ? ctx.lineTo(p.x + k * 9 * u, p.y) : ctx.moveTo(p.x + k * 9 * u, p.y)));
+    ctx.stroke();
+  }
+  // ice floes on the sea
+  for (let i = 0; i < 70; i++) {
+    const p = pos(0.55 + rnd() * 0.5, rnd());
+    const r = (6 + rnd() * 22) * u;
+    ctx.beginPath();
+    const n = 5 + Math.floor(rnd() * 3);
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + rnd() * 0.4;
+      ctx.lineTo(p.x + Math.cos(a) * r * (0.7 + rnd() * 0.4), p.y + Math.sin(a) * r * 0.6);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(220,238,250,${0.25 + rnd() * 0.35})`;
+    ctx.fill();
+  }
+  // marsh pools and reeds on the left
+  for (let i = 0; i < 18; i++) {
+    const p = pos(0.04 + rnd() * 0.25, 0.65 + rnd() * 0.3);
+    ctx.fillStyle = 'rgba(30,48,66,0.6)';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, (8 + rnd() * 16) * u, (4 + rnd() * 6) * u, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(160,170,120,0.6)';
+    ctx.lineWidth = 1;
+    for (let k = 0; k < 4; k++) {
+      const x = p.x + (rnd() - 0.5) * 20 * u;
+      ctx.beginPath();
+      ctx.moveTo(x, p.y);
+      ctx.lineTo(x + (rnd() - 0.5) * 4 * u, p.y - (6 + rnd() * 6) * u);
+      ctx.stroke();
+    }
+  }
+  // dunes of drifting snow
+  for (let i = 0; i < 14; i++) {
+    const p = pos(0.12 + rnd() * 0.25, 0.42 + rnd() * 0.25);
+    ctx.fillStyle = 'rgba(235,244,255,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, (14 + rnd() * 18) * u, (5 + rnd() * 5) * u, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // mountains inland
+  const peaks: { x: number; y: number; s: number }[] = [];
+  for (let i = 0; i < 10; i++) peaks.push({ ...pos(-0.03 + rnd() * 0.06, 0.05 + i * 0.06), s: 28 + rnd() * 24 });
+  for (let i = 0; i < 7; i++) peaks.push({ ...pos(0.12 + i * 0.05, 0.08 + rnd() * 0.08), s: 24 + rnd() * 20 });
+  peaks.sort((a, b) => a.y - b.y);
+  for (const p of peaks) mountain(ctx, p.x, p.y, p.s * u, rnd);
+  // black ice boats beached in the marsh
+  for (let i = 0; i < 4; i++) {
+    const p = pos(0.16 + i * 0.05, 0.86 + (rnd() - 0.5) * 0.04);
+    ctx.fillStyle = '#0d1420';
+    ctx.beginPath();
+    ctx.moveTo(p.x - 12 * u, p.y);
+    ctx.quadraticCurveTo(p.x, p.y + 8 * u, p.x + 12 * u, p.y);
+    ctx.lineTo(p.x + 9 * u, p.y - 3 * u);
+    ctx.lineTo(p.x - 9 * u, p.y - 3 * u);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(140,200,255,0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  // the lighthouse pyre
+  const lh = pos(0.42, 0.7);
+  ctx.fillStyle = '#d9dee6';
+  ctx.beginPath();
+  ctx.moveTo(lh.x - 6 * u, lh.y);
+  ctx.lineTo(lh.x - 3.5 * u, lh.y - 40 * u);
+  ctx.lineTo(lh.x + 3.5 * u, lh.y - 40 * u);
+  ctx.lineTo(lh.x + 6 * u, lh.y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#a3383a';
+  for (let k = 0; k < 3; k++) ctx.fillRect(lh.x - 5 * u + k * 0.6 * u, lh.y - (10 + k * 11) * u, (10 - k * 1.3) * u, 4 * u);
+  const fire = ctx.createRadialGradient(lh.x, lh.y - 46 * u, 0, lh.x, lh.y - 46 * u, 40 * u);
+  fire.addColorStop(0, 'rgba(255,220,140,0.95)');
+  fire.addColorStop(0.2, 'rgba(255,150,60,0.5)');
+  fire.addColorStop(1, 'rgba(255,120,40,0)');
+  ctx.fillStyle = fire;
+  ctx.fillRect(lh.x - 40 * u, lh.y - 86 * u, 80 * u, 80 * u);
+  // the ice bridge: a pale band out over the sea
+  const b0 = pos(0.6, 0.78);
+  const b1 = pos(0.74, 0.66);
+  ctx.strokeStyle = 'rgba(225,240,252,0.7)';
+  ctx.lineWidth = 9 * u;
+  ctx.beginPath();
+  ctx.moveTo(b0.x, b0.y);
+  ctx.quadraticCurveTo((b0.x + b1.x) / 2, b0.y - 30 * u, b1.x, b1.y);
+  ctx.stroke();
+  // the wreck of the Aurora: a broken hull and mast, tilted in the ice, under its aurora
+  const wr = pos(0.8, 0.44);
+  for (let k = 0; k < 3; k++) {
+    ctx.strokeStyle = k === 1 ? 'rgba(170,120,255,0.12)' : 'rgba(110,255,200,0.12)';
+    ctx.lineWidth = (20 - k * 5) * u;
+    ctx.beginPath();
+    ctx.arc(wr.x, wr.y + 60 * u, (90 + k * 14) * u, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+  }
+  ctx.save();
+  ctx.translate(wr.x, wr.y);
+  ctx.rotate(-0.25);
+  ctx.fillStyle = '#2b2420';
+  ctx.beginPath();
+  ctx.moveTo(-24 * u, 0);
+  ctx.quadraticCurveTo(0, 12 * u, 22 * u, -2 * u);
+  ctx.lineTo(18 * u, -8 * u);
+  ctx.lineTo(-20 * u, -6 * u);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#3a302a';
+  ctx.lineWidth = 2 * u;
+  ctx.beginPath();
+  ctx.moveTo(-2 * u, -6 * u);
+  ctx.lineTo(4 * u, -40 * u);
+  ctx.stroke();
+  ctx.restore();
+  // the last seawall: a long grey wall with towers, across the top right
+  const sw0 = pos(0.72, 0.1);
+  const sw1 = pos(1.02, 0.2);
+  ctx.strokeStyle = '#7a8597';
+  ctx.lineWidth = 8 * u;
+  ctx.beginPath();
+  ctx.moveTo(sw0.x, sw0.y);
+  ctx.lineTo(sw1.x, sw1.y);
+  ctx.stroke();
+  for (let k = 0; k <= 4; k++) {
+    const x = sw0.x + ((sw1.x - sw0.x) * k) / 4;
+    const y = sw0.y + ((sw1.y - sw0.y) * k) / 4;
+    ctx.fillStyle = '#8c97a8';
+    ctx.fillRect(x - 5 * u, y - 14 * u, 10 * u, 14 * u);
+    ctx.fillStyle = '#5c6677';
+    ctx.fillRect(x - 6 * u, y - 16 * u, 12 * u, 3 * u);
+  }
+
+  compass(ctx, pos(0.06, 0.08).x, pos(0.06, 0.08).y, 30 * u);
+  const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(2,6,14,0.7)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(150,200,240,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(6.5, 6.5, w - 13, h - 13);
+  ctx.strokeStyle = 'rgba(150,200,240,0.1)';
   ctx.strokeRect(11.5, 11.5, w - 23, h - 23);
   return c;
 }

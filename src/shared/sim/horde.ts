@@ -454,7 +454,7 @@ export class Horde {
     const p = this.g.player(owner);
     let gold = 0;
     if (p) {
-      gold = Math.round(c.def.bounty * p.goldMul * (this.g.weatherDef.bounty ?? 1) * (c.elite ? ELITE.bounty : 1));
+      gold = Math.round(c.def.bounty * p.goldMul * (this.g.weatherDef.bounty ?? 1) * (c.elite ? ELITE.bounty * (1 + (p.mods.eliteBane ?? 0)) : 1));
       const t = this.g.towers.get(towerId);
       const e = t?.def.econ;
       if (e?.killGold && this.g.rng.chance(e.killGoldChance ?? 1)) gold += e.killGold;

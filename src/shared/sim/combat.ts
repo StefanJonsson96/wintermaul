@@ -95,6 +95,7 @@ export class Combat {
     if (frostbite && ((this.g.time < c.slowUntil && c.slowPct > 0) || c.auraSlow > 0)) mult *= 1 + frostbite;
     if (m) {
       if (m.vsBoss && c.def.boss) mult *= m.vsBoss;
+      if (m.eliteBane && c.elite) mult *= 1 + m.eliteBane;
       if (m.vsAir && c.air) mult *= m.vsAir;
       const vs = m.vsArmor?.[c.def.armorType];
       if (vs) mult *= vs;

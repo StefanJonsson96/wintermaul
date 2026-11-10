@@ -357,7 +357,7 @@ export const THAW_STAGES: Stage[] = [
 ];
 
 export interface Chapter {
-  id: 'winter' | 'thaw' | 'night';
+  id: 'winter' | 'thaw' | 'night' | 'coast';
   act: string;
   name: string;
   blurb: string;
@@ -492,10 +492,127 @@ export const NIGHT_STAGES: Stage[] = [
 ];
 
 
+const RACES_TIDE = ['frost', 'storm', 'tech', 'venom', 'gold', 'stone'];
+
+/** Act IV: the frozen sea, where the horde comes ashore with champions at its head. */
+export const COAST_STAGES: Stage[] = [
+  {
+    id: 'saltmarsh',
+    name: 'Saltmarsh Landing',
+    x: 0.08,
+    y: 0.8,
+    story: 'The night lifts over a grey coast. Boats of black ice are beaching in the marsh, and the quarrymen of the shore have blessed your walls.',
+    difficulty: 'normal',
+    rules: { finalWave: 15, lives: 20, startBoons: ['quarry'], hpMul: 5.0 },
+    mutators: [{ name: "Quarrymen's gift", text: "You start with Quarryman's Blessing: selling never leaves rubble." }],
+    reach: 9,
+    flawless: 3,
+    rewards: [1, 1, 1],
+  },
+  {
+    id: 'driftfields',
+    name: 'The Driftfields',
+    x: 0.22,
+    y: 0.55,
+    story: 'On the dunes behind the shore the snow never stops moving. Every wave the drifts are somewhere else.',
+    difficulty: 'normal',
+    rules: { firstWave: 6, finalWave: 20, lives: 20, startGold: 440, startLumber: 1, firstWaveDelay: 80, drifts: true, hpMul: 4.0 },
+    mutators: [{ name: 'Moving dunes', text: 'Snowdrifts block the path every wave, whatever the weather.' }],
+    reach: 13,
+    flawless: 3,
+    rewards: [1, 1, 1],
+  },
+  {
+    id: 'pyre',
+    name: 'Lighthouse Pyre',
+    x: 0.4,
+    y: 0.74,
+    story: 'The keepers lit the lighthouse as a pyre to call you. The rock is frozen to its heart: what you build here stays built.',
+    difficulty: 'normal',
+    rules: { firstWave: 10, finalWave: 24, lives: 20, startGold: 760, startLumber: 2, firstWaveDelay: 100, noSell: true, startBoons: ['sweep'], hpMul: 2.2 },
+    mutators: [
+      { name: 'Frozen ground', text: "Towers can't be sold (undoing one built this build phase still works)." },
+      { name: "Keepers' gift", text: 'You start with Clean Sweep: a wave without a leak from your lane pays.' },
+    ],
+    reach: 17,
+    flawless: 3,
+    rewards: [1, 1, 1],
+    waves: 'thaw',
+  },
+  {
+    id: 'champions',
+    name: 'Tide of Champions',
+    x: 0.53,
+    y: 0.45,
+    story: 'Every boat that lands carries a champion of the deep. Bring them down and their armour is worth a fortune.',
+    difficulty: 'normal',
+    rules: { firstWave: 12, finalWave: 26, lives: 20, startGold: 980, startLumber: 2, firstWaveDelay: 100, elites: true, hpMul: 3.2 },
+    mutators: [{ name: 'Champions', text: 'Every wave ends with a moon-touched champion: 4× health, 8× gold.' }],
+    reach: 19,
+    flawless: 4,
+    rewards: [1, 1, 1],
+  },
+  {
+    id: 'icebridge',
+    name: 'The Ice Bridge',
+    x: 0.66,
+    y: 0.72,
+    story: 'A bridge of sea ice, narrow and shifting. There is room for fifty towers, and the drifts close half of it each wave.',
+    difficulty: 'normal',
+    rules: { firstWave: 14, finalWave: 28, lives: 20, startGold: 1250, startLumber: 2, firstWaveDelay: 110, maxTowers: 50, drifts: true, hpMul: 1.9 },
+    mutators: [
+      { name: 'Narrow ice', text: 'At most 50 towers.' },
+      { name: 'Shifting snow', text: 'Snowdrifts every wave.' },
+    ],
+    reach: 21,
+    flawless: 4,
+    rewards: [1, 1, 1],
+    waves: 'thaw',
+  },
+  {
+    id: 'wreck',
+    name: 'Wreck of the Aurora',
+    x: 0.78,
+    y: 0.4,
+    story: 'The flagship of the north lies broken in the ice under an aurora that never fades. Its crew still fights: only the orders of the lights and the sea answer here.',
+    difficulty: 'normal',
+    rules: { firstWave: 18, finalWave: 32, lives: 20, startGold: 1900, startLumber: 3, firstWaveDelay: 120, weather: 'aurora', elites: true, races: RACES_TIDE, hpMul: 4.4 },
+    mutators: [
+      { name: 'Endless aurora', text: 'Every wave: Magic, Elemental and Pure damage +25%.' },
+      { name: 'Drowned champions', text: 'Every wave ends with a champion.' },
+      { name: 'Sea orders', text: 'Only Frostborn, Stormcallers, Clockwork, Venomkin, Goldhoard and Stonewardens.' },
+    ],
+    reach: 25,
+    flawless: 4,
+    rewards: [1, 1, 1],
+    waves: 'thaw',
+  },
+  {
+    id: 'seawall',
+    name: 'The Last Seawall',
+    x: 0.9,
+    y: 0.14,
+    story: 'Behind the seawall is everything you have saved. In front of it, the whole sea, forty waves deep, champions at the head of each.',
+    difficulty: 'hard',
+    rules: { lives: 20, elites: true, noSell: true, omenEvery: 4, hpMul: 1.6 },
+    mutators: [
+      { name: 'Champions', text: 'Every wave ends with a champion.' },
+      { name: 'Frozen ground', text: "Towers can't be sold." },
+      { name: 'Sea shrines', text: 'A shrine after every fourth wave.' },
+    ],
+    reach: 30,
+    flawless: 5,
+    rewards: [2, 2, 2],
+    waves: 'thaw',
+  },
+];
+
+
 export const CHAPTERS: Chapter[] = [
   { id: 'winter', act: 'Act I', name: 'The Long Winter', blurb: 'The road north, to the Throne of Winter.', stages: STAGES, endless: ENDLESS },
   { id: 'thaw', act: 'Act II', name: 'The Thaw', blurb: 'What slept under the glacier is waking.', stages: THAW_STAGES, opensAfter: 'mill' },
   { id: 'night', act: 'Act III', name: 'The Long Night', blurb: 'The sun has set for good. Weather and the old shrines decide the war.', stages: NIGHT_STAGES, opensAfter: 'hexwood' },
+  { id: 'coast', act: 'Act IV', name: 'The Sundered Coast', blurb: 'The horde comes over the frozen sea, champions at its head.', stages: COAST_STAGES, opensAfter: 'cairns' },
 ];
 
 /** Every stage of every chapter, the endless ones included. */

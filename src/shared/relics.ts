@@ -40,6 +40,7 @@ export const RELICS: Relic[] = [
   { id: 'compass', name: "Pathfinder's Compass", feat: 'act1', icon: 'map', flavor: 'It points north, where the trouble is.', effects: [E.prep(20), gift(40)] },
   { id: 'seed', name: 'Glacier Seed', feat: 'act2', icon: 'crystal', flavor: 'Ice that grew from a single grain.', effects: [E.stun(0.25), E.damage(0.03)] },
   { id: 'dawnstone', name: 'Dawnstone', feat: 'act3', icon: 'flame', flavor: 'The first light after the long night, kept in a stone.', effects: [E.damage(0.06), E.lives(3), gift(50)] },
+  { id: 'conch', name: "Tidecaller's Conch", feat: 'act4', icon: 'crown', flavor: 'Blow it, and the champions of the deep come to you.', effects: [{ text: 'Moon-touched champions take 50% more damage from you and pay you 50% more', apply: (m) => (m.eliteBane = (m.eliteBane ?? 0) + 0.5) }] },
   { id: 'mantle', name: 'Starlit Mantle', feat: 'stars', icon: 'star', flavor: 'Every star you earned, sewn in.', effects: [E.damage(0.04), E.range(0.04), E.speed(0.04)] },
   { id: 'ring', name: 'Runebound Ring', feat: 'keystone', icon: 'rune', flavor: 'The web hums when you wear it.', effects: [E.types(['magic', 'elemental', 'pure'], 0.1)] },
   { id: 'thread', name: "Weaver's Thread", feat: 'weaver', icon: 'rune', flavor: 'Spun from a hundred spent runes.', effects: [E.types(['impact', 'pierce'], 0.1)] },

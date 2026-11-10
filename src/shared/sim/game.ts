@@ -150,6 +150,14 @@ export class Game {
     } else if (mode === 'random') {
       for (const p of this.players) this.pickRace(p, 'random');
     }
+    // a stage's gifts: boons everyone starts with
+    for (const id of this.rules.startBoons ?? []) {
+      if (!BOON_BY_ID[id]) continue;
+      for (const p of this.players) {
+        p.omen = [id];
+        this.takeBoon(p, id);
+      }
+    }
     this.phase = 'build';
     this.countdown = (this.rules.firstWaveDelay ?? FIRST_WAVE_DELAY) + Math.max(0, ...this.players.map((p) => p.mods.prep ?? 0));
     this.phaseCounter++;
@@ -413,6 +421,7 @@ export class Game {
       const t = this.towers.get(id);
       if (!t || t.owner !== p.id) continue;
       const undo = this.phase === 'build' && t.buildPhase === this.phaseCounter;
+      if (this.rules.noSell && !undo) return { ok: false, error: 'The ground is frozen: towers here stay where they are' };
       const refund = Math.floor(t.invested * (undo ? 1 : sellRefund(p.mods)));
       p.gold += refund;
       if (t.def.tier === 5) {
@@ -558,7 +567,7 @@ export class Game {
     }
     // a warm wind melts the rubble; a blizzard piles snowdrifts across the path
     if (this.weather === 'warm') this.clearRubble();
-    if (this.weather === 'blizzard') this.pileDrifts(n);
+    if (this.weather === 'blizzard' || this.rules.drifts) this.pileDrifts(n);
     this.phaseCounter++;
     for (const p of this.players) p.ready = false;
     const { wave } = this.waveInfo(n);
@@ -579,9 +588,10 @@ export class Game {
     }
     this.horde.spawnQueue.sort((a, b) => a.at - b.at);
     // under a blood moon the last creep of the wave in every lane is moon-touched
-    if (this.weather === 'bloodmoon') {
+    if (this.weather === 'bloodmoon' || this.rules.elites) {
       for (const lane of this.lanes) {
-        const last = this.horde.spawnQueue.filter((s) => s.wave === n && s.lane === lane.index).pop();
+        // never the boss: a champion walks beside it
+        const last = this.horde.spawnQueue.filter((s) => s.wave === n && s.lane === lane.index && !this.creepDef(s.def).boss).pop();
         if (last) last.elite = true;
       }
     }

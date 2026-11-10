@@ -17,6 +17,8 @@ export interface GameSettings {
   weather?: boolean;
   /** A shrine offers a boon after every fifth wave (on unless false). */
   omens?: boolean;
+  /** With two or more players, one shrine for the team: each takes a different boon (on unless false). */
+  sharedShrines?: boolean;
 }
 
 export const DIFFICULTIES: Record<Difficulty, { label: string; lives: number; perPlayer: number; hp: number; blurb: string }> = {
@@ -174,7 +176,7 @@ export type GameEvent =
   | { e: 'ward'; t: number; id: number }
   | { e: 'brood'; t: number; id: number }
   | { e: 'freeze'; t: number; id: number; tw: number; until: number }
-  | { e: 'omen'; t: number; p: number; offers: string[]; wave: number }
+  | { e: 'omen'; t: number; p: number; offers: string[]; wave: number; shared?: boolean }
   | { e: 'boon'; t: number; p: number; id: string }
   | { e: 'mods'; t: number; p: number; mods: import('./sim/mods').PlayerMods }
   | { e: 'setup'; t: number; settings: GameSettings; done: boolean; lives: number; finalWave: number };

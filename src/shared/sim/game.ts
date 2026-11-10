@@ -71,6 +71,9 @@ export class Game {
   readonly seed: number;
   /** The weather in force (calm between waves). */
   weather: WeatherId = 'clear';
+  /** A shared shrine's boons still on the altar, and who has taken from it. */
+  private teamOmen: string[] = [];
+  private tookFromTeam = new Set<number>();
   private nextId = 1;
   private phaseCounter = 0;
   private endlessDefs: CreepDef[] = [];
@@ -215,6 +218,7 @@ export class Game {
         if (st.waves && st.waves in WAVE_SETS) this.settings.waves = st.waves;
         if (typeof st.weather === 'boolean') this.settings.weather = st.weather;
         if (typeof st.omens === 'boolean') this.settings.omens = st.omens;
+        if (typeof st.sharedShrines === 'boolean') this.settings.sharedShrines = st.sharedShrines;
         this.lives = this.maxLives = this.startLives();
         this.emit({ e: 'setup', t: this.time, settings: { ...this.settings }, done: false, lives: this.lives, finalWave: this.settings.endless ? 0 : this.finalWave });
         return { ok: true };
@@ -543,6 +547,7 @@ export class Game {
   private startWave(n: number): void {
     this.wave = n;
     this.phase = 'wave';
+    this.botsTakeTeamBoons();
     this.setWeather(this.rules.weather ?? (this.settings.weather === false ? 'clear' : weatherOf(this.seed, n)));
     // the Minotaur Horn measures the maze as each wave starts
     for (const p of this.players) if (p.baseMods.mazeDmg) this.refreshMods(p);
@@ -678,9 +683,19 @@ export class Game {
 
   /** The shrine after every fifth wave: three boons for each player to choose from. */
   private offerOmens(n: number): void {
+    // an offer left unanswered is settled with its first boon
+    for (const p of this.players) if (p.omen?.length) this.takeBoon(p, p.omen[0]);
+    if (this.sharedShrines) {
+      // one shrine for the team: two more boons than players, first come first served
+      const extra = this.players.reduce((k, p) => k + (p.baseMods.omenChoices ?? 0), 0);
+      this.teamOmen = omenOffers(this.seed, 999, n, [], this.players.length + 2 + extra);
+      this.tookFromTeam = new Set();
+      for (const p of this.players) p.omenWave = n;
+      this.reofferTeam(n);
+      // bots let the people choose first: they take what is left when the next wave starts
+      return;
+    }
     for (const p of this.players) {
-      // an offer left unanswered is settled with its first boon
-      if (p.omen) this.takeBoon(p, p.omen[0]);
       p.omen = omenOffers(this.seed, p.id, n, p.boons, 3 + (p.baseMods.omenChoices ?? 0));
       p.omenWave = n;
       this.emit({ e: 'omen', t: this.time, p: p.id, offers: [...p.omen], wave: n });
@@ -688,11 +703,39 @@ export class Game {
     }
   }
 
+  /** Shared shrines: what is left of the team's offer, for everyone who hasn't chosen yet. */
+  private reofferTeam(n: number): void {
+    for (const p of this.players) {
+      if (this.tookFromTeam.has(p.id)) {
+        p.omen = null;
+        continue;
+      }
+      const left = this.teamOmen.filter((id) => !p.boons.includes(id) || !BOON_BY_ID[id].effects.length);
+      p.omen = left.length ? left : null;
+      if (p.omen) this.emit({ e: 'omen', t: this.time, p: p.id, offers: [...p.omen], wave: n, shared: true });
+    }
+  }
+
+  /** Two or more players share one shrine (a rules option, on unless false). */
+  get sharedShrines(): boolean {
+    return this.players.length > 1 && this.settings.sharedShrines !== false;
+  }
+
+  /** Bots take their share of a team shrine as the next wave starts. */
+  private botsTakeTeamBoons(): void {
+    for (const p of this.players) if (p.isBot && p.omen?.length) this.takeBoon(p, botBoon(p.omen));
+  }
+
   takeBoon(p: Player, id: string): CommandResult {
     if (!p.omen || !p.omen.includes(id)) return { ok: false, error: 'The shrine offers no such boon' };
     const b = BOON_BY_ID[id];
     p.omen = null;
     p.boons.push(id);
+    if (this.sharedShrines && this.teamOmen.includes(id)) {
+      this.teamOmen = this.teamOmen.filter((x) => x !== id);
+      this.tookFromTeam.add(p.id);
+      this.reofferTeam(p.omenWave ?? this.wave);
+    }
     // gold that scales is worth what the card said when it was offered
     const gold = (b.goldPerWave ?? 0) * Math.max(1, p.omenWave ?? this.wave) + (b.now?.gold ?? 0);
     if (gold) {

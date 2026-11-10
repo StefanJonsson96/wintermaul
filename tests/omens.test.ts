@@ -52,7 +52,7 @@ describe('omens', () => {
   });
 
   it('are taken with a command, once, and change the player', () => {
-    const g = new Game({ ...settings, weather: false }, [{ id: 0, name: 'P', color: 0, isBot: false }, { id: 1, name: 'B', color: 1, isBot: true }], 3, { skipSetup: true });
+    const g = new Game({ ...settings, weather: false, sharedShrines: false }, [{ id: 0, name: 'P', color: 0, isBot: false }, { id: 1, name: 'B', color: 1, isBot: true }], 3, { skipSetup: true });
     g.devSkipTo(5);
     for (let i = 0; i < 20000 && !(g.phase === 'build' && g.wave === 5); i++) g.step();
     const p = g.player(0)!;
@@ -182,5 +182,29 @@ describe('reworked relics', () => {
     const q = g.player(1)!.gold;
     g.command(0, { c: 'gift', to: 1, amount: 100 });
     expect(g.player(1)!.gold - q).toBe(125);
+  });
+});
+
+describe('shared shrines', () => {
+  it('lay out one offer for the team: each takes a different boon, bots last', () => {
+    const players = [0, 1, 2].map((id) => ({ id, name: `P${id}`, color: id, isBot: id === 2 }));
+    const g = new Game({ ...settings, weather: false }, players, 4, { skipSetup: true, rules: { lives: 999 } });
+    g.devSkipTo(5);
+    for (let i = 0; i < 30000 && !(g.phase === 'build' && g.wave === 5); i++) g.step();
+    const [a, b, bot] = g.players;
+    expect(a.omen).toHaveLength(5);
+    expect(b.omen).toEqual(a.omen);
+    expect(bot.boons).toHaveLength(0);
+    const pick = a.omen![1];
+    expect(g.command(0, { c: 'omen', pick }).ok).toBe(true);
+    // gone for everyone else
+    expect(b.omen).not.toContain(pick);
+    expect(b.omen).toHaveLength(4);
+    expect(g.command(1, { c: 'omen', pick }).ok).toBe(false);
+    expect(g.command(1, { c: 'omen', pick: b.omen![0] }).ok).toBe(true);
+    // the bot takes from what is left when the next wave starts
+    for (let i = 0; i < 20000 && g.phase !== 'wave'; i++) g.step();
+    expect(bot.boons).toHaveLength(1);
+    expect([a.boons[0], b.boons[0]]).not.toContain(bot.boons[0]);
   });
 });

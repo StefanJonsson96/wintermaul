@@ -123,6 +123,9 @@ export function openSetupDialog(view: GameView, onClose: () => void): { modal: M
           { class: 'setup-grid', style: { gridTemplateColumns: 'repeat(2, 1fr)' } },
           choice(st.weather !== false, st.weather !== false ? 'Weather: on' : 'Weather: off', 'Blizzards, auroras, fog and blood moons change the rules from wave to wave.', { weather: st.weather === false }),
           choice(st.omens !== false, st.omens !== false ? 'Omens: on' : 'Omens: off', 'After every fifth wave a shrine offers each player a choice of three boons.', { omens: st.omens === false }),
+          ...(view.state.players.length > 1
+            ? [choice(st.sharedShrines !== false, st.sharedShrines !== false ? 'Shared shrines' : 'A shrine each', st.sharedShrines !== false ? 'One offer for the team: each takes a different boon.' : 'Every player gets their own three boons.', { sharedShrines: st.sharedShrines === false })]
+            : []),
         ),
       ),
     );
@@ -266,6 +269,9 @@ export function openOmenPicker(view: GameView, onClose: () => void): ModalHandle
   if (!me?.omen?.length) return null;
   const offers = me.omen;
   const wave = Math.max(1, me.omenWave ?? s.wave.n);
+  const shared = s.players.length > 1 && s.settings.sharedShrines !== false;
+  // what teammates already took from this shrine
+  const takenHere = s.players.filter((p) => p.id !== me.id && p.omenWave === me.omenWave && p.boons?.length && !p.omen).map((p) => `${BOON_BY_ID[p.boons![p.boons!.length - 1]]?.name} (${p.name})`);
   const cards = h('div', { class: 'omen-cards' });
   for (const id of offers) {
     const b = BOON_BY_ID[id];
@@ -292,9 +298,10 @@ export function openOmenPicker(view: GameView, onClose: () => void): ModalHandle
     h(
       'div',
       { class: 'omen' },
-      h('div', { class: 'omen-kicker' }, `After wave ${wave}`),
+      h('div', { class: 'omen-kicker' }, shared ? `A shared shrine · after wave ${wave}` : `After wave ${wave}`),
       h('h2', null, 'A wayside shrine'),
-      h('p', { class: 'muted' }, 'Candles still burn under the snow. The old gods of the north offer one gift: take it, and it stays with you for the rest of the war.'),
+      h('p', { class: 'muted' }, shared ? 'One altar for the whole team: each of you takes one gift, and what you take, the others cannot. Talk it over, or be quick.' : 'Candles still burn under the snow. The old gods of the north offer one gift: take it, and it stays with you for the rest of the war.'),
+      shared && takenHere.length ? h('div', { class: 'omen-have muted' }, `Already taken: ${takenHere.join(', ')}`) : null,
       cards,
       have.length ? h('div', { class: 'omen-have muted' }, `Your boons: ${have.join(', ')}`) : null,
       h('div', { class: 'field-row', style: { justifyContent: 'flex-end', marginTop: '12px' } }, h('button', { class: 'btn ghost', onclick: () => modal.close() }, 'Decide later')),

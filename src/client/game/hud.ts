@@ -513,8 +513,13 @@ export class Hud {
     setTimeout(() => el.remove(), 3300);
   }
 
-  openOmen(): void {
-    if (this.omenModal) return;
+  get omenOpen(): boolean {
+    return !!this.omenModal;
+  }
+
+  openOmen(refresh = false): void {
+    if (this.omenModal && !refresh) return;
+    this.omenModal?.close();
     this.omenModal = openOmenPicker(this.view, () => (this.omenModal = null));
   }
 

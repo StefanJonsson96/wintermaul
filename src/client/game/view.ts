@@ -56,6 +56,8 @@ export class GameView {
   marks: ViewState['marks'] = [];
   /** Called every frame, e.g. by the tutorial coach. */
   frameHooks: ((now: number) => void)[] = [];
+  /** The shrine whose offer was last shown (a shared one is re-sent as teammates choose). */
+  private omenShown = -1;
   /** Extra notes for the end screen (achievements earned, for one). */
   endNotes: (() => HTMLElement | null)[] = [];
   private ghost: Ghost | null = null;
@@ -334,8 +336,11 @@ export class GameView {
         audio.play('lumber', 0.7);
         this.hud.chat.system(`After wave ${ev.wave} a shrine offers you a boon (press O, or the Shrine button).`);
         this.hud.refreshBuildPanel(true);
-        // don't cover the map while creeps are walking: only open it in the build phase
-        if (s.wave.phase !== 'wave') this.hud.openOmen();
+        // don't cover the map while creeps are walking: only open it in the build phase;
+        // a shared shrine's offer shrinks as teammates choose, so an open picker is redrawn
+        if (this.hud.omenOpen) this.hud.openOmen(true);
+        else if (s.wave.phase !== 'wave' && ev.wave !== this.omenShown) this.hud.openOmen();
+        this.omenShown = ev.wave;
         return;
       case 'boon': {
         if (ev.p !== s.you) return;

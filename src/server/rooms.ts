@@ -14,7 +14,7 @@ import {
 } from '../shared/protocol';
 import { Bot } from '../shared/sim/bot';
 import { Game, type GameRules } from '../shared/sim/game';
-import { applyRelics, cleanRelics } from '../shared/relics';
+import { allowedRelics, applyRelics } from '../shared/relics';
 import { type Loadout, modsFromLoadout, sanitizeLoadout, totalSpent } from '../shared/talents';
 import { VERSION } from '../shared/version';
 import { endStats, GameRunner } from '../shared/sim/runner';
@@ -535,7 +535,8 @@ export class Lobby {
         return;
       case 'talents':
         s.talents = sanitizeLoadout(msg.loadout);
-        s.relics = cleanRelics(msg.relics);
+        // without accounts the server can't prove achievements; it keeps the claim consistent
+        s.relics = allowedRelics(msg.relics, msg.feats);
         if (s.room?.state === 'lobby') s.room.broadcastRoom();
         return;
       default:

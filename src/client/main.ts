@@ -86,7 +86,7 @@ function boot(): void {
   const playStage = (stage: Stage) => startLocal(stageOptions(stage, loadSave(), stageActions));
   const sendTalents = () => {
     const s = loadSave();
-    net.send({ type: 'talents', loadout: s.talents, relics: s.relics });
+    net.send({ type: 'talents', loadout: s.talents, relics: s.relics, feats: Object.keys(s.feats) });
   };
   const campaign = new CampaignScreen($('#screen-campaign'), {
     play: playStage,

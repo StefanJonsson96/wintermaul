@@ -251,7 +251,7 @@ export class Game {
         if (!to || to.id === p.id) return { ok: false, error: 'Pick another player' };
         if (!(amount > 0) || amount > p.gold) return { ok: false, error: 'Not enough gold' };
         p.gold -= amount;
-        to.gold += amount;
+        to.gold += Math.floor(amount * (1 + (p.mods.giftBonus ?? 0)));
         this.emit({ e: 'gift', t: this.time, from: p.id, to: to.id, amount });
         return { ok: true };
       }
@@ -544,6 +544,8 @@ export class Game {
     this.wave = n;
     this.phase = 'wave';
     this.setWeather(this.rules.weather ?? (this.settings.weather === false ? 'clear' : weatherOf(this.seed, n)));
+    // the Minotaur Horn measures the maze as each wave starts
+    for (const p of this.players) if (p.baseMods.mazeDmg) this.refreshMods(p);
     for (const lane of this.lanes) {
       lane.waveLeaks = 0;
       lane.forgiven = 0;
@@ -604,6 +606,13 @@ export class Game {
     this.emit({ e: 'wave', t: this.time, n, phase: 'build' });
   }
 
+  /** Minotaur Horn: +1% damage per 20 cells of path past 60, at most +12%. */
+  private mazeBonus(p: Player): number {
+    const grid = this.lanes[p.lane].grid;
+    const len = grid.tracePath(grid.spawnCells[Math.floor(grid.spawnCells.length / 2)]).length;
+    return Math.min(0.12, Math.max(0, Math.floor((len - 60) / 20)) * 0.01);
+  }
+
   /** Clean Sweep and Night Vigil: a wave with no leak from your lane pays. */
   private rewardCleanLanes(n: number): void {
     for (const lane of this.lanes) {
@@ -660,6 +669,7 @@ export class Game {
   /** Recomputes what a player's bonuses add up to, and tells the clients. */
   private refreshMods(p: Player): void {
     p.mods = effectiveMods(p.baseMods, p.boons, this.weather);
+    if (p.mods.mazeDmg) p.mods.dmg = (p.mods.dmg ?? 1) * (1 + this.mazeBonus(p));
     p.goldMul = p.baseGoldMul * (p.mods.bounty ?? 1);
     // towers keep their damage and speed multipliers: recompute them where this player builds
     for (const lane of this.lanes) if ([...this.towers.values()].some((t) => t.owner === p.id && t.lane === lane.index)) this.combat.refreshAuras(lane.index);

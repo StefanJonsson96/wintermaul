@@ -85,6 +85,10 @@ export interface PlayerMods {
   vigil?: number;
   /** Seconds every creep in your lane is stunned by the first leak of a wave. */
   avalanche?: number;
+  /** Damage grows with the length of your maze. */
+  mazeDmg?: boolean;
+  /** Gifts you send arrive with this much more. */
+  giftBonus?: number;
 }
 
 /** Gold price of a tower for a player with these bonuses. */

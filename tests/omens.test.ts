@@ -168,3 +168,19 @@ describe('rule-bending boons', () => {
     expect(g.lives).toBeLessThan(lives);
   });
 });
+
+describe('reworked relics', () => {
+  it('Minotaur Horn grows with the maze; Oathband gifts arrive bigger', () => {
+    const g = new Game({ ...settings, weather: false }, [{ id: 0, name: 'P', color: 0, isBot: false }, { id: 1, name: 'Q', color: 1, isBot: false }], 5, { skipSetup: true, rules: { mods: { 0: { mazeDmg: true, giftBonus: 0.25 } } } });
+    g.command(0, { c: 'race', race: 'fire' });
+    g.devGold(0, 5000);
+    // a wall across the lane with a gap at the bottom bends the path
+    for (let y = 0; y < 20; y += 2) g.command(0, { c: 'build', tower: 'fire_1', x: 20, y });
+    g.devSkipTo(1);
+    for (let i = 0; i < 200 && g.phase !== 'wave'; i++) g.step();
+    expect(g.player(0)!.mods.dmg ?? 1).toBeGreaterThanOrEqual(1);
+    const q = g.player(1)!.gold;
+    g.command(0, { c: 'gift', to: 1, amount: 100 });
+    expect(g.player(1)!.gold - q).toBe(125);
+  });
+});

@@ -99,6 +99,17 @@ describe('relics', () => {
     expect(relicSlots(0)).toBe(1);
     expect(relicSlots(12)).toBe(2);
     expect(cleanRelics(['tooth', 'tooth', 'nope', 'ward', 'wardstone', 'lily'])).toEqual(['tooth', 'wardstone']);
-    expect(applyRelics({}, ['tooth', 'wardstone'])).toEqual({ vsBoss: 1.2, lives: 5 });
+    expect(applyRelics({}, ['tooth', 'wardstone'])).toEqual({ vsBoss: 1.2, mercy: 1, dmg: 0.95 });
+  });
+});
+
+describe('relics online', () => {
+  it('need the achievement that wins them, within the slots', async () => {
+    const { allowedRelics } = await import('../src/shared/relics');
+    expect(allowedRelics(['tooth', 'wardstone'], ['boss'])).toEqual(['tooth']);
+    expect(allowedRelics(['tooth', 'wardstone'], ['boss', 'flawless'])).toEqual(['tooth']);
+    const twelve = ['boss', 'flawless', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+    expect(allowedRelics(['tooth', 'wardstone', 'lily'], twelve)).toEqual(['tooth', 'wardstone']);
+    expect(allowedRelics('nonsense', null)).toEqual([]);
   });
 });

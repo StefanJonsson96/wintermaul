@@ -275,7 +275,7 @@ export type ClientMsg =
   | { type: 'cmd'; cmd: GameCommand }
   | { type: 'playAgain' }
   /** The player's campaign talents (used when the room allows them). */
-  | { type: 'talents'; loadout: Record<string, number>; relics?: string[] };
+  | { type: 'talents'; loadout: Record<string, number>; relics?: string[]; feats?: string[] };
 
 export type ServerMsg =
   | { type: 'welcome'; id: string; token: string; name: string; version: string }

@@ -25,18 +25,18 @@ export const RELICS: Relic[] = [
   { id: 'crown', name: 'Crown of Old Kings', feat: 'legend', icon: 'crown', flavor: 'It remembers how to rule.', effects: [E.damage(0.05), E.speed(0.05)] },
   { id: 'whetstone', name: 'Veteran\'s Whetstone', feat: 'veteran', icon: 'sword', flavor: 'Worn hollow by a hundred winters.', effects: [E.crit(0.05)] },
   { id: 'chalk', name: "Cartographer's Chalk", feat: 'maze_200', icon: 'maze', flavor: 'Every line on the snow is a mile for them.', effects: [E.creepSlow(0.05)] },
-  { id: 'horn', name: 'Minotaur Horn', feat: 'maze_300', icon: 'maze', flavor: 'Whoever built the first maze kept this.', effects: [E.creepSlow(0.05), E.damage(0.04)] },
-  { id: 'level', name: "Mason's Level", feat: 'towers_100', icon: 'brick', flavor: 'True walls, cheaply laid.', effects: [E.walls(2), E.refund(0.1)] },
+  { id: 'horn', name: 'Minotaur Horn', feat: 'maze_300', icon: 'maze', flavor: 'Whoever built the first maze kept this.', effects: [{ text: '+1% damage for every 20 cells your maze makes the creeps walk past 60 (at most +12%)', apply: (m) => (m.mazeDmg = true) }] },
+  { id: 'level', name: "Mason's Level", feat: 'towers_100', icon: 'brick', flavor: 'True walls, cheaply laid.', effects: [{ text: 'Selling never leaves rubble, even mid-wave', apply: (m) => (m.noRubble = true) }, E.walls(1)] },
   { id: 'purse', name: "Dragon's Purse", feat: 'hoard', icon: 'coin', flavor: 'Gold breeds gold, if you let it sleep.', effects: [E.interest(0.04, 80)] },
   { id: 'hook', name: "Butcher's Hook", feat: 'kills_1000', icon: 'skull', flavor: 'Every carcass has a price.', effects: [E.bounty(0.08)] },
-  { id: 'wardstone', name: 'Ward Stone', feat: 'flawless', icon: 'shield', flavor: 'Nothing passed it. Nothing will.', effects: [E.lives(5)] },
+  { id: 'wardstone', name: 'Ward Stone', feat: 'flawless', icon: 'shield', flavor: 'Nothing passed it. Nothing will.', effects: [{ text: 'The first leak of every wave costs no lives (not a boss)', apply: (m) => (m.mercy = (m.mercy ?? 0) + 1) }, E.damage(-0.05)] },
   { id: 'candle', name: 'Last Candle', feat: 'last_life', icon: 'heart', flavor: 'One flame is enough to start again.', effects: [E.secondWind(10)] },
   { id: 'rimecrown', name: 'Rime Crown', feat: 'full_hard', icon: 'snow', flavor: 'Cold enough to slow the heart.', effects: [E.slow(0.3), E.slowDur(0.35)] },
   { id: 'heart', name: 'Heart of Winter', feat: 'full_brutal', icon: 'gem', flavor: 'It beats once a year, and hates you.', effects: [E.damage(0.15), E.leakMul(1)] },
   { id: 'lily', name: 'Thaw Lily', feat: 'full_thaw', icon: 'drop', flavor: 'It blooms in rot and fire.', effects: [E.poison(0.45), E.burn(0.45)] },
-  { id: 'lantern', name: 'Night Lantern', feat: 'endless_50', icon: 'eye', flavor: 'It shows a little further into the dark.', effects: [E.range(0.06)] },
+  { id: 'lantern', name: 'Night Lantern', feat: 'endless_50', icon: 'eye', flavor: 'It shows a little further into the dark.', effects: [{ text: 'Creeps that leak out of your lane lose 25% of their health', apply: (m) => (m.undertow = 1 - (1 - (m.undertow ?? 0)) * 0.75) }, E.range(0.03)] },
   { id: 'sigil', name: 'Starfall Sigil', feat: 'endless_60', icon: 'star', flavor: 'Fast as falling stars, and as careless.', effects: [E.speed(0.12), E.bounty(-0.05)] },
-  { id: 'oathband', name: 'Oathband', feat: 'coop_win', icon: 'people', flavor: 'Sworn on a shared wall.', effects: [E.lives(3), E.bossLeak(3)] },
+  { id: 'oathband', name: 'Oathband', feat: 'coop_win', icon: 'people', flavor: 'Sworn on a shared wall.', effects: [{ text: 'Gold you gift a teammate arrives with 25% more', apply: (m) => (m.giftBonus = (m.giftBonus ?? 0) + 0.25) }, E.lives(2)] },
   { id: 'compass', name: "Pathfinder's Compass", feat: 'act1', icon: 'map', flavor: 'It points north, where the trouble is.', effects: [E.prep(20), gift(40)] },
   { id: 'seed', name: 'Glacier Seed', feat: 'act2', icon: 'crystal', flavor: 'Ice that grew from a single grain.', effects: [E.stun(0.25), E.damage(0.03)] },
   { id: 'dawnstone', name: 'Dawnstone', feat: 'act3', icon: 'flame', flavor: 'The first light after the long night, kept in a stone.', effects: [E.damage(0.06), E.lives(3), gift(50)] },
@@ -62,6 +62,14 @@ export function relicSlots(feats: number): number {
 export function cleanRelics(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   return [...new Set(raw.filter((r): r is string => typeof r === 'string' && !!RELIC_BY_ID[r]))].slice(0, 2);
+}
+
+/** Relics a player may carry: known, won by one of their achievements, within their slots. */
+export function allowedRelics(raw: unknown, feats: unknown): string[] {
+  const have = new Set(Array.isArray(feats) ? feats.filter((f): f is string => typeof f === 'string') : []);
+  return cleanRelics(raw)
+    .filter((id) => have.has(RELIC_BY_ID[id].feat))
+    .slice(0, relicSlots(have.size));
 }
 
 /** Adds relics' bonuses to a player's mods. */

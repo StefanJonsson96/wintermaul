@@ -20,6 +20,9 @@ export function announce(f: Feat): void {
   setTimeout(() => el.remove(), 5300);
 }
 
+/** Feats of skill, not earned on Casual. */
+const SKILL_FEATS = new Set(['flawless', 'last_life', 'full_thaw', 'endless_50', 'endless_60', 'stormproof', 'kills_1000']);
+
 export interface FeatContext {
   /** What kind of game this is; the tutorial earns nothing. */
   mode: 'online' | 'skirmish' | 'campaign' | 'tutorial';
@@ -39,6 +42,8 @@ export class FeatTracker {
   private storm: { wave: number; leaked: number } | null = null;
   /** Lives your team lost to leaks this game (healing can't hide them). */
   private leaked = 0;
+  /** Gold teammates have given you. */
+  private gifted = 0;
   private over = false;
 
   constructor(
@@ -57,7 +62,9 @@ export class FeatTracker {
   }
 
   private earn(...ids: string[]): void {
-    const ids2 = ids.filter((id) => !this.have.has(id));
+    // Casual makes some feats too easy: those wait for a sterner game
+    const casual = this.view.state.settings.difficulty === 'casual';
+    const ids2 = ids.filter((id) => !this.have.has(id) && !(casual && SKILL_FEATS.has(id)));
     if (!ids2.length || !this.ctx.fair()) return;
     for (const id of ids2) this.have.add(id);
     this.fresh.push(...earn(ids2));
@@ -96,6 +103,9 @@ export class FeatTracker {
       case 'leak':
         this.leaked += ev.cost;
         return;
+      case 'gift':
+        if (ev.to === this.you) this.gifted += ev.amount;
+        return;
       case 'boon':
         if (ev.p === this.you && (st.me?.boons?.length ?? 0) + 1 >= 6) this.earn('boons_6');
         return;
@@ -109,7 +119,8 @@ export class FeatTracker {
     const st = this.view.state;
     const me = st.me;
     if (!me) return;
-    if (me.gold >= 5000) this.earn('hoard');
+    // gold gifted by teammates doesn't count towards the hoard
+    if (me.gold - this.gifted >= 5000) this.earn('hoard');
     if (me.kills >= 1000) this.earn('kills_1000');
     if (me.races.length >= 3) this.earn('three_races');
     let towers = 0;

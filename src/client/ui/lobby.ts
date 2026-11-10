@@ -1,3 +1,4 @@
+import { RELIC_BY_ID } from '../../shared/relics';
 import { MAX_PLAYERS, PLAYER_COLORS } from '../../shared/constants';
 import type { ChatLine, RoomState } from '../../shared/protocol';
 import { loadSave, unspent } from '../campaign/save';
@@ -110,6 +111,7 @@ export class LobbyScreen {
             h('div', { class: 's' }, `${color.name}${!p.connected ? ' · reconnecting…' : ''}`),
           ),
           room.settings.talents && !p.isBot ? h('span', { class: 'tag talent', title: `${p.talents} runestones in talents` }, icon('rune', 12), String(p.talents)) : null,
+          room.settings.talents && p.relics?.length ? h('span', { class: 'tag talent', title: `Relics: ${p.relics.map((r) => RELIC_BY_ID[r]?.name ?? r).join(', ')}` }, icon('gem', 12), p.relics.map((r) => RELIC_BY_ID[r]?.name ?? r).join(', ')) : null,
           p.host ? h('span', { class: 'tag host' }, 'Host') : null,
           p.isBot ? h('span', { class: 'tag wait' }, 'Bot') : p.host ? null : p.ready ? h('span', { class: 'tag ready' }, 'Ready') : h('span', { class: 'tag wait' }, 'Not ready'),
           isHost && !mine ? h('button', { class: 'btn small ghost', title: 'Remove', onclick: () => this.net.send({ type: 'kick', slot: p.id }) }, '✕') : null,

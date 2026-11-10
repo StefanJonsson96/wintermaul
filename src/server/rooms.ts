@@ -207,7 +207,7 @@ export class Room {
       you,
       players: this.seats.flatMap((seat, id) =>
         seat
-          ? [{ id, name: seat.name, color: seat.color, isBot: seat.isBot, ready: seat.ready || seat.isBot, host: !!seat.session && seat.session === this.host, connected: seat.connected || seat.isBot, talents: seat.session ? totalSpent(seat.session.talents) : 0 }]
+          ? [{ id, name: seat.name, color: seat.color, isBot: seat.isBot, ready: seat.ready || seat.isBot, host: !!seat.session && seat.session === this.host, connected: seat.connected || seat.isBot, talents: seat.session ? totalSpent(seat.session.talents) : 0, relics: seat.session?.relics ?? [] }]
           : [],
       ),
     };

@@ -18,7 +18,7 @@ import { type ModalHandle } from '../ui/modal';
 import { touchDevice } from '../ui/device';
 import { towerTooltip, dps } from './describe';
 import { openEndDialog, openGiftDialog, openOmenPicker, openRacePicker, openSettingsDialog, openSetupDialog } from './dialogs';
-import { WEATHERS } from '../../shared/sim/omens';
+import { BOON_BY_ID, WEATHERS } from '../../shared/sim/omens';
 import type { GameView } from './view';
 
 const MODE_LABEL: Record<TargetMode, string> = { first: 'First', last: 'Last', strong: 'Strong', weak: 'Weak', close: 'Close' };
@@ -238,6 +238,16 @@ export class Hud {
     void now;
   }
 
+  /** A player's boons in the scoreboard: how many, red when one has a price; hover for the list. */
+  private boonChip(boons: string[]): HTMLElement | null {
+    if (!boons.length) return null;
+    const defs = boons.map((id) => BOON_BY_ID[id]).filter(Boolean);
+    const priced = defs.some((b) => b.effects.some((e) => e.bad));
+    const chip = h('span', { class: `boon-chip${priced ? ' priced' : ''}` }, `✦${defs.length}`);
+    tooltip(chip, () => defs.map((b) => `${b.name}: ${b.effects.map((e) => e.text).join(', ') || 'a gift when taken'}`).join('\n'));
+    return chip;
+  }
+
   /** The forecast of a wave, as a chip (none for still air). */
   private weatherChip(n: number): HTMLElement[] {
     const wx = WEATHERS[this.state.weatherAt(n)];
@@ -296,7 +306,7 @@ export class Hud {
   // ───────────────────────────────────────── scoreboard
   private updateScoreboard(): void {
     const s = this.state;
-    const key = s.players.map((p) => `${p.gold}|${p.kills}|${p.leaks}|${p.ready}|${p.connected}|${p.races.join(',')}`).join(';') + s.wave.phase;
+    const key = s.players.map((p) => `${p.gold}|${p.kills}|${p.leaks}|${p.ready}|${p.connected}|${p.races.join(',')}|${(p.boons ?? []).join(',')}`).join(';') + s.wave.phase;
     if (key === this.sbKey) return;
     this.sbKey = key;
     clear(this.scoreboard);
@@ -314,7 +324,7 @@ export class Hud {
         'div',
         { class: `sb-row${p.id === s.you ? ' me' : ''}${p.connected ? '' : ' away'}`, onclick: () => this.view.focusLane(p.lane) },
         h('span', { class: 'c', style: { background: color.hex } }),
-        h('span', { class: 'nm' }, h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis' } }, p.name), dots, s.wave.phase === 'build' && p.ready ? h('span', { class: 'rdy' }, '✓') : null),
+        h('span', { class: 'nm' }, h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis' } }, p.name), dots, this.boonChip(p.boons ?? []), s.wave.phase === 'build' && p.ready ? h('span', { class: 'rdy' }, '✓') : null),
         h('span', { class: 'num gold-text' }, fmt(p.gold)),
         h('span', { class: 'num' }, String(p.kills)),
         h('span', { class: 'num leaks' }, String(p.leaks)),

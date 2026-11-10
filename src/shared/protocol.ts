@@ -224,6 +224,8 @@ export interface LobbyPlayer {
   connected: boolean;
   /** Runestones the player has spent on talents. */
   talents: number;
+  /** Relics they would bring when campaign talents are on. */
+  relics?: string[];
 }
 
 export interface RoomInfo {

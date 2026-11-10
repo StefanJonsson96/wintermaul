@@ -3868,3 +3868,19 @@ kbd {
   margin-top: 10px;
   font-size: 12px;
 }
+
+.boon-chip {
+  flex: 0 0 auto;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: rgba(255, 200, 90, 0.18);
+  color: #ffd27a;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.boon-chip.priced {
+  background: rgba(255, 90, 90, 0.2);
+  color: #ffb3b3;
+}
